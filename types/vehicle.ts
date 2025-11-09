@@ -1,0 +1,46 @@
+export interface Vehicle {
+  id: string
+  userId: string
+  make: string
+  model: string
+  variant?: string
+  year: number
+  price: number
+  mileage: number
+  transmission: string
+  fuel: string
+  fuelType?: string
+  engineCapacity?: string
+  bodyType?: string
+  province: string
+  city: string
+  description?: string
+  images: string[]
+  status?: string
+  sellerName?: string
+  sellerEmail?: string
+  sellerPhone?: string
+  sellerSuburb?: string
+  sellerCity?: string
+  sellerProvince?: string
+  sellerProfilePic?: string
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface VehicleFormData {
+  make: string
+  model: string
+  variant?: string
+  year: number
+  price: number
+  mileage: number
+  transmission: string
+  fuel: string // Changed from fuelType to fuel to match the form
+  engineCapacity?: string
+  bodyType?: string
+  province: string
+  city: string
+  description?: string
+  images?: string[]
+}
