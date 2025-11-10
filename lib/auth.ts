@@ -53,7 +53,7 @@ async function signUp(
       email,
       password,
       options: {
-        emailRedirectTo: process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL || `${window.location.origin}/auth/callback`,
+        emailRedirectTo: undefined,
         data: {
           first_name: metadata?.firstName || "",
           last_name: metadata?.lastName || "",
@@ -449,8 +449,8 @@ async function signInWithOAuth(provider: "google" | "facebook" | "apple"): Promi
     const { error } = await supabase.auth.signInWithOAuth({
       provider: provider,
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
+        redirectTo: `https://imotogtv7.vercel.app/dashboard`,
+      }
     })
 
     if (error) {
