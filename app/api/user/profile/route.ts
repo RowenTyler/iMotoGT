@@ -1,61 +1,52 @@
+import { createServerClient } from "@/lib/supabase-server"
 import { type NextRequest, NextResponse } from "next/server"
-import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs"
-import { cookies } from "next/headers"
-import { authService } from "@/lib/auth"
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
 export async function GET(request: NextRequest) {
-  try {
-    const cookieStore = cookies()
-    const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
+  const requestUrl = new URL(request.url)
+  const code = requestUrl.searchParams.get("code")
 
-    const {
-      data: { session },
-      error: sessionError,
-    } = await supabase.auth.getSession()
+  if (code) {
+    const supabase = createServerClient()
 
-    if (sessionError || !session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    try {
+      const { data, error } = await supabase.auth.exchangeCodeForSession(code)
+
+      if (error) {
+        console.error("Auth callback error:", error)
+        return NextResponse.redirect(`${requestUrl.origin}/login?error=auth_callback_error`)
+      }
+
+      if (data.user) {
+        // Check if user profile exists, create if not
+        const { data: existingProfile } = await supabase.from("users").select("id").eq("id", data.user.id).single()
+
+        if (!existingProfile) {
+          // Create user profile
+          const { error: profileError } = await supabase.from("users").insert({
+            id: data.user.id,
+            email: data.user.email!,
+            first_name: data.user.user_metadata?.first_name || "",
+            last_name: data.user.user_metadata?.last_name || "",
+            login_method: data.user.app_metadata?.provider || "email",
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+
+          if (profileError) {
+            console.error("Profile creation error:", profileError)
+          }
+        }
+      }
+
+      return NextResponse.redirect(`${requestUrl.origin}/dashboard`)
+    } catch (error) {
+      console.error("Auth callback error:", error)
+      return NextResponse.redirect(`${requestUrl.origin}/login?error=auth_callback_error`)
     }
-
-    const profile = await authService.getUserProfile(session.user.id)
-
-    if (!profile) {
-      return NextResponse.json({ error: "Profile not found" }, { status: 404 })
-    }
-
-    return NextResponse.json(profile)
-  } catch (error) {
-    console.error("API user profile GET error:", error)
-    return NextResponse.json({ error: "Failed to fetch user profile" }, { status: 500 })
   }
-}
 
-export async function PUT(request: NextRequest) {
-  try {
-    const cookieStore = cookies()
-    const supabase = createRouteHandlerClient({ cookies: () => cookieStore })
-
-    const {
-      data: { session },
-      error: sessionError,
-    } = await supabase.auth.getSession()
-
-    if (sessionError || !session) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-    }
-
-    const updates = await request.json()
-
-    await authService.updateProfile(session.user.id, updates)
-
-    const updatedProfile = await authService.getUserProfile(session.user.id)
-
-    return NextResponse.json(updatedProfile)
-  } catch (error) {
-    console.error("API user profile PUT error:", error)
-    return NextResponse.json({ error: "Failed to update user profile" }, { status: 500 })
-  }
+  return NextResponse.redirect(`${requestUrl.origin}/login`)
 }
