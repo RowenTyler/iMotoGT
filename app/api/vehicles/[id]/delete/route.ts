@@ -3,6 +3,9 @@ import { cookies } from "next/headers"
 import { type NextRequest, NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 // Deletion audit trail interface
 interface DeletionAudit {
   vehicle_id: string

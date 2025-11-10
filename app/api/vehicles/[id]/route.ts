@@ -2,6 +2,9 @@ import { type NextRequest, NextResponse } from "next/server"
 import { vehicleService } from "@/lib/vehicle-service"
 import { supabase } from "@/lib/supabase"
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     console.log("🔍 GET /api/vehicles/[id] - Fetching vehicle:", params.id)

@@ -4,6 +4,9 @@ import { cookies } from "next/headers"
 import { vehicleService } from "@/lib/vehicle-service"
 import type { Database } from "@/types/supabase"
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
