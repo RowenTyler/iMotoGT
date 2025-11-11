@@ -83,7 +83,7 @@ export default function UploadVehicle({
   onCancel,
 }: UploadVehicleProps) {
   const router = useRouter()
-  const { user: authUser, userProfile, isLoading: userLoading, refreshUserProfile } = useUser()
+  const { user: authUser, userProfile, isLoading: userLoading, refreshUserProfile, updateProfile } = useUser()
   const user = propUser || userProfile || authUser
   const profile = userProfile || propUser || authUser
   const supabase = createClientComponentClient()
@@ -119,6 +119,7 @@ export default function UploadVehicle({
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
   const [dropTargetIndex, setDropTargetIndex] = useState<number | null>(null)
 
+  // Add condition field to formData like in the first code
   const [formData, setFormData] = useState({
     make: "",
     model: "",
@@ -131,6 +132,7 @@ export default function UploadVehicle({
     bodyType: "",
     variant: "",
     description: "",
+    condition: "good", // Added condition field from first code
     sellerName:
       profile?.firstName && profile?.lastName
         ? `${profile.firstName} ${profile.lastName}`
@@ -187,6 +189,7 @@ export default function UploadVehicle({
         bodyType: existingVehicle.body_type || "",
         variant: existingVehicle.variant || "",
         description: existingVehicle.description || "",
+        condition: existingVehicle.condition || "good", // Added condition
         sellerName: existingVehicle.seller_name || "",
         sellerEmail: existingVehicle.seller_email || "",
         sellerPhone: existingVehicle.seller_phone || "",
@@ -314,10 +317,19 @@ export default function UploadVehicle({
     setSubmitError(null)
   }
 
-  const handleSellerInputChange = (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  // Updated to match first code's auto-save behavior (commented out)
+  const handleSellerInputChange = async (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = event.target
-    setSellerFormData((prev) => ({ ...prev, [name]: value }))
-    setSubmitError(null)
+    const updated = { ...sellerFormData, [name]: value }
+    setSellerFormData(updated)
+    // Auto-save to profile on every change (commented out like in first code)
+    try {
+      // if (updateProfile) await updateProfile(updated) // Commented out for testing auto-save issue
+      // if (onSaveProfile) await onSaveProfile(updated) // Commented out for testing auto-save issue
+    } catch (error) {
+      console.error("Failed to auto-save seller info:", error)
+      setSubmitError("Failed to auto-save seller information. Please try again.")
+    }
   }
 
   const handleEngineCapacitySearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -354,138 +366,45 @@ export default function UploadVehicle({
     setSubmitError(null)
   }
 
-  // --------- FIXED: Save seller info to Supabase with better error handling -----------
+  // Updated to match first code's handleSaveSellerInfo
   const handleSaveSellerInfo = async () => {
-  try {
-    console.log("💾 Save button clicked");
-    
-    // First check if user is authenticated and has an ID
-    if (!user?.id) {
-      throw new Error("User not authenticated. Please log in again.");
-    }
-
-    // Validate required fields
-    if (!sellerFormData.firstName || !sellerFormData.lastName || !sellerFormData.phone) {
-      setSubmitError("Please fill in all required fields (First Name, Last Name, Phone)");
-      return;
-    }
-
-    const updatedProfile: any = {
-      first_name: sellerFormData.firstName.trim(),
-      last_name: sellerFormData.lastName.trim(),
-      phone: sellerFormData.phone.trim(),
-      suburb: sellerFormData.suburb?.trim() || "",
-      city: sellerFormData.city?.trim() || "",
-      province: sellerFormData.province?.trim() || "",
-      profile_pic: sellerFormData.profilePic || "",
-    }
-
-    console.log("📝 Updating profile with:", updatedProfile);
-    console.log("👤 User ID:", user.id);
-
-    // Save to Supabase database with timeout and retry logic
-    let retries = 3;
-    let lastError;
-
-    while (retries > 0) {
-      try {
-        const { data, error } = await supabase
-          .from('users')
-          .update(updatedProfile)
-          .eq('id', user.id)
-          .select()
-
-        if (error) {
-          console.error('❌ Supabase update error:', error);
-          
-          // If it's an RLS policy violation, provide specific guidance
-          if (error.code === '42501') {
-            throw new Error('Permission denied. Please try logging out and back in.');
-          }
-          
-          throw error;
-        }
-
-        console.log('✅ Profile updated successfully:', data);
-
-        // Update local formData shown in the upload form
-        const newSellerName = `${sellerFormData.firstName} ${sellerFormData.lastName}`.trim()
-        
-        setFormData((prev) => ({
-          ...prev,
-          sellerName: newSellerName,
-          sellerPhone: sellerFormData.phone,
-          sellerSuburb: sellerFormData.suburb,
-          sellerCity: sellerFormData.city,
-          sellerProvince: sellerFormData.province,
-          sellerProfilePic: sellerFormData.profilePic,
-        }))
-
-        // Call the onSaveProfile prop if it exists
-        if (onSaveProfile) {
-          console.log("🔄 Calling onSaveProfile prop");
-          await onSaveProfile({
-            firstName: sellerFormData.firstName,
-            lastName: sellerFormData.lastName,
-            phone: sellerFormData.phone,
-            suburb: sellerFormData.suburb,
-            city: sellerFormData.city,
-            province: sellerFormData.province,
-            profilePic: sellerFormData.profilePic,
-          });
-        }
-
-        // Refresh the user profile in context
-        if (refreshUserProfile) {
-          console.log("🔄 Refreshing user profile");
-          await refreshUserProfile();
-        }
-
-        setUserClickedEdit(false);
-        setSubmitSuccess("Seller information updated successfully!");
-        setSubmitError(null);
-        
-        // Clear success message after 3 seconds
-        setTimeout(() => {
-          setSubmitSuccess(null);
-        }, 3000);
-        
-        return; // Success, exit the function
-
-      } catch (error) {
-        lastError = error;
-        retries--;
-        
-        if (retries > 0) {
-          console.log(`⏳ Retrying... ${retries} attempts left`);
-          // Wait before retrying (exponential backoff)
-          await new Promise(resolve => setTimeout(resolve, 1000 * (3 - retries)));
-        }
+    try {
+      const updatedProfile: Partial<UserProfile> = {
+        firstName: sellerFormData.firstName,
+        lastName: sellerFormData.lastName,
+        phone: sellerFormData.phone,
+        suburb: sellerFormData.suburb,
+        city: sellerFormData.city,
+        province: sellerFormData.province,
+        profilePic: sellerFormData.profilePic,
       }
+      const newSellerName =
+        sellerFormData.firstName && sellerFormData.lastName
+          ? `${sellerFormData.firstName} ${sellerFormData.lastName}`
+          : sellerFormData.firstName || sellerFormData.lastName
+            ? `${sellerFormData.firstName || ""}${sellerFormData.firstName && sellerFormData.lastName ? " " : ""}${sellerFormData.lastName || ""}`.trim()
+            : profile?.email?.split("@")[0] || ""
+      setFormData((prev) => ({
+        ...prev,
+        sellerName: newSellerName,
+        sellerPhone: sellerFormData.phone,
+        sellerSuburb: sellerFormData.suburb,
+        sellerCity: sellerFormData.city,
+        sellerProvince: sellerFormData.province,
+        sellerProfilePic: sellerFormData.profilePic,
+      }))
+      // Update profile in context for real-time sync
+      if (updateProfile) await updateProfile(updatedProfile)
+      if (onSaveProfile) await onSaveProfile(updatedProfile)
+      setUserClickedEdit(false)
+      setSubmitSuccess("Seller information updated successfully!")
+      setSubmitError(null)
+    } catch (error) {
+      console.error("Failed to save seller info:", error)
+      setSubmitError("Failed to update seller information. Please try again.")
+      setSubmitSuccess(null)
     }
-
-    // If we get here, all retries failed
-    throw lastError;
-    
-  } catch (error) {
-    console.error("❌ Failed to save seller info:", error);
-    
-    let errorMessage = "Failed to update seller information. Please try again.";
-    
-    if (error instanceof Error) {
-      if (error.message.includes('Failed to fetch') || error.message.includes('HTTP2')) {
-        errorMessage = "Network error. Please check your internet connection and try again.";
-      } else if (error.message.includes('Permission denied') || error.message.includes('RLS')) {
-        errorMessage = "Database permission error. Please try logging out and back in.";
-      } else {
-        errorMessage = error.message;
-      }
-    }
-    
-    setSubmitError(errorMessage);
-    setSubmitSuccess(null);
   }
-}
 
   const compressImage = (file: File, maxWidth = 1200, quality = 0.8): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -649,6 +568,7 @@ export default function UploadVehicle({
       }
     }
 
+    // Updated validation to include condition like in first code
     if (
       !formData.make ||
       !formData.model ||
@@ -657,7 +577,8 @@ export default function UploadVehicle({
       !formData.mileage ||
       !formData.transmission ||
       !formData.fuel ||
-      !formData.engineCapacity
+      !formData.engineCapacity ||
+      !formData.condition
     ) {
       setSubmitError("Please fill in all required fields.")
       setIsSubmitting(false)
@@ -679,32 +600,21 @@ export default function UploadVehicle({
         setUploadProgress((prev) => Math.min(prev + 10, 90))
       }, 200)
 
+      // Match first code's approach - vehicle data only contains form data and images
       const vehicleData = { ...formData, images: vehicleImages }
-      const vehicleDataWithSeller = {
-        ...vehicleData,
-        sellerName: formData.sellerName,
-        sellerEmail: formData.sellerEmail,
-        sellerPhone: formData.sellerPhone,
-        sellerSuburb: formData.sellerSuburb,
-        sellerCity: formData.sellerCity,
-        sellerProvince: formData.sellerProvince,
-        sellerProfilePic: formData.sellerProfilePic,
-        user_id: user?.id,
-        status: "active",
-      }
 
       let result: Vehicle | null
 
       if (editMode && existingVehicle) {
-        result = await vehicleService.updateVehicle(existingVehicle.id, vehicleDataWithSeller)
+        result = await vehicleService.updateVehicle(existingVehicle.id, vehicleData)
         if (result && onVehicleUpdate) {
           onVehicleUpdate(result)
         }
       } else {
         if (onVehicleSubmit) {
-          await onVehicleSubmit(vehicleDataWithSeller)
+          await onVehicleSubmit(vehicleData)
         } else {
-          result = await vehicleService.createVehicle(vehicleDataWithSeller)
+          result = await vehicleService.createVehicle(vehicleData)
         }
       }
 
@@ -740,10 +650,35 @@ export default function UploadVehicle({
     )
   }
 
-  if (!authUser) {
+  // Add email verification check like in first code
+  if (!authUser || !authUser.email_confirmed_at) {
     return (
-      <div className="min-h-screen bg-[var(--light-bg)] dark:bg-[var(--dark-bg)] flex items-center justify-center">
-        <p className="text-[#3E5641] dark:text-white">Redirecting to login...</p>
+      <div className="min-h-screen bg-[var(--light-bg)] dark:bg-[var(--dark-bg)] flex flex-col">
+        <Header
+          user={user}
+          onLoginClick={handleLogin}
+          onDashboardClick={handleDashboard}
+          onGoHome={handleGoHome}
+          onShowAllCars={handleShowAllCars}
+          onGoToSellPage={handleGoToSell}
+          onSignOut={handleSignOutClick}
+          transparent={false}
+        />
+        <main className="flex-1 flex flex-col items-center justify-center text-center p-4">
+          <AlertCircle className="w-16 h-16 text-yellow-500 mb-4" />
+          <h1 className="text-2xl font-bold mb-2 text-[#3E5641] dark:text-white">Account Not Verified</h1>
+          <p className="max-w-md mb-6 text-gray-600 dark:text-gray-300">
+            You must verify your email address before you can list a vehicle for sale. Please check your inbox for a
+            verification link sent to <strong>{authUser?.email}</strong>.
+          </p>
+          <Button
+            onClick={onBack || (() => router.push("/dashboard"))}
+            className="bg-[#FF6700] text-white hover:bg-[#FF6700]/90 dark:bg-[#FF7D33] dark:hover:bg-[#FF7D33]/90"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Dashboard
+          </Button>
+        </main>
       </div>
     )
   }
@@ -922,9 +857,10 @@ export default function UploadVehicle({
                   </div>
                 )}
               </Card>
+              
+              {/* Seller Information Card - Updated to match first code */}
               {!editMode && (
-                <Card className="rounded-3xl overflow-hidden p-6 flex flex-col w-full border-[#9FA791]/20 dark:border-[#4A4D45]/20 bg-white dark:bg-[#2A352A] mb-6">
-
+                <Card className="rounded-3xl overflow-hidden p-6 flex flex-col w-full border-[#9FA791]/20 dark:border-[#4A4D45]/20 bg-white dark:bg-[#2A352A]">
                   {isEditingSeller && isProfileIncomplete && (
                     <Alert
                       variant="default"
@@ -936,19 +872,14 @@ export default function UploadVehicle({
                       </AlertDescription>
                     </Alert>
                   )}
-
                   <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-xl font-bold text-[#3E5641] dark:text-white">
-                      Seller Information
-                    </h2>
-
+                    <h2 className="text-xl font-bold text-[#3E5641] dark:text-white">Seller Information</h2>
                     {!isEditingSeller ? (
                       <Button
                         variant="ghost"
                         size="sm"
                         className="text-[#FF6700] dark:text-[#FF7D33]"
                         onClick={() => setUserClickedEdit(true)}
-                        disabled={isSubmitting}
                       >
                         <Edit className="h-4 w-4 mr-1" />
                         Edit
@@ -957,55 +888,35 @@ export default function UploadVehicle({
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20"
+                        className="text-green-600 dark:text-green-400"
                         onClick={handleSaveSellerInfo}
-                        disabled={
-                          isSubmitting ||
-                          !sellerFormData.firstName?.trim() ||
-                          !sellerFormData.lastName?.trim() ||
-                          !sellerFormData.phone?.trim()
-                        }
                       >
                         <Check className="h-4 w-4 mr-1" />
                         Save
                       </Button>
                     )}
                   </div>
-
                   <div className="space-y-4">
                     {!isEditingSeller ? (
                       <>
                         <div className="flex flex-col">
-                          <Label className="text-sm font-medium text-[#6F7F69] dark:text-gray-400 mb-1">
-                            Name
-                          </Label>
+                          <Label className="text-sm font-medium text-[#6F7F69] dark:text-gray-400 mb-1">Name</Label>
                           <div className="text-[#3E5641] dark:text-white font-medium">
                             {formData.sellerName || "Not provided"}
                           </div>
                         </div>
-
                         <div className="flex flex-col">
-                          <Label className="text-sm font-medium text-[#6F7F69] dark:text-gray-400 mb-1">
-                            Email
-                          </Label>
-                          <div className="text-[#3E5641] dark:text-white font-medium">
-                            {formData.sellerEmail}
-                          </div>
+                          <Label className="text-sm font-medium text-[#6F7F69] dark:text-gray-400 mb-1">Email</Label>
+                          <div className="text-[#3E5641] dark:text-white font-medium">{formData.sellerEmail}</div>
                         </div>
-
                         <div className="flex flex-col">
-                          <Label className="text-sm font-medium text-[#6F7F69] dark:text-gray-400 mb-1">
-                            Phone
-                          </Label>
+                          <Label className="text-sm font-medium text-[#6F7F69] dark:text-gray-400 mb-1">Phone</Label>
                           <div className="text-[#3E5641] dark:text-white font-medium">
                             {formData.sellerPhone || "Not provided"}
                           </div>
                         </div>
-
                         <div className="flex flex-col">
-                          <Label className="text-sm font-medium text-[#6F7F69] dark:text-gray-400 mb-1">
-                            Location
-                          </Label>
+                          <Label className="text-sm font-medium text-[#6F7F69] dark:text-gray-400 mb-1">Location</Label>
                           <div className="text-[#3E5641] dark:text-white font-medium">
                             {profile?.suburb && `${profile.suburb}, `}
                             {profile?.city && `${profile.city}, `}
@@ -1017,50 +928,35 @@ export default function UploadVehicle({
                       <>
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-1.5">
-                            <Label
-                              htmlFor="firstName"
-                              className="text-sm font-medium text-[#3E5641] dark:text-gray-300"
-                            >
-                              First Name <span className="text-red-500">*</span>
+                            <Label htmlFor="firstName" className="text-sm font-medium text-[#3E5641] dark:text-gray-300">
+                              First Name
                             </Label>
                             <Input
                               id="firstName"
                               name="firstName"
                               value={sellerFormData.firstName}
                               onChange={handleSellerInputChange}
-                              placeholder="Enter first name"
+                              placeholder="First Name"
                               className="border-[#9FA791] dark:border-[#4A4D45] focus:border-[#FF6700] dark:focus:border-[#FF7D33] focus:ring-[#FF6700] dark:focus:ring-[#FF7D33] dark:bg-[#1F2B20] dark:text-white"
-                              disabled={isSubmitting}
-                              required
                             />
                           </div>
-
                           <div className="space-y-1.5">
-                            <Label
-                              htmlFor="lastName"
-                              className="text-sm font-medium text-[#3E5641] dark:text-gray-300"
-                            >
-                              Last Name <span className="text-red-500">*</span>
+                            <Label htmlFor="lastName" className="text-sm font-medium text-[#3E5641] dark:text-gray-300">
+                              Last Name
                             </Label>
                             <Input
                               id="lastName"
                               name="lastName"
                               value={sellerFormData.lastName}
                               onChange={handleSellerInputChange}
-                              placeholder="Enter last name"
+                              placeholder="Last Name"
                               className="border-[#9FA791] dark:border-[#4A4D45] focus:border-[#FF6700] dark:focus:border-[#FF7D33] focus:ring-[#FF6700] dark:focus:ring-[#FF7D33] dark:bg-[#1F2B20] dark:text-white"
-                              disabled={isSubmitting}
-                              required
                             />
                           </div>
                         </div>
-
                         <div className="space-y-1.5">
-                          <Label
-                            htmlFor="phone"
-                            className="text-sm font-medium text-[#3E5641] dark:text-gray-300"
-                          >
-                            Phone Number <span className="text-red-500">*</span>
+                          <Label htmlFor="phone" className="text-sm font-medium text-[#3E5641] dark:text-gray-300">
+                            Phone Number
                           </Label>
                           <Input
                             id="phone"
@@ -1070,16 +966,10 @@ export default function UploadVehicle({
                             onChange={handleSellerInputChange}
                             placeholder="+27 12 345 6789"
                             className="border-[#9FA791] dark:border-[#4A4D45] focus:border-[#FF6700] dark:focus:border-[#FF7D33] focus:ring-[#FF6700] dark:focus:ring-[#FF7D33] dark:bg-[#1F2B20] dark:text-white"
-                            disabled={isSubmitting}
-                            required
                           />
                         </div>
-
                         <div className="space-y-1.5">
-                          <Label
-                            htmlFor="email"
-                            className="text-sm font-medium text-[#3E5641] dark:text-gray-300"
-                          >
+                          <Label htmlFor="email" className="text-sm font-medium text-[#3E5641] dark:text-gray-300">
                             Email
                           </Label>
                           <Input
@@ -1090,17 +980,11 @@ export default function UploadVehicle({
                             disabled
                             className="opacity-70 border-[#9FA791] dark:border-[#4A4D45] dark:bg-[#1F2B20] dark:text-white"
                           />
-                          <p className="text-xs text-gray-500 dark:text-gray-400">
-                            Email cannot be changed
-                          </p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">Email cannot be changed</p>
                         </div>
-
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-1.5">
-                            <Label
-                              htmlFor="suburb"
-                              className="text-sm font-medium text-[#3E5641] dark:text-gray-300"
-                            >
+                            <Label htmlFor="suburb" className="text-sm font-medium text-[#3E5641] dark:text-gray-300">
                               Suburb
                             </Label>
                             <Input
@@ -1108,17 +992,12 @@ export default function UploadVehicle({
                               name="suburb"
                               value={sellerFormData.suburb || ""}
                               onChange={handleSellerInputChange}
-                              placeholder="Enter suburb"
+                              placeholder="Suburb"
                               className="border-[#9FA791] dark:border-[#4A4D45] focus:border-[#FF6700] dark:focus:border-[#FF7D33] focus:ring-[#FF6700] dark:focus:ring-[#FF7D33] dark:bg-[#1F2B20] dark:text-white"
-                              disabled={isSubmitting}
                             />
                           </div>
-
                           <div className="space-y-1.5">
-                            <Label
-                              htmlFor="city"
-                              className="text-sm font-medium text-[#3E5641] dark:text-gray-300"
-                            >
+                            <Label htmlFor="city" className="text-sm font-medium text-[#3E5641] dark:text-gray-300">
                               City
                             </Label>
                             <Input
@@ -1126,18 +1005,13 @@ export default function UploadVehicle({
                               name="city"
                               value={sellerFormData.city || ""}
                               onChange={handleSellerInputChange}
-                              placeholder="Enter city"
+                              placeholder="City"
                               className="border-[#9FA791] dark:border-[#4A4D45] focus:border-[#FF6700] dark:focus:border-[#FF7D33] focus:ring-[#FF6700] dark:focus:ring-[#FF7D33] dark:bg-[#1F2B20] dark:text-white"
-                              disabled={isSubmitting}
                             />
                           </div>
                         </div>
-
                         <div className="space-y-1.5">
-                          <Label
-                            htmlFor="province"
-                            className="text-sm font-medium text-[#3E5641] dark:text-gray-300"
-                          >
+                          <Label htmlFor="province" className="text-sm font-medium text-[#3E5641] dark:text-gray-300">
                             Province
                           </Label>
                           <select
@@ -1146,7 +1020,6 @@ export default function UploadVehicle({
                             value={sellerFormData.province || ""}
                             onChange={handleSellerInputChange}
                             className="w-full px-3 py-2 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] appearance-none bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white"
-                            disabled={isSubmitting}
                           >
                             <option value="">Select Province</option>
                             <option value="Eastern Cape">Eastern Cape</option>
@@ -1163,17 +1036,15 @@ export default function UploadVehicle({
                       </>
                     )}
                   </div>
-
                   <p className="text-sm text-gray-500 dark:text-gray-400 mt-4">
                     This information will be visible to potential buyers.
                   </p>
                 </Card>
               )}
-
             </div>
             <div className="lg:w-2/3 flex">
               <Card className="rounded-3xl p-6 w-full border-[#9FA791]/20 dark:border-[#4A4D45]/20 bg-white dark:bg-[#2A352A]">
-                <h2 className="text-xl font-bold mb-6 text-[#3E56441] dark:text-white">Vehicle Details</h2>
+                <h2 className="text-xl font-bold mb-6 text-[#3E5641] dark:text-white">Vehicle Details</h2>
                 <div className="space-y-6">
                   <div>
                     <h3 className="text-lg font-semibold mb-3 text-[#3E5641] dark:text-white">Basic Information</h3>
@@ -1342,7 +1213,7 @@ export default function UploadVehicle({
                               )
                             }}
                             placeholder="Select Capacity"
-                            className="w-full px-3 py-2 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] appearance-none bg-white dark:bg-[#2A352A] text-[#3E56441] dark:text-white"
+                            className="w-full px-3 py-2 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] appearance-none bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white"
                             disabled={isSubmitting}
                             autoComplete="off"
                           />
@@ -1351,7 +1222,7 @@ export default function UploadVehicle({
                               {engineCapacityFiltered.map((option) => (
                                 <div
                                   key={option.value}
-                                  className="px-4 py-2 hover:bg-[#FFF8E0] dark:hover:bg-[#2A352A] cursor-pointer text-[#3E56441] dark:text-white"
+                                  className="px-4 py-2 hover:bg-[#FFF8E0] dark:hover:bg-[#2A352A] cursor-pointer text-[#3E5641] dark:text-white"
                                   onMouseDown={(e) => {
                                     e.preventDefault()
                                     handleEngineCapacitySelect(option)
@@ -1368,7 +1239,7 @@ export default function UploadVehicle({
                         <div className="relative" ref={bodyTypeRef}>
                           <Label
                             htmlFor="bodyTypeInput"
-                            className="text-sm font-medium text-[#3E56441] dark:text-gray-300"
+                            className="text-sm font-medium text-[#3E5641] dark:text-gray-300"
                           >
                             Body Type
                           </Label>
@@ -1389,7 +1260,7 @@ export default function UploadVehicle({
                               )
                             }}
                             placeholder="Select Body Type"
-                            className="w-full px-5 py-4 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] appearance-none bg-white dark:bg-[#2A352A] text-[#3E56441] dark:text-white"
+                            className="w-full px-5 py-4 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] appearance-none bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white"
                             disabled={isSubmitting}
                             autoComplete="off"
                           />
@@ -1398,7 +1269,7 @@ export default function UploadVehicle({
                               {bodyTypeFiltered.map((option) => (
                                 <div
                                   key={option.value}
-                                  className="px-4 py-3 hover:bg-[#FFF8E0] dark:hover:bg-[#2A352A] cursor-pointer text-[#3E56441] dark:text-white flex items-center"
+                                  className="px-4 py-3 hover:bg-[#FFF8E0] dark:hover:bg-[#2A352A] cursor-pointer text-[#3E5641] dark:text-white flex items-center"
                                   onMouseDown={(e) => {
                                     e.preventDefault()
                                     handleBodyTypeSelect(option)
@@ -1414,10 +1285,32 @@ export default function UploadVehicle({
                       </div>
                     </div>
                   </div>
+                  {/* Add Condition Field */}
                   <div>
-                    <h3 className="text-lg font-semibold mb-3 text-[#3E56441] dark:text-white">Description</h3>
+                    <h3 className="text-lg font-semibold mb-3 text-[#3E5641] dark:text-white">Vehicle Condition</h3>
                     <div className="space-y-1.5">
-                      <Label htmlFor="description" className="text-sm font-medium text-[#3E56441] dark:text-gray-300">
+                      <Label htmlFor="condition" className="text-sm font-medium text-[#3E5641] dark:text-gray-300">
+                        Condition
+                      </Label>
+                      <select
+                        id="condition"
+                        name="condition"
+                        value={formData.condition}
+                        onChange={handleInputChange}
+                        className="w-full px-3 py-2 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] appearance-none bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white"
+                        disabled={isSubmitting}
+                      >
+                        <option value="excellent">Excellent</option>
+                        <option value="good">Good</option>
+                        <option value="fair">Fair</option>
+                        <option value="needs-work">Needs Work</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3 text-[#3E5641] dark:text-white">Description</h3>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="description" className="text-sm font-medium text-[#3E5641] dark:text-gray-300">
                         Vehicle Description (Optional)
                       </Label>
                       <textarea
