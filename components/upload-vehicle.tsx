@@ -312,10 +312,11 @@ export default function UploadVehicle({
     setSubmitError(null)
   }
 
-  const handleSellerInputChange = async (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = event.target
-    const updated = { ...sellerFormData, [name]: value }
-    setSellerFormData(updated)
+  const handleSellerInputChange = (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const { name, value } = event.target
+  setSellerFormData((prev) => ({ ...prev, [name]: value }))
+  setSubmitError(null)
+  }
 
     try {
       const updatedProfile: Partial<UserProfile> = {
