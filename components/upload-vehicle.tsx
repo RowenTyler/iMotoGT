@@ -356,119 +356,136 @@ export default function UploadVehicle({
 
   // --------- FIXED: Save seller info to Supabase with better error handling -----------
   const handleSaveSellerInfo = async () => {
-    try {
-      console.log("Save button clicked");
-      
-      // First check if user is authenticated and has an ID
-      if (!user?.id) {
-        throw new Error("User not authenticated. Please log in again.");
-      }
-
-      const updatedProfile: any = {
-        first_name: sellerFormData.firstName,
-        last_name: sellerFormData.lastName,
-        phone: sellerFormData.phone,
-        suburb: sellerFormData.suburb,
-        city: sellerFormData.city,
-        province: sellerFormData.province,
-        profile_pic: sellerFormData.profilePic,
-      }
-
-      console.log("Updating profile with:", updatedProfile);
-      console.log("User ID:", user.id);
-
-      // Update local formData shown in the upload form
-      const newSellerName =
-        sellerFormData.firstName && sellerFormData.lastName
-          ? `${sellerFormData.firstName} ${sellerFormData.lastName}`
-          : sellerFormData.firstName || sellerFormData.lastName
-            ? `${sellerFormData.firstName || ""}${sellerFormData.firstName && sellerFormData.lastName ? " " : ""}${sellerFormData.lastName || ""}`.trim()
-            : profile?.email?.split("@")[0] || ""
-      
-      setFormData((prev) => ({
-        ...prev,
-        sellerName: newSellerName,
-        sellerPhone: sellerFormData.phone,
-        sellerSuburb: sellerFormData.suburb,
-        sellerCity: sellerFormData.city,
-        sellerProvince: sellerFormData.province,
-        sellerProfilePic: sellerFormData.profilePic,
-      }))
-
-      // Save to Supabase database with timeout and retry logic
-      let retries = 3;
-      let lastError;
-
-      while (retries > 0) {
-        try {
-          const { data, error } = await supabase
-            .from('users')
-            .update(updatedProfile)
-            .eq('id', user.id)
-            .select()
-
-          if (error) {
-            console.error('Supabase update error:', error);
-            
-            // If it's an RLS policy violation, provide specific guidance
-            if (error.code === '42501') {
-              throw new Error('Permission denied. Please check if Row Level Security is properly configured.');
-            }
-            
-            throw error;
-          }
-
-          console.log('Profile updated successfully:', data);
-
-          // Call the onSaveProfile prop if it exists
-          if (onSaveProfile) {
-            await onSaveProfile(updatedProfile);
-          }
-
-          // Refresh the user profile
-          if (refreshUserProfile) {
-            await refreshUserProfile();
-          }
-
-          setUserClickedEdit(false);
-          setSubmitSuccess("Seller information updated successfully!");
-          setSubmitError(null);
-          return; // Success, exit the function
-
-        } catch (error) {
-          lastError = error;
-          retries--;
-          
-          if (retries > 0) {
-            console.log(`Retrying... ${retries} attempts left`);
-            // Wait before retrying (exponential backoff)
-            await new Promise(resolve => setTimeout(resolve, 1000 * (3 - retries)));
-          }
-        }
-      }
-
-      // If we get here, all retries failed
-      throw lastError;
-      
-    } catch (error) {
-      console.error("Failed to save seller info:", error);
-      
-      let errorMessage = "Failed to update seller information. Please try again.";
-      
-      if (error instanceof Error) {
-        if (error.message.includes('Failed to fetch') || error.message.includes('HTTP2')) {
-          errorMessage = "Network error. Please check your internet connection and try again.";
-        } else if (error.message.includes('Permission denied') || error.message.includes('RLS')) {
-          errorMessage = "Database permission error. Please contact support.";
-        } else {
-          errorMessage = error.message;
-        }
-      }
-      
-      setSubmitError(errorMessage);
-      setSubmitSuccess(null);
+  try {
+    console.log("💾 Save button clicked");
+    
+    // First check if user is authenticated and has an ID
+    if (!user?.id) {
+      throw new Error("User not authenticated. Please log in again.");
     }
+
+    // Validate required fields
+    if (!sellerFormData.firstName || !sellerFormData.lastName || !sellerFormData.phone) {
+      setSubmitError("Please fill in all required fields (First Name, Last Name, Phone)");
+      return;
+    }
+
+    const updatedProfile: any = {
+      first_name: sellerFormData.firstName.trim(),
+      last_name: sellerFormData.lastName.trim(),
+      phone: sellerFormData.phone.trim(),
+      suburb: sellerFormData.suburb?.trim() || "",
+      city: sellerFormData.city?.trim() || "",
+      province: sellerFormData.province?.trim() || "",
+      profile_pic: sellerFormData.profilePic || "",
+    }
+
+    console.log("📝 Updating profile with:", updatedProfile);
+    console.log("👤 User ID:", user.id);
+
+    // Save to Supabase database with timeout and retry logic
+    let retries = 3;
+    let lastError;
+
+    while (retries > 0) {
+      try {
+        const { data, error } = await supabase
+          .from('users')
+          .update(updatedProfile)
+          .eq('id', user.id)
+          .select()
+
+        if (error) {
+          console.error('❌ Supabase update error:', error);
+          
+          // If it's an RLS policy violation, provide specific guidance
+          if (error.code === '42501') {
+            throw new Error('Permission denied. Please try logging out and back in.');
+          }
+          
+          throw error;
+        }
+
+        console.log('✅ Profile updated successfully:', data);
+
+        // Update local formData shown in the upload form
+        const newSellerName = `${sellerFormData.firstName} ${sellerFormData.lastName}`.trim()
+        
+        setFormData((prev) => ({
+          ...prev,
+          sellerName: newSellerName,
+          sellerPhone: sellerFormData.phone,
+          sellerSuburb: sellerFormData.suburb,
+          sellerCity: sellerFormData.city,
+          sellerProvince: sellerFormData.province,
+          sellerProfilePic: sellerFormData.profilePic,
+        }))
+
+        // Call the onSaveProfile prop if it exists
+        if (onSaveProfile) {
+          console.log("🔄 Calling onSaveProfile prop");
+          await onSaveProfile({
+            firstName: sellerFormData.firstName,
+            lastName: sellerFormData.lastName,
+            phone: sellerFormData.phone,
+            suburb: sellerFormData.suburb,
+            city: sellerFormData.city,
+            province: sellerFormData.province,
+            profilePic: sellerFormData.profilePic,
+          });
+        }
+
+        // Refresh the user profile in context
+        if (refreshUserProfile) {
+          console.log("🔄 Refreshing user profile");
+          await refreshUserProfile();
+        }
+
+        setUserClickedEdit(false);
+        setSubmitSuccess("Seller information updated successfully!");
+        setSubmitError(null);
+        
+        // Clear success message after 3 seconds
+        setTimeout(() => {
+          setSubmitSuccess(null);
+        }, 3000);
+        
+        return; // Success, exit the function
+
+      } catch (error) {
+        lastError = error;
+        retries--;
+        
+        if (retries > 0) {
+          console.log(`⏳ Retrying... ${retries} attempts left`);
+          // Wait before retrying (exponential backoff)
+          await new Promise(resolve => setTimeout(resolve, 1000 * (3 - retries)));
+        }
+      }
+    }
+
+    // If we get here, all retries failed
+    throw lastError;
+    
+  } catch (error) {
+    console.error("❌ Failed to save seller info:", error);
+    
+    let errorMessage = "Failed to update seller information. Please try again.";
+    
+    if (error instanceof Error) {
+      if (error.message.includes('Failed to fetch') || error.message.includes('HTTP2')) {
+        errorMessage = "Network error. Please check your internet connection and try again.";
+      } else if (error.message.includes('Permission denied') || error.message.includes('RLS')) {
+        errorMessage = "Database permission error. Please try logging out and back in.";
+      } else {
+        errorMessage = error.message;
+      }
+    }
+    
+    setSubmitError(errorMessage);
+    setSubmitSuccess(null);
   }
+}
 
   const compressImage = (file: File, maxWidth = 1200, quality = 0.8): Promise<string> => {
     return new Promise((resolve, reject) => {
