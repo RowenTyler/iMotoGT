@@ -359,21 +359,35 @@ export default function UploadVehicle({
 
   const handleSaveSellerInfo = async () => {
     try {
-      const updatedProfile: Partial<UserProfile> = {
-        firstName: sellerFormData.firstName,
-        lastName: sellerFormData.lastName,
-        phone: sellerFormData.phone,
-        suburb: sellerFormData.suburb,
-        city: sellerFormData.city,
-        province: sellerFormData.province,
-        profilePic: sellerFormData.profilePic,
+      // First check if user is authenticated
+      if (!user?.id) {
+        throw new Error("User not authenticated. Please log in again.")
       }
+
+      // Validate required fields
+      if (!sellerFormData.firstName?.trim() || !sellerFormData.lastName?.trim() || !sellerFormData.phone?.trim()) {
+        setSubmitError("Please fill in all required fields (First Name, Last Name, Phone)")
+        return
+      }
+
+      const updatedProfile: any = {
+        first_name: sellerFormData.firstName.trim(),
+        last_name: sellerFormData.lastName.trim(),
+        phone: sellerFormData.phone.trim(),
+        suburb: sellerFormData.suburb?.trim() || "",
+        city: sellerFormData.city?.trim() || "",
+        province: sellerFormData.province?.trim() || "",
+        profile_pic: sellerFormData.profilePic || "",
+      }
+
       const newSellerName =
         sellerFormData.firstName && sellerFormData.lastName
           ? `${sellerFormData.firstName} ${sellerFormData.lastName}`
           : sellerFormData.firstName || sellerFormData.lastName
             ? `${sellerFormData.firstName || ""}${sellerFormData.firstName && sellerFormData.lastName ? " " : ""}${sellerFormData.lastName || ""}`.trim()
             : profile?.email?.split("@")[0] || ""
+
+      // Update local form data
       setFormData((prev) => ({
         ...prev,
         sellerName: newSellerName,
@@ -383,12 +397,58 @@ export default function UploadVehicle({
         sellerProvince: sellerFormData.province,
         sellerProfilePic: sellerFormData.profilePic,
       }))
+
+      // Save to Supabase database
+      const { data, error } = await supabase
+        .from('users')
+        .update(updatedProfile)
+        .eq('id', user.id)
+        .select()
+
+      if (error) {
+        throw error
+      }
+
       // Update profile in context for real-time sync
-      if (updateProfile) await updateProfile(updatedProfile)
-      if (onSaveProfile) await onSaveProfile(updatedProfile)
+      if (updateProfile) {
+        await updateProfile({
+          firstName: sellerFormData.firstName,
+          lastName: sellerFormData.lastName,
+          phone: sellerFormData.phone,
+          suburb: sellerFormData.suburb,
+          city: sellerFormData.city,
+          province: sellerFormData.province,
+          profilePic: sellerFormData.profilePic,
+        })
+      }
+      
+      // Also call onSaveProfile if provided (for parent component updates)
+      if (onSaveProfile) {
+        await onSaveProfile({
+          firstName: sellerFormData.firstName,
+          lastName: sellerFormData.lastName,
+          phone: sellerFormData.phone,
+          suburb: sellerFormData.suburb,
+          city: sellerFormData.city,
+          province: sellerFormData.province,
+          profilePic: sellerFormData.profilePic,
+        })
+      }
+
+      // Force refresh the user profile data
+      if (refreshUserProfile) {
+        await refreshUserProfile()
+      }
+
       setUserClickedEdit(false)
       setSubmitSuccess("Seller information updated successfully!")
       setSubmitError(null)
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => {
+        setSubmitSuccess(null)
+      }, 3000)
+      
     } catch (error) {
       console.error("Failed to save seller info:", error)
       setSubmitError("Failed to update seller information. Please try again.")
@@ -637,8 +697,6 @@ export default function UploadVehicle({
       </div>
     )
   }
-
-  // REMOVED: Email verification check block that was blocking Google users
 
   if (!authUser) {
     return (
