@@ -15,7 +15,7 @@ import type { UserProfile } from "@/types/user"
 import type { Vehicle } from "@/lib/data"
 import { useUser } from "@/components/UserContext"
 import { vehicleService } from "@/lib/vehicle-service"
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs' // Add this import
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 
 interface HeaderPropsOverride {
   onLoginClick?: () => void
@@ -86,7 +86,7 @@ export default function UploadVehicle({
   const { user: authUser, userProfile, isLoading: userLoading, refreshUserProfile } = useUser()
   const user = propUser || userProfile || authUser
   const profile = userProfile || propUser || authUser
-  const supabase = createClientComponentClient() // Initialize Supabase client
+  const supabase = createClientComponentClient()
 
   const isProfileIncomplete =
     !profile?.firstName ||
@@ -354,13 +354,18 @@ export default function UploadVehicle({
     setSubmitError(null)
   }
 
-  // --------- FIXED: Save seller info to Supabase -----------
+  // --------- FIXED: Save seller info to Supabase with better error handling -----------
   const handleSaveSellerInfo = async () => {
     try {
-      console.log("Save button clicked"); // Debug log
+      console.log("Save button clicked");
       
-      const updatedProfile: Partial<UserProfile> = {
-        first_name: sellerFormData.firstName, // Match your database column names
+      // First check if user is authenticated and has an ID
+      if (!user?.id) {
+        throw new Error("User not authenticated. Please log in again.");
+      }
+
+      const updatedProfile: any = {
+        first_name: sellerFormData.firstName,
         last_name: sellerFormData.lastName,
         phone: sellerFormData.phone,
         suburb: sellerFormData.suburb,
@@ -369,8 +374,8 @@ export default function UploadVehicle({
         profile_pic: sellerFormData.profilePic,
       }
 
-      console.log("Updating profile with:", updatedProfile); // Debug log
-      console.log("User ID:", user?.id); // Debug log
+      console.log("Updating profile with:", updatedProfile);
+      console.log("User ID:", user.id);
 
       // Update local formData shown in the upload form
       const newSellerName =
@@ -390,38 +395,78 @@ export default function UploadVehicle({
         sellerProfilePic: sellerFormData.profilePic,
       }))
 
-      // Save to Supabase database
-      const { data, error } = await supabase
-        .from('users')
-        .update(updatedProfile)
-        .eq('id', user?.id)
-        .select()
+      // Save to Supabase database with timeout and retry logic
+      let retries = 3;
+      let lastError;
 
-      if (error) {
-        console.error('Supabase update error:', error)
-        throw new Error(`Failed to update profile: ${error.message}`)
+      while (retries > 0) {
+        try {
+          const { data, error } = await supabase
+            .from('users')
+            .update(updatedProfile)
+            .eq('id', user.id)
+            .select()
+
+          if (error) {
+            console.error('Supabase update error:', error);
+            
+            // If it's an RLS policy violation, provide specific guidance
+            if (error.code === '42501') {
+              throw new Error('Permission denied. Please check if Row Level Security is properly configured.');
+            }
+            
+            throw error;
+          }
+
+          console.log('Profile updated successfully:', data);
+
+          // Call the onSaveProfile prop if it exists
+          if (onSaveProfile) {
+            await onSaveProfile(updatedProfile);
+          }
+
+          // Refresh the user profile
+          if (refreshUserProfile) {
+            await refreshUserProfile();
+          }
+
+          setUserClickedEdit(false);
+          setSubmitSuccess("Seller information updated successfully!");
+          setSubmitError(null);
+          return; // Success, exit the function
+
+        } catch (error) {
+          lastError = error;
+          retries--;
+          
+          if (retries > 0) {
+            console.log(`Retrying... ${retries} attempts left`);
+            // Wait before retrying (exponential backoff)
+            await new Promise(resolve => setTimeout(resolve, 1000 * (3 - retries)));
+          }
+        }
       }
 
-      console.log('Profile updated successfully:', data)
-
-      // Call the onSaveProfile prop if it exists
-      if (onSaveProfile) {
-        await onSaveProfile(updatedProfile)
-      }
-
-      // Refresh the user profile
-      if (refreshUserProfile) {
-        await refreshUserProfile()
-      }
-
-      setUserClickedEdit(false)
-      setSubmitSuccess("Seller information updated successfully!")
-      setSubmitError(null)
+      // If we get here, all retries failed
+      throw lastError;
       
     } catch (error) {
-      console.error("Failed to save seller info:", error)
-      setSubmitError("Failed to update seller information. Please try again.")
-      setSubmitSuccess(null)
+      console.error("Failed to save seller info:", error);
+      
+      let errorMessage = "Failed to update seller information. Please try again.";
+      
+      if (error instanceof Error) {
+        if (error.message.includes('Failed to fetch') || error.message.includes('HTTP2')) {
+          errorMessage = "Network error. Please check your internet connection and try again.";
+        } else if (error.message.includes('Permission denied') || error.message.includes('RLS')) {
+          errorMessage = "Database permission error. Please contact support.";
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      setSubmitError(errorMessage);
+      setSubmitSuccess(null);
     }
   }
 
