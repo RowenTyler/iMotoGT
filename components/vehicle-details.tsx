@@ -878,9 +878,9 @@ export default function VehicleDetails({
             onClick={() => setActiveTab("review")}
           >
             Vehicle Review
-          </button>
+          </button>*/} /* Not for public until later updates*/
         </div>
-      </div>*/} /* Not for public until later updates*/
+      </div>
 
       {/* Main Content Section */}
       <div className="px-6 py-6 max-w-7xl mx-auto">
@@ -1036,8 +1036,8 @@ export default function VehicleDetails({
                 </div>
               </>
             )}
-          {/*
-            {activeTab === "report" && (
+          
+            {/*{activeTab === "report" && (
               <div className="relative">
                 <h2 className="text-2xl font-bold mb-4 text-[#3E5641] dark:text-white filter blur-sm">
                   Vehicle Report
@@ -1103,8 +1103,7 @@ export default function VehicleDetails({
                   </div>
                 </div>
               </div>
-            )}
-            */}
+            )}*/}
           </div>
 
           {/* Contact Seller Section */}
