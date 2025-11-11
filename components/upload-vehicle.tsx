@@ -15,7 +15,6 @@ import type { UserProfile } from "@/types/user"
 import type { Vehicle } from "@/lib/data"
 import { useUser } from "@/components/UserContext"
 import { vehicleService } from "@/lib/vehicle-service"
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 
 interface HeaderPropsOverride {
   onLoginClick?: () => void
@@ -83,10 +82,9 @@ export default function UploadVehicle({
   onCancel,
 }: UploadVehicleProps) {
   const router = useRouter()
-  const { user: authUser, userProfile, isLoading: userLoading, refreshUserProfile, updateProfile } = useUser()
+  const { user: authUser, userProfile, isLoading: userLoading } = useUser()
   const user = propUser || userProfile || authUser
   const profile = userProfile || propUser || authUser
-  const supabase = createClientComponentClient()
 
   const isProfileIncomplete =
     !profile?.firstName ||
@@ -316,10 +314,9 @@ export default function UploadVehicle({
     setSubmitError(null)
   }
 
-  const handleSellerInputChange = async (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleSellerInputChange = (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = event.target
-    const updated = { ...sellerFormData, [name]: value }
-    setSellerFormData(updated)
+    setSellerFormData((prev) => ({ ...prev, [name]: value }))
     setSubmitError(null)
   }
 
@@ -357,94 +354,33 @@ export default function UploadVehicle({
     setSubmitError(null)
   }
 
+  // SIMPLIFIED: Just use the onSaveProfile function that already works in settings
   const handleSaveSellerInfo = async () => {
     try {
-      // First check if user is authenticated
-      if (!user?.id) {
-        throw new Error("User not authenticated. Please log in again.")
-      }
-
-      // Validate required fields
       if (!sellerFormData.firstName?.trim() || !sellerFormData.lastName?.trim() || !sellerFormData.phone?.trim()) {
         setSubmitError("Please fill in all required fields (First Name, Last Name, Phone)")
         return
       }
 
-      const updatedProfile: any = {
-        first_name: sellerFormData.firstName.trim(),
-        last_name: sellerFormData.lastName.trim(),
-        phone: sellerFormData.phone.trim(),
-        suburb: sellerFormData.suburb?.trim() || "",
-        city: sellerFormData.city?.trim() || "",
-        province: sellerFormData.province?.trim() || "",
-        profile_pic: sellerFormData.profilePic || "",
+      const updatedProfile: Partial<UserProfile> = {
+        firstName: sellerFormData.firstName,
+        lastName: sellerFormData.lastName,
+        phone: sellerFormData.phone,
+        suburb: sellerFormData.suburb,
+        city: sellerFormData.city,
+        province: sellerFormData.province,
+        profilePic: sellerFormData.profilePic,
       }
 
-      const newSellerName =
-        sellerFormData.firstName && sellerFormData.lastName
-          ? `${sellerFormData.firstName} ${sellerFormData.lastName}`
-          : sellerFormData.firstName || sellerFormData.lastName
-            ? `${sellerFormData.firstName || ""}${sellerFormData.firstName && sellerFormData.lastName ? " " : ""}${sellerFormData.lastName || ""}`.trim()
-            : profile?.email?.split("@")[0] || ""
-
-      // Update local form data
-      setFormData((prev) => ({
-        ...prev,
-        sellerName: newSellerName,
-        sellerPhone: sellerFormData.phone,
-        sellerSuburb: sellerFormData.suburb,
-        sellerCity: sellerFormData.city,
-        sellerProvince: sellerFormData.province,
-        sellerProfilePic: sellerFormData.profilePic,
-      }))
-
-      // Save to Supabase database
-      const { data, error } = await supabase
-        .from('users')
-        .update(updatedProfile)
-        .eq('id', user.id)
-        .select()
-
-      if (error) {
-        throw error
-      }
-
-      // Update profile in context for real-time sync
-      if (updateProfile) {
-        await updateProfile({
-          firstName: sellerFormData.firstName,
-          lastName: sellerFormData.lastName,
-          phone: sellerFormData.phone,
-          suburb: sellerFormData.suburb,
-          city: sellerFormData.city,
-          province: sellerFormData.province,
-          profilePic: sellerFormData.profilePic,
-        })
-      }
-      
-      // Also call onSaveProfile if provided (for parent component updates)
+      // Simply call onSaveProfile - let the parent component handle the database update
       if (onSaveProfile) {
-        await onSaveProfile({
-          firstName: sellerFormData.firstName,
-          lastName: sellerFormData.lastName,
-          phone: sellerFormData.phone,
-          suburb: sellerFormData.suburb,
-          city: sellerFormData.city,
-          province: sellerFormData.province,
-          profilePic: sellerFormData.profilePic,
-        })
-      }
-
-      // Force refresh the user profile data
-      if (refreshUserProfile) {
-        await refreshUserProfile()
+        await onSaveProfile(updatedProfile)
       }
 
       setUserClickedEdit(false)
       setSubmitSuccess("Seller information updated successfully!")
       setSubmitError(null)
       
-      // Clear success message after 3 seconds
       setTimeout(() => {
         setSubmitSuccess(null)
       }, 3000)
