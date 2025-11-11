@@ -860,11 +860,12 @@ export default function VehicleDetails({
           >
             Details
           </button>
+      {/*
           <button
             className={`py-3 font-medium filter blur-sm ${activeTab === "report" ? "border-b-2 border-[#FF6700] dark:border-[#FF7D33] text-[#3E5641] dark:text-white" : "text-[#6F7F69] dark:text-gray-400 hover:text-[#3E5641] dark:hover:text-white"}`}
             onClick={() => setActiveTab("report")}
           >
-      {/*    
+          
             Vehicle Report
           </button>
           <button
