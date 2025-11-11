@@ -864,7 +864,7 @@ export default function VehicleDetails({
             className={`py-3 font-medium filter blur-sm ${activeTab === "report" ? "border-b-2 border-[#FF6700] dark:border-[#FF7D33] text-[#3E5641] dark:text-white" : "text-[#6F7F69] dark:text-gray-400 hover:text-[#3E5641] dark:hover:text-white"}`}
             onClick={() => setActiveTab("report")}
           >
-          {/*
+          
             Vehicle Report
           </button>
           <button
@@ -878,7 +878,7 @@ export default function VehicleDetails({
             onClick={() => setActiveTab("review")}
           >
             Vehicle Review
-          </button>*/} /* Not for public until later updates*/
+          </button>
         </div>
       </div>
 
@@ -1037,7 +1037,9 @@ export default function VehicleDetails({
               </>
             )}
           
-            {/*{activeTab === "report" && (
+            {/* Commented out sections - keeping the comments but fixing syntax */}
+            {/*
+            {activeTab === "report" && (
               <div className="relative">
                 <h2 className="text-2xl font-bold mb-4 text-[#3E5641] dark:text-white filter blur-sm">
                   Vehicle Report
@@ -1060,7 +1062,9 @@ export default function VehicleDetails({
                 </div>
               </div>
             )}
+            */}
 
+            {/*
             {activeTab === "insurance" && (
               <div className="relative">
                 <h2 className="text-2xl font-bold mb-4 text-[#3E5641] dark:text-white filter blur-sm">
@@ -1084,7 +1088,9 @@ export default function VehicleDetails({
                 </div>
               </div>
             )}
+            */}
 
+            {/*
             {activeTab === "review" && (
               <div className="relative">
                 <h2 className="text-2xl font-bold mb-4 text-[#3E5641] dark:text-white filter blur-sm">
@@ -1103,7 +1109,8 @@ export default function VehicleDetails({
                   </div>
                 </div>
               </div>
-            )}*/}
+            )}
+            */}
           </div>
 
           {/* Contact Seller Section */}
