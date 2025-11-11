@@ -119,7 +119,6 @@ export default function UploadVehicle({
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
   const [dropTargetIndex, setDropTargetIndex] = useState<number | null>(null)
 
-  // Add condition field to formData like in the first code
   const [formData, setFormData] = useState({
     make: "",
     model: "",
@@ -132,7 +131,7 @@ export default function UploadVehicle({
     bodyType: "",
     variant: "",
     description: "",
-    condition: "good", // Added condition field from first code
+    condition: "good",
     sellerName:
       profile?.firstName && profile?.lastName
         ? `${profile.firstName} ${profile.lastName}`
@@ -189,7 +188,7 @@ export default function UploadVehicle({
         bodyType: existingVehicle.body_type || "",
         variant: existingVehicle.variant || "",
         description: existingVehicle.description || "",
-        condition: existingVehicle.condition || "good", // Added condition
+        condition: existingVehicle.condition || "good",
         sellerName: existingVehicle.seller_name || "",
         sellerEmail: existingVehicle.seller_email || "",
         sellerPhone: existingVehicle.seller_phone || "",
@@ -317,19 +316,11 @@ export default function UploadVehicle({
     setSubmitError(null)
   }
 
-  // Updated to match first code's auto-save behavior (commented out)
   const handleSellerInputChange = async (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = event.target
     const updated = { ...sellerFormData, [name]: value }
     setSellerFormData(updated)
-    // Auto-save to profile on every change (commented out like in first code)
-    try {
-      // if (updateProfile) await updateProfile(updated) // Commented out for testing auto-save issue
-      // if (onSaveProfile) await onSaveProfile(updated) // Commented out for testing auto-save issue
-    } catch (error) {
-      console.error("Failed to auto-save seller info:", error)
-      setSubmitError("Failed to auto-save seller information. Please try again.")
-    }
+    setSubmitError(null)
   }
 
   const handleEngineCapacitySearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -366,7 +357,6 @@ export default function UploadVehicle({
     setSubmitError(null)
   }
 
-  // Updated to match first code's handleSaveSellerInfo
   const handleSaveSellerInfo = async () => {
     try {
       const updatedProfile: Partial<UserProfile> = {
@@ -568,7 +558,6 @@ export default function UploadVehicle({
       }
     }
 
-    // Updated validation to include condition like in first code
     if (
       !formData.make ||
       !formData.model ||
@@ -600,7 +589,6 @@ export default function UploadVehicle({
         setUploadProgress((prev) => Math.min(prev + 10, 90))
       }, 200)
 
-      // Match first code's approach - vehicle data only contains form data and images
       const vehicleData = { ...formData, images: vehicleImages }
 
       let result: Vehicle | null
@@ -650,35 +638,12 @@ export default function UploadVehicle({
     )
   }
 
-  // Add email verification check like in first code
-  if (!authUser || !authUser.email_confirmed_at) {
+  // REMOVED: Email verification check block that was blocking Google users
+
+  if (!authUser) {
     return (
-      <div className="min-h-screen bg-[var(--light-bg)] dark:bg-[var(--dark-bg)] flex flex-col">
-        <Header
-          user={user}
-          onLoginClick={handleLogin}
-          onDashboardClick={handleDashboard}
-          onGoHome={handleGoHome}
-          onShowAllCars={handleShowAllCars}
-          onGoToSellPage={handleGoToSell}
-          onSignOut={handleSignOutClick}
-          transparent={false}
-        />
-        <main className="flex-1 flex flex-col items-center justify-center text-center p-4">
-          <AlertCircle className="w-16 h-16 text-yellow-500 mb-4" />
-          <h1 className="text-2xl font-bold mb-2 text-[#3E5641] dark:text-white">Account Not Verified</h1>
-          <p className="max-w-md mb-6 text-gray-600 dark:text-gray-300">
-            You must verify your email address before you can list a vehicle for sale. Please check your inbox for a
-            verification link sent to <strong>{authUser?.email}</strong>.
-          </p>
-          <Button
-            onClick={onBack || (() => router.push("/dashboard"))}
-            className="bg-[#FF6700] text-white hover:bg-[#FF6700]/90 dark:bg-[#FF7D33] dark:hover:bg-[#FF7D33]/90"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Dashboard
-          </Button>
-        </main>
+      <div className="min-h-screen bg-[var(--light-bg)] dark:bg-[var(--dark-bg)] flex items-center justify-center">
+        <p className="text-[#3E5641] dark:text-white">Redirecting to login...</p>
       </div>
     )
   }
@@ -858,7 +823,6 @@ export default function UploadVehicle({
                 )}
               </Card>
               
-              {/* Seller Information Card - Updated to match first code */}
               {!editMode && (
                 <Card className="rounded-3xl overflow-hidden p-6 flex flex-col w-full border-[#9FA791]/20 dark:border-[#4A4D45]/20 bg-white dark:bg-[#2A352A]">
                   {isEditingSeller && isProfileIncomplete && (
@@ -1285,7 +1249,6 @@ export default function UploadVehicle({
                       </div>
                     </div>
                   </div>
-                  {/* Add Condition Field */}
                   <div>
                     <h3 className="text-lg font-semibold mb-3 text-[#3E5641] dark:text-white">Vehicle Condition</h3>
                     <div className="space-y-1.5">
