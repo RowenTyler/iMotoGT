@@ -4,7 +4,7 @@ import type React from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { useState, useRef, useEffect, type ElementType } from "react"
-import { ArrowLeft, Camera, Save, AlertCircle, XCircle, Edit, Check, Grip, Car, Truck, Bike } from "lucide-react"
+import { ArrowLeft, Camera, Save, AlertCircle, Edit, Check, Car, Truck, Bike } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -12,10 +12,7 @@ import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Header } from "@/components/ui/header"
 import type { UserProfile } from "@/types/user"
-import type { Vehicle } from "@/lib/data"
 import { useUser } from "@/components/UserContext"
-import { vehicleService } from "@/lib/vehicle-service"
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 
 interface HeaderPropsOverride {
   onLoginClick?: () => void
@@ -27,16 +24,12 @@ interface HeaderPropsOverride {
 }
 
 interface UploadVehicleProps {
-  user?: UserProfile
-  onBack?: () => void
-  onVehicleSubmit?: (vehicleData: any) => Promise<void>
+  user: UserProfile
+  onBack: () => void
+  onVehicleSubmit: (vehicleData: any) => Promise<void>
   onSaveProfile?: (updatedProfile: Partial<UserProfile>) => Promise<void>
   onSignOut?: () => void
   HeaderPropsOverride?: HeaderPropsOverride
-  editMode?: boolean
-  existingVehicle?: Vehicle
-  onVehicleUpdate?: (vehicle: Vehicle) => void
-  onCancel?: () => void
 }
 
 const generateEngineCapacityOptions = () => {
@@ -71,30 +64,20 @@ const bodyTypeOptionsList: { value: string; label: string; IconComponent: Elemen
 ]
 
 export default function UploadVehicle({
-  user: propUser,
+  user,
   onBack,
   onVehicleSubmit,
   onSaveProfile,
   onSignOut,
   HeaderPropsOverride,
-  editMode = false,
-  existingVehicle,
-  onVehicleUpdate,
-  onCancel,
 }: UploadVehicleProps) {
   const router = useRouter()
-  const { user: authUser, userProfile, isLoading: userLoading, refreshUserProfile } = useUser()
-  const user = propUser || userProfile || authUser
-  const profile = userProfile || propUser || authUser
-  const supabase = createClientComponentClient()
-
+  // Use userProfile from context for real-time sync
+  const { user: authUser, userProfile, loading: userLoading, updateProfile } = useUser()
+  // Use userProfile if available, else fallback to user prop
+  const profile = userProfile || user
   const isProfileIncomplete =
-    !profile?.firstName ||
-    !profile?.lastName ||
-    !profile?.phone ||
-    !profile?.suburb ||
-    !profile?.city ||
-    !profile?.province
+    !profile.firstName || !profile.lastName || !profile.phone || !profile.suburb || !profile.city || !profile.province
 
   const handleLogin = HeaderPropsOverride?.onLoginClick ?? (() => router.push("/login"))
   const handleDashboard =
@@ -119,6 +102,7 @@ export default function UploadVehicle({
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
   const [dropTargetIndex, setDropTargetIndex] = useState<number | null>(null)
 
+  // Auto-populate seller info from user profile
   const [formData, setFormData] = useState({
     make: "",
     model: "",
@@ -131,28 +115,33 @@ export default function UploadVehicle({
     bodyType: "",
     variant: "",
     description: "",
+<<<<<<< HEAD
+    condition: "good",
+    sellerName: profile.firstName && profile.lastName ? `${profile.firstName} ${profile.lastName}` : profile.firstName || profile.lastName || profile.email.split("@")[0],
+=======
     sellerName:
-      profile?.firstName && profile?.lastName
+      profile.firstName && profile.lastName
         ? `${profile.firstName} ${profile.lastName}`
-        : profile?.firstName || profile?.lastName || profile?.email?.split("@")[0] || "",
-    sellerEmail: profile?.email || "",
-    sellerPhone: profile?.phone || "",
-    sellerSuburb: profile?.suburb || "",
-    sellerCity: profile?.city || "",
-    sellerProvince: profile?.province || "",
-    sellerProfilePic: profile?.profilePic || "",
+        : profile.firstName || profile.lastName || profile.email.split("@")[0],
+>>>>>>> 261c80144a5d6af2b0a3a90645e912b994bbb2f0
+    sellerEmail: profile.email,
+    sellerPhone: profile.phone || "",
+    sellerSuburb: profile.suburb || "",
+    sellerCity: profile.city || "",
+    sellerProvince: profile.province || "",
+    sellerProfilePic: profile.profilePic || "",
   })
 
   const [userClickedEdit, setUserClickedEdit] = useState(false)
   const isEditingSeller = isProfileIncomplete || userClickedEdit
   const [sellerFormData, setSellerFormData] = useState({
-    firstName: profile?.firstName || "",
-    lastName: profile?.lastName || "",
-    phone: profile?.phone || "",
-    suburb: profile?.suburb || "",
-    city: profile?.city || "",
-    province: profile?.province || "",
-    profilePic: profile?.profilePic || "",
+    firstName: profile.firstName || "",
+    lastName: profile.lastName || "",
+    phone: profile.phone || "",
+    suburb: profile.suburb || "",
+    city: profile.city || "",
+    province: profile.province || "",
+    profilePic: profile.profilePic || "",
   })
 
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -174,59 +163,28 @@ export default function UploadVehicle({
   const [showBodyTypeDropdown, setShowBodyTypeDropdown] = useState(false)
 
   useEffect(() => {
-    if (editMode && existingVehicle) {
-      setFormData({
-        make: existingVehicle.make || "",
-        model: existingVehicle.model || "",
-        year: existingVehicle.year?.toString() || "",
-        price: existingVehicle.price?.toString() || "",
-        mileage: existingVehicle.mileage?.toString() || "",
-        transmission: existingVehicle.transmission || "",
-        fuel: existingVehicle.fuel || "",
-        engineCapacity: existingVehicle.engine_capacity || "",
-        bodyType: existingVehicle.body_type || "",
-        variant: existingVehicle.variant || "",
-        description: existingVehicle.description || "",
-        sellerName: existingVehicle.seller_name || "",
-        sellerEmail: existingVehicle.seller_email || "",
-        sellerPhone: existingVehicle.seller_phone || "",
-        sellerSuburb: existingVehicle.seller_suburb || "",
-        sellerCity: existingVehicle.seller_city || "",
-        sellerProvince: existingVehicle.seller_province || "",
-        sellerProfilePic: existingVehicle.seller_profile_pic || "",
-      })
-
-      if (existingVehicle.images && existingVehicle.images.length > 0) {
-        setVehicleImages(existingVehicle.images)
-      }
-    }
-  }, [editMode, existingVehicle])
-
-  useEffect(() => {
-    if (profile) {
-      setFormData((prev) => ({
-        ...prev,
-        sellerName:
-          profile.firstName && profile.lastName
-            ? `${profile.firstName} ${profile.lastName}`
-            : profile.firstName || profile.lastName || profile.email?.split("@")[0] || "",
-        sellerEmail: profile.email || "",
-        sellerPhone: profile.phone || "",
-        sellerSuburb: profile.suburb || "",
-        sellerCity: profile.city || "",
-        sellerProvince: profile.province || "",
-        sellerProfilePic: profile.profilePic || "",
-      }))
-      setSellerFormData({
-        firstName: profile.firstName || "",
-        lastName: profile.lastName || "",
-        phone: profile.phone || "",
-        suburb: profile.suburb || "",
-        city: profile.city || "",
-        province: profile.province || "",
-        profilePic: profile.profilePic || "",
-      })
-    }
+    setFormData((prev) => ({
+      ...prev,
+      sellerName:
+        profile.firstName && profile.lastName
+          ? `${profile.firstName} ${profile.lastName}`
+          : profile.firstName || profile.lastName || profile.email.split("@")[0],
+      sellerEmail: profile.email,
+      sellerPhone: profile.phone || "",
+      sellerSuburb: profile.suburb || "",
+      sellerCity: profile.city || "",
+      sellerProvince: profile.province || "",
+      sellerProfilePic: profile.profilePic || "",
+    }))
+    setSellerFormData({
+      firstName: profile.firstName || "",
+      lastName: profile.lastName || "",
+      phone: profile.phone || "",
+      suburb: profile.suburb || "",
+      city: profile.city || "",
+      province: profile.province || "",
+      profilePic: profile.profilePic || "",
+    })
   }, [profile])
 
   useEffect(() => {
@@ -314,10 +272,18 @@ export default function UploadVehicle({
     setSubmitError(null)
   }
 
-  const handleSellerInputChange = (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleSellerInputChange = async (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = event.target
-    setSellerFormData((prev) => ({ ...prev, [name]: value }))
-    setSubmitError(null)
+    const updated = { ...sellerFormData, [name]: value }
+    setSellerFormData(updated)
+    // Auto-save to profile on every change
+    try {
+      // if (updateProfile) await updateProfile(updated) // Commented out for testing auto-save issue
+      // if (onSaveProfile) await onSaveProfile(updated) // Commented out for testing auto-save issue
+    } catch (error) {
+      console.error("Failed to auto-save seller info:", error)
+      setSubmitError("Failed to auto-save seller information. Please try again.")
+    }
   }
 
   const handleEngineCapacitySearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -354,138 +320,41 @@ export default function UploadVehicle({
     setSubmitError(null)
   }
 
-  // --------- FIXED: Save seller info to Supabase with better error handling -----------
   const handleSaveSellerInfo = async () => {
-  try {
-    console.log("💾 Save button clicked");
-    
-    // First check if user is authenticated and has an ID
-    if (!user?.id) {
-      throw new Error("User not authenticated. Please log in again.");
-    }
-
-    // Validate required fields
-    if (!sellerFormData.firstName || !sellerFormData.lastName || !sellerFormData.phone) {
-      setSubmitError("Please fill in all required fields (First Name, Last Name, Phone)");
-      return;
-    }
-
-    const updatedProfile: any = {
-      first_name: sellerFormData.firstName.trim(),
-      last_name: sellerFormData.lastName.trim(),
-      phone: sellerFormData.phone.trim(),
-      suburb: sellerFormData.suburb?.trim() || "",
-      city: sellerFormData.city?.trim() || "",
-      province: sellerFormData.province?.trim() || "",
-      profile_pic: sellerFormData.profilePic || "",
-    }
-
-    console.log("📝 Updating profile with:", updatedProfile);
-    console.log("👤 User ID:", user.id);
-
-    // Save to Supabase database with timeout and retry logic
-    let retries = 3;
-    let lastError;
-
-    while (retries > 0) {
-      try {
-        const { data, error } = await supabase
-          .from('users')
-          .update(updatedProfile)
-          .eq('id', user.id)
-          .select()
-
-        if (error) {
-          console.error('❌ Supabase update error:', error);
-          
-          // If it's an RLS policy violation, provide specific guidance
-          if (error.code === '42501') {
-            throw new Error('Permission denied. Please try logging out and back in.');
-          }
-          
-          throw error;
-        }
-
-        console.log('✅ Profile updated successfully:', data);
-
-        // Update local formData shown in the upload form
-        const newSellerName = `${sellerFormData.firstName} ${sellerFormData.lastName}`.trim()
-        
-        setFormData((prev) => ({
-          ...prev,
-          sellerName: newSellerName,
-          sellerPhone: sellerFormData.phone,
-          sellerSuburb: sellerFormData.suburb,
-          sellerCity: sellerFormData.city,
-          sellerProvince: sellerFormData.province,
-          sellerProfilePic: sellerFormData.profilePic,
-        }))
-
-        // Call the onSaveProfile prop if it exists
-        if (onSaveProfile) {
-          console.log("🔄 Calling onSaveProfile prop");
-          await onSaveProfile({
-            firstName: sellerFormData.firstName,
-            lastName: sellerFormData.lastName,
-            phone: sellerFormData.phone,
-            suburb: sellerFormData.suburb,
-            city: sellerFormData.city,
-            province: sellerFormData.province,
-            profilePic: sellerFormData.profilePic,
-          });
-        }
-
-        // Refresh the user profile in context
-        if (refreshUserProfile) {
-          console.log("🔄 Refreshing user profile");
-          await refreshUserProfile();
-        }
-
-        setUserClickedEdit(false);
-        setSubmitSuccess("Seller information updated successfully!");
-        setSubmitError(null);
-        
-        // Clear success message after 3 seconds
-        setTimeout(() => {
-          setSubmitSuccess(null);
-        }, 3000);
-        
-        return; // Success, exit the function
-
-      } catch (error) {
-        lastError = error;
-        retries--;
-        
-        if (retries > 0) {
-          console.log(`⏳ Retrying... ${retries} attempts left`);
-          // Wait before retrying (exponential backoff)
-          await new Promise(resolve => setTimeout(resolve, 1000 * (3 - retries)));
-        }
+    try {
+      const updatedProfile: Partial<UserProfile> = {
+        firstName: sellerFormData.firstName,
+        lastName: sellerFormData.lastName,
+        phone: sellerFormData.phone,
+        suburb: sellerFormData.suburb,
+        city: sellerFormData.city,
+        province: sellerFormData.province,
+        profilePic: sellerFormData.profilePic,
       }
+      const newSellerName =
+        sellerFormData.firstName && sellerFormData.lastName
+          ? `${sellerFormData.firstName} ${sellerFormData.lastName}`
+          : sellerFormData.firstName || sellerFormData.lastName
+            ? `${sellerFormData.firstName || ""}${sellerFormData.firstName && sellerFormData.lastName ? " " : ""}${sellerFormData.lastName || ""}`.trim()
+            : profile.email.split("@")[0]
+      setFormData((prev) => ({
+        ...prev,
+        sellerName: newSellerName,
+        sellerPhone: sellerFormData.phone,
+        sellerSuburb: sellerFormData.suburb,
+        sellerCity: sellerFormData.city,
+        sellerProvince: sellerFormData.province,
+        sellerProfilePic: sellerFormData.profilePic,
+      }))
+      // Update profile in context for real-time sync
+      if (updateProfile) await updateProfile(updatedProfile)
+      if (onSaveProfile) await onSaveProfile(updatedProfile)
+      setUserClickedEdit(false)
+    } catch (error) {
+      console.error("Failed to save seller info:", error)
+      setSubmitError("Failed to update seller information. Please try again.")
     }
-
-    // If we get here, all retries failed
-    throw lastError;
-    
-  } catch (error) {
-    console.error("❌ Failed to save seller info:", error);
-    
-    let errorMessage = "Failed to update seller information. Please try again.";
-    
-    if (error instanceof Error) {
-      if (error.message.includes('Failed to fetch') || error.message.includes('HTTP2')) {
-        errorMessage = "Network error. Please check your internet connection and try again.";
-      } else if (error.message.includes('Permission denied') || error.message.includes('RLS')) {
-        errorMessage = "Database permission error. Please try logging out and back in.";
-      } else {
-        errorMessage = error.message;
-      }
-    }
-    
-    setSubmitError(errorMessage);
-    setSubmitSuccess(null);
   }
-}
 
   const compressImage = (file: File, maxWidth = 1200, quality = 0.8): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -498,14 +367,16 @@ export default function UploadVehicle({
           return
         }
 
-        const img = document.createElement("img")
+        const img = document.createElement("img") // Use createElement instead of new Image()
 
         img.onload = () => {
           try {
+            // Calculate new dimensions
             const ratio = Math.min(maxWidth / img.width, maxWidth / img.height)
             canvas.width = img.width * ratio
             canvas.height = img.height * ratio
 
+            // Draw and compress
             ctx?.drawImage(img, 0, 0, canvas.width, canvas.height)
 
             canvas.toBlob(
@@ -558,8 +429,10 @@ export default function UploadVehicle({
               throw new Error(`File "${file.name}" is not a valid image.`)
             }
 
+            // Update progress
             setImageUploadProgress(((index + 1) / fileArray.length) * 100)
 
+            // Compress image for faster upload with better error handling
             return await compressImage(file, 1200, 0.85)
           } catch (error) {
             throw new Error(`Processing ${file.name}: ${error instanceof Error ? error.message : "Unknown error"}`)
@@ -627,26 +500,19 @@ export default function UploadVehicle({
     setSubmitSuccess(null)
     setUploadProgress(0)
 
-    if (!editMode && isEditingSeller) {
+    if (isEditingSeller) {
       setSubmitError("Please save your updated seller information before listing a vehicle.")
       setIsSubmitting(false)
       return
     }
 
-    if (!editMode) {
-      const isProfileStillIncomplete =
-        !profile?.firstName ||
-        !profile?.lastName ||
-        !profile?.phone ||
-        !profile?.suburb ||
-        !profile?.city ||
-        !profile?.province
-      if (isProfileStillIncomplete) {
-        setSubmitError("Your seller profile is incomplete. Please edit and save your information to proceed.")
-        setUserClickedEdit(true)
-        setIsSubmitting(false)
-        return
-      }
+    const isProfileStillIncomplete =
+      !profile.firstName || !profile.lastName || !profile.phone || !profile.suburb || !profile.city || !profile.province
+    if (isProfileStillIncomplete) {
+      setSubmitError("Your seller profile is incomplete. Please edit and save your information to proceed.")
+      setUserClickedEdit(true)
+      setIsSubmitting(false)
+      return
     }
 
     if (
@@ -657,7 +523,8 @@ export default function UploadVehicle({
       !formData.mileage ||
       !formData.transmission ||
       !formData.fuel ||
-      !formData.engineCapacity
+      !formData.engineCapacity ||
+      !formData.condition
     ) {
       setSubmitError("Please fill in all required fields.")
       setIsSubmitting(false)
@@ -675,6 +542,13 @@ export default function UploadVehicle({
     }
 
     try {
+<<<<<<< HEAD
+      // The vehicleData should only contain form data and images.
+      // Seller information is automatically fetched on the server-side using the user's session.
+      const vehicleData = { ...formData, images: vehicleImages }
+
+      await onVehicleSubmit(vehicleData)
+=======
       const progressInterval = setInterval(() => {
         setUploadProgress((prev) => Math.min(prev + 10, 90))
       }, 200)
@@ -689,40 +563,18 @@ export default function UploadVehicle({
         sellerCity: formData.sellerCity,
         sellerProvince: formData.sellerProvince,
         sellerProfilePic: formData.sellerProfilePic,
-        user_id: user?.id,
-        status: "active",
       }
 
-      let result: Vehicle | null
-
-      if (editMode && existingVehicle) {
-        result = await vehicleService.updateVehicle(existingVehicle.id, vehicleDataWithSeller)
-        if (result && onVehicleUpdate) {
-          onVehicleUpdate(result)
-        }
-      } else {
-        if (onVehicleSubmit) {
-          await onVehicleSubmit(vehicleDataWithSeller)
-        } else {
-          result = await vehicleService.createVehicle(vehicleDataWithSeller)
-        }
-      }
+      await onVehicleSubmit(vehicleDataWithSeller)
 
       clearInterval(progressInterval)
       setUploadProgress(100)
 
-      setSubmitSuccess(
-        editMode
-          ? "Vehicle updated successfully! Redirecting..."
-          : "Vehicle listed successfully! Redirecting to your dashboard...",
-      )
+>>>>>>> 261c80144a5d6af2b0a3a90645e912b994bbb2f0
+      setSubmitSuccess("Vehicle listed successfully! Redirecting to your dashboard...")
       setTimeout(() => {
-        if (editMode && onCancel) {
-          onCancel()
-        } else {
-          router.push("/dashboard")
-        }
-      }, 1500)
+        router.push("/dashboard")
+      }, 1500) // Reduced redirect delay for faster flow
     } catch (error) {
       console.error("Failed to submit vehicle:", error)
       setSubmitError(error instanceof Error ? error.message : String(error) || "Failed to list vehicle.")
@@ -735,23 +587,39 @@ export default function UploadVehicle({
   if (userLoading) {
     return (
       <div className="min-h-screen bg-[var(--light-bg)] dark:bg-[var(--dark-bg)] flex items-center justify-center">
-        <p className="text-[#3E5641] dark:text-white">Loading...</p>
+        <p>Loading...</p>
       </div>
     )
   }
 
-  if (!authUser) {
+  if (!authUser || !authUser.email_confirmed_at) {
     return (
-      <div className="min-h-screen bg-[var(--light-bg)] dark:bg-[var(--dark-bg)] flex items-center justify-center">
-        <p className="text-[#3E5641] dark:text-white">Redirecting to login...</p>
-      </div>
-    )
-  }
-
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-[var(--light-bg)] dark:bg-[var(--dark-bg)] flex items-center justify-center">
-        <p className="text-[#3E5641] dark:text-white">Loading profile...</p>
+      <div className="min-h-screen bg-[var(--light-bg)] dark:bg-[var(--dark-bg)] flex flex-col">
+        <Header
+          user={user}
+          onLoginClick={handleLogin}
+          onDashboardClick={handleDashboard}
+          onGoHome={handleGoHome}
+          onShowAllCars={handleShowAllCars}
+          onGoToSellPage={handleGoToSell}
+          onSignOut={handleSignOutClick}
+          transparent={false}
+        />
+        <main className="flex-1 flex flex-col items-center justify-center text-center p-4">
+          <AlertCircle className="w-16 h-16 text-yellow-500 mb-4" />
+          <h1 className="text-2xl font-bold mb-2 text-[#3E5641] dark:text-white">Account Not Verified</h1>
+          <p className="max-w-md mb-6 text-gray-600 dark:text-gray-300">
+            You must verify your email address before you can list a vehicle for sale. Please check your inbox for a
+            verification link sent to <strong>{authUser?.email}</strong>.
+          </p>
+          <Button
+            onClick={onBack}
+            className="bg-[#FF6700] text-white hover:bg-[#FF6700]/90 dark:bg-[#FF7D33] dark:hover:bg-[#FF7D33]/90"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Dashboard
+          </Button>
+        </main>
       </div>
     )
   }
@@ -769,17 +637,11 @@ export default function UploadVehicle({
         transparent={false}
       />
       <main className="flex-1 px-4 sm:px-6 pb-6 overflow-auto pt-20 md:pt-24">
-        <Button
-          variant="ghost"
-          onClick={onBack || onCancel || (() => router.push("/dashboard"))}
-          className="mb-4 -ml-2 text-[#FF6700] dark:text-[#FF7D33]"
-        >
+        <Button variant="ghost" onClick={onBack} className="mb-4 -ml-2 text-[#FF6700] dark:text-[#FF7D33]">
           <ArrowLeft className="h-5 w-5 mr-2" />
-          {editMode ? "Cancel Edit" : "Back to Dashboard"}
+          Back to Dashboard
         </Button>
-        <h1 className="text-3xl font-bold mb-6 text-[#3E5641] dark:text-white">
-          {editMode ? "Edit Vehicle Listing" : "List Your Vehicle"}
-        </h1>
+        <h1 className="text-3xl font-bold mb-6 text-[#3E5641] dark:text-white">List Your Vehicle</h1>
         <div className="max-w-6xl mx-auto">
           {submitError && (
             <Alert variant="destructive" className="mb-4">
@@ -812,9 +674,7 @@ export default function UploadVehicle({
           {isSubmitting && uploadProgress > 0 && (
             <div className="mb-4 p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-green-700 dark:text-green-300">
-                  {editMode ? "Updating vehicle..." : "Uploading vehicle..."}
-                </span>
+                <span className="text-sm font-medium text-green-700 dark:text-green-300">Uploading vehicle...</span>
                 <span className="text-sm text-green-600 dark:text-green-400">{Math.round(uploadProgress)}%</span>
               </div>
               <div className="w-full bg-green-200 dark:bg-green-800 rounded-full h-2">
@@ -879,301 +739,213 @@ export default function UploadVehicle({
                       </h3>
                       <p className="text-xs text-gray-500 dark:text-gray-400">Drag to reorder • First image is main</p>
                     </div>
-                    <div className="grid grid-cols-3 gap-3 max-h-60 overflow-y-auto p-1">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 max-h-96 overflow-y-auto">
                       {vehicleImages.map((image, index) => (
-                        <div
-                          key={index}
-                          className={`relative aspect-square overflow-hidden rounded-lg group cursor-move ${draggedIndex === index ? "opacity-50 scale-95" : ""} ${dropTargetIndex === index ? "ring-2 ring-[#FF6700] dark:ring-[#FF7D33]" : ""}`}
-                          draggable
-                          onDragStart={() => handleDragStart(index)}
-                          onDragEnter={() => handleDragEnter(index)}
-                          onDragOver={(e) => e.preventDefault()}
-                          onDragEnd={handleDragEnd}
-                        >
-                          <div className="absolute inset-0 flex items-center justify-center z-10 opacity-0 group-hover:opacity-100 bg-black/20 transition-opacity">
-                            <Grip className="w-5 h-5 text-white" />
-                          </div>
-                          <Image
+                        <div key={index} className="relative group">
+                          <img
                             src={image || "/placeholder.svg"}
-                            alt={`Vehicle image ${index + 1}`}
-                            layout="fill"
-                            objectFit="cover"
-                            unoptimized
-                            className="object-cover"
+                            alt={`Vehicle ${index + 1}`}
+                            className="w-full h-24 sm:h-32 object-cover rounded-lg"
+                            loading="lazy" // Added lazy loading for better performance
                           />
                           <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleRemoveImage(index)
-                            }}
-                            className="absolute top-1 right-1 bg-red-500/80 hover:bg-red-600/90 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity z-20"
-                            aria-label={`Remove image ${index + 1}`}
+                            type="button"
+                            onClick={() => handleRemoveImage(index)}
+                            className="absolute -top-2 -right-2 bg-red-500 hover:bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                            disabled={isSubmitting || isProcessingImages}
                           >
-                            <XCircle className="w-4 h-4" />
+                            ×
                           </button>
-                          {index === 0 && (
-                            <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs py-1 text-center">
-                              Main Image
-                            </div>
-                          )}
                         </div>
                       ))}
                     </div>
                   </div>
                 )}
               </Card>
-              {!editMode && (
-                <Card className="rounded-3xl overflow-hidden p-6 flex flex-col w-full border-[#9FA791]/20 dark:border-[#4A4D45]/20 bg-white dark:bg-[#2A352A] mb-6">
-
-                  {isEditingSeller && isProfileIncomplete && (
-                    <Alert
-                      variant="default"
-                      className="mb-4 bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-500/30"
+              <Card className="rounded-3xl overflow-hidden p-6 flex flex-col w-full border-[#9FA791]/20 dark:border-[#4A4D45]/20 bg-white dark:bg-[#2A352A]">
+                {isEditingSeller && isProfileIncomplete && (
+                  <Alert
+                    variant="default"
+                    className="mb-4 bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-500/30"
+                  >
+                    <AlertCircle className="h-4 w-4 text-yellow-600" />
+                    <AlertDescription className="text-yellow-800 dark:text-yellow-200">
+                      Your seller profile is incomplete. Please fill out all fields and save before listing a vehicle.
+                    </AlertDescription>
+                  </Alert>
+                )}
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-xl font-bold text-[#3E5641] dark:text-white">Seller Information</h2>
+                  {!isEditingSeller ? (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-[#FF6700] dark:text-[#FF7D33]"
+                      onClick={() => setUserClickedEdit(true)}
                     >
-                      <AlertCircle className="h-4 w-4 text-yellow-600" />
-                      <AlertDescription className="text-yellow-800 dark:text-yellow-200">
-                        Your seller profile is incomplete. Please fill out all fields and save before listing a vehicle.
-                      </AlertDescription>
-                    </Alert>
+                      <Edit className="h-4 w-4 mr-1" />
+                      Edit
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-green-600 dark:text-green-400"
+                      onClick={handleSaveSellerInfo}
+                    >
+                      <Check className="h-4 w-4 mr-1" />
+                      Save
+                    </Button>
                   )}
-
-                  <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-xl font-bold text-[#3E5641] dark:text-white">
-                      Seller Information
-                    </h2>
-
-                    {!isEditingSeller ? (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-[#FF6700] dark:text-[#FF7D33]"
-                        onClick={() => setUserClickedEdit(true)}
-                        disabled={isSubmitting}
-                      >
-                        <Edit className="h-4 w-4 mr-1" />
-                        Edit
-                      </Button>
-                    ) : (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20"
-                        onClick={handleSaveSellerInfo}
-                        disabled={
-                          isSubmitting ||
-                          !sellerFormData.firstName?.trim() ||
-                          !sellerFormData.lastName?.trim() ||
-                          !sellerFormData.phone?.trim()
-                        }
-                      >
-                        <Check className="h-4 w-4 mr-1" />
-                        Save
-                      </Button>
-                    )}
-                  </div>
-
-                  <div className="space-y-4">
-                    {!isEditingSeller ? (
-                      <>
-                        <div className="flex flex-col">
-                          <Label className="text-sm font-medium text-[#6F7F69] dark:text-gray-400 mb-1">
-                            Name
-                          </Label>
-                          <div className="text-[#3E5641] dark:text-white font-medium">
-                            {formData.sellerName || "Not provided"}
-                          </div>
+                </div>
+                <div className="space-y-4">
+                  {!isEditingSeller ? (
+                    <>
+                      <div className="flex flex-col">
+                        <Label className="text-sm font-medium text-[#6F7F69] dark:text-gray-400 mb-1">Name</Label>
+                        <div className="text-[#3E5641] dark:text-white font-medium">
+                          {formData.sellerName || "Not provided"}
                         </div>
-
-                        <div className="flex flex-col">
-                          <Label className="text-sm font-medium text-[#6F7F69] dark:text-gray-400 mb-1">
-                            Email
-                          </Label>
-                          <div className="text-[#3E5641] dark:text-white font-medium">
-                            {formData.sellerEmail}
-                          </div>
+                      </div>
+                      <div className="flex flex-col">
+                        <Label className="text-sm font-medium text-[#6F7F69] dark:text-gray-400 mb-1">Email</Label>
+                        <div className="text-[#3E5641] dark:text-white font-medium">{formData.sellerEmail}</div>
+                      </div>
+                      <div className="flex flex-col">
+                        <Label className="text-sm font-medium text-[#6F7F69] dark:text-gray-400 mb-1">Phone</Label>
+                        <div className="text-[#3E5641] dark:text-white font-medium">
+                          {formData.sellerPhone || "Not provided"}
                         </div>
-
-                        <div className="flex flex-col">
-                          <Label className="text-sm font-medium text-[#6F7F69] dark:text-gray-400 mb-1">
-                            Phone
-                          </Label>
-                          <div className="text-[#3E5641] dark:text-white font-medium">
-                            {formData.sellerPhone || "Not provided"}
-                          </div>
+                      </div>
+                      <div className="flex flex-col">
+                        <Label className="text-sm font-medium text-[#6F7F69] dark:text-gray-400 mb-1">Location</Label>
+                        <div className="text-[#3E5641] dark:text-white font-medium">
+                          {profile.suburb && `${profile.suburb}, `}
+                          {profile.city && `${profile.city}, `}
+                          {profile.province || "Not provided"}
                         </div>
-
-                        <div className="flex flex-col">
-                          <Label className="text-sm font-medium text-[#6F7F69] dark:text-gray-400 mb-1">
-                            Location
-                          </Label>
-                          <div className="text-[#3E5641] dark:text-white font-medium">
-                            {profile?.suburb && `${profile.suburb}, `}
-                            {profile?.city && `${profile.city}, `}
-                            {profile?.province || "Not provided"}
-                          </div>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-1.5">
-                            <Label
-                              htmlFor="firstName"
-                              className="text-sm font-medium text-[#3E5641] dark:text-gray-300"
-                            >
-                              First Name <span className="text-red-500">*</span>
-                            </Label>
-                            <Input
-                              id="firstName"
-                              name="firstName"
-                              value={sellerFormData.firstName}
-                              onChange={handleSellerInputChange}
-                              placeholder="Enter first name"
-                              className="border-[#9FA791] dark:border-[#4A4D45] focus:border-[#FF6700] dark:focus:border-[#FF7D33] focus:ring-[#FF6700] dark:focus:ring-[#FF7D33] dark:bg-[#1F2B20] dark:text-white"
-                              disabled={isSubmitting}
-                              required
-                            />
-                          </div>
-
-                          <div className="space-y-1.5">
-                            <Label
-                              htmlFor="lastName"
-                              className="text-sm font-medium text-[#3E5641] dark:text-gray-300"
-                            >
-                              Last Name <span className="text-red-500">*</span>
-                            </Label>
-                            <Input
-                              id="lastName"
-                              name="lastName"
-                              value={sellerFormData.lastName}
-                              onChange={handleSellerInputChange}
-                              placeholder="Enter last name"
-                              className="border-[#9FA791] dark:border-[#4A4D45] focus:border-[#FF6700] dark:focus:border-[#FF7D33] focus:ring-[#FF6700] dark:focus:ring-[#FF7D33] dark:bg-[#1F2B20] dark:text-white"
-                              disabled={isSubmitting}
-                              required
-                            />
-                          </div>
-                        </div>
-
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1.5">
-                          <Label
-                            htmlFor="phone"
-                            className="text-sm font-medium text-[#3E5641] dark:text-gray-300"
-                          >
-                            Phone Number <span className="text-red-500">*</span>
+                          <Label htmlFor="firstName" className="text-sm font-medium text-[#3E5641] dark:text-gray-300">
+                            First Name
                           </Label>
                           <Input
-                            id="phone"
-                            name="phone"
-                            type="tel"
-                            value={sellerFormData.phone}
+                            id="firstName"
+                            name="firstName"
+                            value={sellerFormData.firstName}
                             onChange={handleSellerInputChange}
-                            placeholder="+27 12 345 6789"
+                            placeholder="First Name"
                             className="border-[#9FA791] dark:border-[#4A4D45] focus:border-[#FF6700] dark:focus:border-[#FF7D33] focus:ring-[#FF6700] dark:focus:ring-[#FF7D33] dark:bg-[#1F2B20] dark:text-white"
-                            disabled={isSubmitting}
-                            required
                           />
                         </div>
-
                         <div className="space-y-1.5">
-                          <Label
-                            htmlFor="email"
-                            className="text-sm font-medium text-[#3E5641] dark:text-gray-300"
-                          >
-                            Email
+                          <Label htmlFor="lastName" className="text-sm font-medium text-[#3E5641] dark:text-gray-300">
+                            Last Name
                           </Label>
                           <Input
-                            id="email"
-                            name="email"
-                            type="email"
-                            value={user?.email || ""}
-                            disabled
-                            className="opacity-70 border-[#9FA791] dark:border-[#4A4D45] dark:bg-[#1F2B20] dark:text-white"
-                          />
-                          <p className="text-xs text-gray-500 dark:text-gray-400">
-                            Email cannot be changed
-                          </p>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-1.5">
-                            <Label
-                              htmlFor="suburb"
-                              className="text-sm font-medium text-[#3E5641] dark:text-gray-300"
-                            >
-                              Suburb
-                            </Label>
-                            <Input
-                              id="suburb"
-                              name="suburb"
-                              value={sellerFormData.suburb || ""}
-                              onChange={handleSellerInputChange}
-                              placeholder="Enter suburb"
-                              className="border-[#9FA791] dark:border-[#4A4D45] focus:border-[#FF6700] dark:focus:border-[#FF7D33] focus:ring-[#FF6700] dark:focus:ring-[#FF7D33] dark:bg-[#1F2B20] dark:text-white"
-                              disabled={isSubmitting}
-                            />
-                          </div>
-
-                          <div className="space-y-1.5">
-                            <Label
-                              htmlFor="city"
-                              className="text-sm font-medium text-[#3E5641] dark:text-gray-300"
-                            >
-                              City
-                            </Label>
-                            <Input
-                              id="city"
-                              name="city"
-                              value={sellerFormData.city || ""}
-                              onChange={handleSellerInputChange}
-                              placeholder="Enter city"
-                              className="border-[#9FA791] dark:border-[#4A4D45] focus:border-[#FF6700] dark:focus:border-[#FF7D33] focus:ring-[#FF6700] dark:focus:ring-[#FF7D33] dark:bg-[#1F2B20] dark:text-white"
-                              disabled={isSubmitting}
-                            />
-                          </div>
-                        </div>
-
-                        <div className="space-y-1.5">
-                          <Label
-                            htmlFor="province"
-                            className="text-sm font-medium text-[#3E5641] dark:text-gray-300"
-                          >
-                            Province
-                          </Label>
-                          <select
-                            id="province"
-                            name="province"
-                            value={sellerFormData.province || ""}
+                            id="lastName"
+                            name="lastName"
+                            value={sellerFormData.lastName}
                             onChange={handleSellerInputChange}
-                            className="w-full px-3 py-2 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] appearance-none bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white"
-                            disabled={isSubmitting}
-                          >
-                            <option value="">Select Province</option>
-                            <option value="Eastern Cape">Eastern Cape</option>
-                            <option value="Free State">Free State</option>
-                            <option value="Gauteng">Gauteng</option>
-                            <option value="KwaZulu-Natal">KwaZulu-Natal</option>
-                            <option value="Limpopo">Limpopo</option>
-                            <option value="Mpumalanga">Mpumalanga</option>
-                            <option value="North West">North West</option>
-                            <option value="Northern Cape">Northern Cape</option>
-                            <option value="Western Cape">Western Cape</option>
-                          </select>
+                            placeholder="Last Name"
+                            className="border-[#9FA791] dark:border-[#4A4D45] focus:border-[#FF6700] dark:focus:border-[#FF7D33] focus:ring-[#FF6700] dark:focus:ring-[#FF7D33] dark:bg-[#1F2B20] dark:text-white"
+                          />
                         </div>
-                      </>
-                    )}
-                  </div>
-
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-4">
-                    This information will be visible to potential buyers.
-                  </p>
-                </Card>
-              )}
-
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="phone" className="text-sm font-medium text-[#3E5641] dark:text-gray-300">
+                          Phone Number
+                        </Label>
+                        <Input
+                          id="phone"
+                          name="phone"
+                          type="tel"
+                          value={sellerFormData.phone}
+                          onChange={handleSellerInputChange}
+                          placeholder="+27 12 345 6789"
+                          className="border-[#9FA791] dark:border-[#4A4D45] focus:border-[#FF6700] dark:focus:border-[#FF7D33] focus:ring-[#FF6700] dark:focus:ring-[#FF7D33] dark:bg-[#1F2B20] dark:text-white"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="email" className="text-sm font-medium text-[#3E5641] dark:text-gray-300">
+                          Email
+                        </Label>
+                        <Input
+                          id="email"
+                          name="email"
+                          type="email"
+                          value={user.email}
+                          disabled
+                          className="opacity-70 border-[#9FA791] dark:border-[#4A4D45] dark:bg-[#1F2B20] dark:text-white"
+                        />
+                        <p className="text-xs text-gray-500 dark:text-gray-400">Email cannot be changed</p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                          <Label htmlFor="suburb" className="text-sm font-medium text-[#3E5641] dark:text-gray-300">
+                            Suburb
+                          </Label>
+                          <Input
+                            id="suburb"
+                            name="suburb"
+                            value={sellerFormData.suburb || ""}
+                            onChange={handleSellerInputChange}
+                            placeholder="Suburb"
+                            className="border-[#9FA791] dark:border-[#4A4D45] focus:border-[#FF6700] dark:focus:border-[#FF7D33] focus:ring-[#FF6700] dark:focus:ring-[#FF7D33] dark:bg-[#1F2B20] dark:text-white"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label htmlFor="city" className="text-sm font-medium text-[#3E5641] dark:text-gray-300">
+                            City
+                          </Label>
+                          <Input
+                            id="city"
+                            name="city"
+                            value={sellerFormData.city || ""}
+                            onChange={handleSellerInputChange}
+                            placeholder="City"
+                            className="border-[#9FA791] dark:border-[#4A4D45] focus:border-[#FF6700] dark:focus:border-[#FF7D33] focus:ring-[#FF6700] dark:focus:ring-[#FF7D33] dark:bg-[#1F2B20] dark:text-white"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label htmlFor="province" className="text-sm font-medium text-[#3E5641] dark:text-gray-300">
+                          Province
+                        </Label>
+                        <select
+                          id="province"
+                          name="province"
+                          value={sellerFormData.province || ""}
+                          onChange={handleSellerInputChange}
+                          className="w-full px-3 py-2 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] appearance-none bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white"
+                        >
+                          <option value="">Select Province</option>
+                          <option value="Eastern Cape">Eastern Cape</option>
+                          <option value="Free State">Free State</option>
+                          <option value="Gauteng">Gauteng</option>
+                          <option value="KwaZulu-Natal">KwaZulu-Natal</option>
+                          <option value="Limpopo">Limpopo</option>
+                          <option value="Mpumalanga">Mpumalanga</option>
+                          <option value="North West">North West</option>
+                          <option value="Northern Cape">Northern Cape</option>
+                          <option value="Western Cape">Western Cape</option>
+                        </select>
+                      </div>
+                    </>
+                  )}
+                </div>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-4">
+                  This information will be visible to potential buyers.
+                </p>
+              </Card>
             </div>
             <div className="lg:w-2/3 flex">
               <Card className="rounded-3xl p-6 w-full border-[#9FA791]/20 dark:border-[#4A4D45]/20 bg-white dark:bg-[#2A352A]">
-                <h2 className="text-xl font-bold mb-6 text-[#3E56441] dark:text-white">Vehicle Details</h2>
+                <h2 className="text-xl font-bold mb-6 text-[#3E5641] dark:text-white">Vehicle Details</h2>
                 <div className="space-y-6">
                   <div>
                     <h3 className="text-lg font-semibold mb-3 text-[#3E5641] dark:text-white">Basic Information</h3>
@@ -1342,7 +1114,7 @@ export default function UploadVehicle({
                               )
                             }}
                             placeholder="Select Capacity"
-                            className="w-full px-3 py-2 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] appearance-none bg-white dark:bg-[#2A352A] text-[#3E56441] dark:text-white"
+                            className="w-full px-3 py-2 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] appearance-none bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white"
                             disabled={isSubmitting}
                             autoComplete="off"
                           />
@@ -1351,7 +1123,7 @@ export default function UploadVehicle({
                               {engineCapacityFiltered.map((option) => (
                                 <div
                                   key={option.value}
-                                  className="px-4 py-2 hover:bg-[#FFF8E0] dark:hover:bg-[#2A352A] cursor-pointer text-[#3E56441] dark:text-white"
+                                  className="px-4 py-2 hover:bg-[#FFF8E0] dark:hover:bg-[#2A352A] cursor-pointer text-[#3E5641] dark:text-white"
                                   onMouseDown={(e) => {
                                     e.preventDefault()
                                     handleEngineCapacitySelect(option)
@@ -1368,7 +1140,7 @@ export default function UploadVehicle({
                         <div className="relative" ref={bodyTypeRef}>
                           <Label
                             htmlFor="bodyTypeInput"
-                            className="text-sm font-medium text-[#3E56441] dark:text-gray-300"
+                            className="text-sm font-medium text-[#3E5641] dark:text-gray-300"
                           >
                             Body Type
                           </Label>
@@ -1389,7 +1161,7 @@ export default function UploadVehicle({
                               )
                             }}
                             placeholder="Select Body Type"
-                            className="w-full px-5 py-4 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] appearance-none bg-white dark:bg-[#2A352A] text-[#3E56441] dark:text-white"
+                            className="w-full px-5 py-4 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] appearance-none bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white"
                             disabled={isSubmitting}
                             autoComplete="off"
                           />
@@ -1398,7 +1170,7 @@ export default function UploadVehicle({
                               {bodyTypeFiltered.map((option) => (
                                 <div
                                   key={option.value}
-                                  className="px-4 py-3 hover:bg-[#FFF8E0] dark:hover:bg-[#2A352A] cursor-pointer text-[#3E56441] dark:text-white flex items-center"
+                                  className="px-4 py-3 hover:bg-[#FFF8E0] dark:hover:bg-[#2A352A] cursor-pointer text-[#3E5641] dark:text-white flex items-center"
                                   onMouseDown={(e) => {
                                     e.preventDefault()
                                     handleBodyTypeSelect(option)
@@ -1415,9 +1187,9 @@ export default function UploadVehicle({
                     </div>
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold mb-3 text-[#3E56441] dark:text-white">Description</h3>
+                    <h3 className="text-lg font-semibold mb-3 text-[#3E5641] dark:text-white">Description</h3>
                     <div className="space-y-1.5">
-                      <Label htmlFor="description" className="text-sm font-medium text-[#3E56441] dark:text-gray-300">
+                      <Label htmlFor="description" className="text-sm font-medium text-[#3E5641] dark:text-gray-300">
                         Vehicle Description (Optional)
                       </Label>
                       <textarea
@@ -1438,13 +1210,7 @@ export default function UploadVehicle({
                       className="bg-[#FF6700] text-white hover:bg-[#FF6700]/90 dark:bg-[#FF7D33] dark:hover:bg-[#FF7D33]/90"
                     >
                       <Save className="h-4 w-4 mr-2" />
-                      {isSubmitting
-                        ? editMode
-                          ? "Updating..."
-                          : "Submitting..."
-                        : editMode
-                          ? "Update Vehicle"
-                          : "List Vehicle"}
+                      {isSubmitting ? "Submitting..." : "List Vehicle"}
                     </Button>
                   </div>
                 </div>
