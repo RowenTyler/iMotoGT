@@ -864,6 +864,7 @@ export default function VehicleDetails({
             className={`py-3 font-medium filter blur-sm ${activeTab === "report" ? "border-b-2 border-[#FF6700] dark:border-[#FF7D33] text-[#3E5641] dark:text-white" : "text-[#6F7F69] dark:text-gray-400 hover:text-[#3E5641] dark:hover:text-white"}`}
             onClick={() => setActiveTab("report")}
           >
+          {/*
             Vehicle Report
           </button>
           <button
@@ -879,7 +880,7 @@ export default function VehicleDetails({
             Vehicle Review
           </button>
         </div>
-      </div>
+      </div>*/} /* Not for public until later updates*/
 
       {/* Main Content Section */}
       <div className="px-6 py-6 max-w-7xl mx-auto">
@@ -1035,7 +1036,7 @@ export default function VehicleDetails({
                 </div>
               </>
             )}
-
+          {/*
             {activeTab === "report" && (
               <div className="relative">
                 <h2 className="text-2xl font-bold mb-4 text-[#3E5641] dark:text-white filter blur-sm">
@@ -1103,6 +1104,7 @@ export default function VehicleDetails({
                 </div>
               </div>
             )}
+            */}
           </div>
 
           {/* Contact Seller Section */}

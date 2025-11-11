@@ -233,7 +233,7 @@ export default function Dashboard({
 
                 {/* Progress Card */}
                 <Card className="col-span-1 rounded-3xl p-5 w-full h-full flex flex-col justify-between bg-gradient-to-br from-white to-gray-50">
-                  <div>
+                  {/*<div>
                     <div className="flex justify-between items-center mb-4">
                       <h3 className="text-xl font-semibold text-[#3E5641]">Listing Metrics</h3>
                       <div className="bg-[#FF6700]/10 p-1.5 rounded-full">
@@ -244,9 +244,9 @@ export default function Dashboard({
                       <div className="text-3xl font-bold text-[#3E5641]">{totalListings}</div>
                       <div className="text-lg font-medium text-[#6F7F69] pb-0.5">Total Views</div>
                     </div>
-                  </div>
+                  </div>-->
 
-                  <div className="space-y-4">
+                  <div className="space-y-4 filter blur-sm">
                     <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
                       <div className="flex justify-between items-center mb-2">
                         <div className="flex items-center gap-2">
@@ -283,7 +283,7 @@ export default function Dashboard({
                         </div>
                       </div>
                     </div>
-                  </div>
+                  </div>*/}
                 </Card>
 
                 {/* Vehicle Uploads Card */}
