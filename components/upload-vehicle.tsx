@@ -15,6 +15,7 @@ import type { UserProfile } from "@/types/user"
 import type { Vehicle } from "@/lib/data"
 import { useUser } from "@/components/UserContext"
 import { vehicleService } from "@/lib/vehicle-service"
+import { supabase } from '@/lib/supabase' // Add this import
 
 interface HeaderPropsOverride {
   onLoginClick?: () => void
@@ -312,13 +313,11 @@ export default function UploadVehicle({
     setSubmitError(null)
   }
 
-  // --------- FIXED: ONLY update local state on input change (NO auto-save) -----------
   const handleSellerInputChange = (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = event.target
     setSellerFormData((prev) => ({ ...prev, [name]: value }))
     setSubmitError(null)
   }
-  // -------------------------------------------------------------------------------
 
   const handleEngineCapacitySearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const searchTerm = e.target.value
@@ -354,7 +353,7 @@ export default function UploadVehicle({
     setSubmitError(null)
   }
 
-  // --------- FIXED: Save only on explicit Save button click -----------
+  // --------- FIXED: Save seller info to Supabase -----------
   const handleSaveSellerInfo = async () => {
     try {
       const updatedProfile: Partial<UserProfile> = {
@@ -366,6 +365,7 @@ export default function UploadVehicle({
         province: sellerFormData.province,
         profilePic: sellerFormData.profilePic,
       }
+
       // Update local formData shown in the upload form
       const newSellerName =
         sellerFormData.firstName && sellerFormData.lastName
@@ -373,6 +373,7 @@ export default function UploadVehicle({
           : sellerFormData.firstName || sellerFormData.lastName
             ? `${sellerFormData.firstName || ""}${sellerFormData.firstName && sellerFormData.lastName ? " " : ""}${sellerFormData.lastName || ""}`.trim()
             : profile?.email?.split("@")[0] || ""
+      
       setFormData((prev) => ({
         ...prev,
         sellerName: newSellerName,
@@ -383,17 +384,40 @@ export default function UploadVehicle({
         sellerProfilePic: sellerFormData.profilePic,
       }))
 
-      // First save to backend, then refresh local profile
-      if (onSaveProfile) await onSaveProfile(updatedProfile)
-      if (refreshUserProfile) await refreshUserProfile()
+      // Save to Supabase database
+      const { data, error } = await supabase
+        .from('users')
+        .update(updatedProfile)
+        .eq('id', user?.id)
+        .select()
+
+      if (error) {
+        console.error('Supabase update error:', error)
+        throw new Error(`Failed to update profile: ${error.message}`)
+      }
+
+      console.log('Profile updated successfully:', data)
+
+      // Call the onSaveProfile prop if it exists
+      if (onSaveProfile) {
+        await onSaveProfile(updatedProfile)
+      }
+
+      // Refresh the user profile
+      if (refreshUserProfile) {
+        await refreshUserProfile()
+      }
 
       setUserClickedEdit(false)
+      setSubmitSuccess("Seller information updated successfully!")
+      setSubmitError(null)
+      
     } catch (error) {
       console.error("Failed to save seller info:", error)
       setSubmitError("Failed to update seller information. Please try again.")
+      setSubmitSuccess(null)
     }
   }
-  // ------------------------------------------------------------------
 
   const compressImage = (file: File, maxWidth = 1200, quality = 0.8): Promise<string> => {
     return new Promise((resolve, reject) => {
