@@ -316,7 +316,7 @@ export default function UploadVehicle({
   const { name, value } = event.target
   setSellerFormData((prev) => ({ ...prev, [name]: value }))
   setSubmitError(null)
-  }
+  
 
     try {
       const updatedProfile: Partial<UserProfile> = {
