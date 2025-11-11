@@ -15,7 +15,7 @@ import type { UserProfile } from "@/types/user"
 import type { Vehicle } from "@/lib/data"
 import { useUser } from "@/components/UserContext"
 import { vehicleService } from "@/lib/vehicle-service"
-import { supabase } from '@/lib/supabase' // Add this import
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs' // Add this import
 
 interface HeaderPropsOverride {
   onLoginClick?: () => void
@@ -86,6 +86,7 @@ export default function UploadVehicle({
   const { user: authUser, userProfile, isLoading: userLoading, refreshUserProfile } = useUser()
   const user = propUser || userProfile || authUser
   const profile = userProfile || propUser || authUser
+  const supabase = createClientComponentClient() // Initialize Supabase client
 
   const isProfileIncomplete =
     !profile?.firstName ||
@@ -356,15 +357,20 @@ export default function UploadVehicle({
   // --------- FIXED: Save seller info to Supabase -----------
   const handleSaveSellerInfo = async () => {
     try {
+      console.log("Save button clicked"); // Debug log
+      
       const updatedProfile: Partial<UserProfile> = {
-        firstName: sellerFormData.firstName,
-        lastName: sellerFormData.lastName,
+        first_name: sellerFormData.firstName, // Match your database column names
+        last_name: sellerFormData.lastName,
         phone: sellerFormData.phone,
         suburb: sellerFormData.suburb,
         city: sellerFormData.city,
         province: sellerFormData.province,
-        profilePic: sellerFormData.profilePic,
+        profile_pic: sellerFormData.profilePic,
       }
+
+      console.log("Updating profile with:", updatedProfile); // Debug log
+      console.log("User ID:", user?.id); // Debug log
 
       // Update local formData shown in the upload form
       const newSellerName =
