@@ -923,7 +923,8 @@ export default function UploadVehicle({
                 )}
               </Card>
               {!editMode && (
-                <Card className="rounded-3xl overflow-hidden p-6 flex flex-col w-full border-[#9FA791]/20 dark:border-[#4A4D45]/20 bg-white dark:bg-[#2A352A]">
+                <Card className="rounded-3xl overflow-hidden p-6 flex flex-col w-full border-[#9FA791]/20 dark:border-[#4A4D45]/20 bg-white dark:bg-[#2A352A] mb-6">
+
                   {isEditingSeller && isProfileIncomplete && (
                     <Alert
                       variant="default"
@@ -935,14 +936,19 @@ export default function UploadVehicle({
                       </AlertDescription>
                     </Alert>
                   )}
+
                   <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-xl font-bold text-[#3E5641] dark:text-white">Seller Information</h2>
+                    <h2 className="text-xl font-bold text-[#3E5641] dark:text-white">
+                      Seller Information
+                    </h2>
+
                     {!isEditingSeller ? (
                       <Button
                         variant="ghost"
                         size="sm"
                         className="text-[#FF6700] dark:text-[#FF7D33]"
                         onClick={() => setUserClickedEdit(true)}
+                        disabled={isSubmitting}
                       >
                         <Edit className="h-4 w-4 mr-1" />
                         Edit
@@ -951,35 +957,55 @@ export default function UploadVehicle({
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="text-green-600 dark:text-green-400"
+                        className="text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20"
                         onClick={handleSaveSellerInfo}
+                        disabled={
+                          isSubmitting ||
+                          !sellerFormData.firstName?.trim() ||
+                          !sellerFormData.lastName?.trim() ||
+                          !sellerFormData.phone?.trim()
+                        }
                       >
                         <Check className="h-4 w-4 mr-1" />
                         Save
                       </Button>
                     )}
                   </div>
+
                   <div className="space-y-4">
                     {!isEditingSeller ? (
                       <>
                         <div className="flex flex-col">
-                          <Label className="text-sm font-medium text-[#6F7F69] dark:text-gray-400 mb-1">Name</Label>
+                          <Label className="text-sm font-medium text-[#6F7F69] dark:text-gray-400 mb-1">
+                            Name
+                          </Label>
                           <div className="text-[#3E5641] dark:text-white font-medium">
                             {formData.sellerName || "Not provided"}
                           </div>
                         </div>
+
                         <div className="flex flex-col">
-                          <Label className="text-sm font-medium text-[#6F7F69] dark:text-gray-400 mb-1">Email</Label>
-                          <div className="text-[#3E5641] dark:text-white font-medium">{formData.sellerEmail}</div>
+                          <Label className="text-sm font-medium text-[#6F7F69] dark:text-gray-400 mb-1">
+                            Email
+                          </Label>
+                          <div className="text-[#3E5641] dark:text-white font-medium">
+                            {formData.sellerEmail}
+                          </div>
                         </div>
+
                         <div className="flex flex-col">
-                          <Label className="text-sm font-medium text-[#6F7F69] dark:text-gray-400 mb-1">Phone</Label>
+                          <Label className="text-sm font-medium text-[#6F7F69] dark:text-gray-400 mb-1">
+                            Phone
+                          </Label>
                           <div className="text-[#3E5641] dark:text-white font-medium">
                             {formData.sellerPhone || "Not provided"}
                           </div>
                         </div>
+
                         <div className="flex flex-col">
-                          <Label className="text-sm font-medium text-[#6F7F69] dark:text-gray-400 mb-1">Location</Label>
+                          <Label className="text-sm font-medium text-[#6F7F69] dark:text-gray-400 mb-1">
+                            Location
+                          </Label>
                           <div className="text-[#3E5641] dark:text-white font-medium">
                             {profile?.suburb && `${profile.suburb}, `}
                             {profile?.city && `${profile.city}, `}
@@ -995,34 +1021,46 @@ export default function UploadVehicle({
                               htmlFor="firstName"
                               className="text-sm font-medium text-[#3E5641] dark:text-gray-300"
                             >
-                              First Name
+                              First Name <span className="text-red-500">*</span>
                             </Label>
                             <Input
                               id="firstName"
                               name="firstName"
                               value={sellerFormData.firstName}
                               onChange={handleSellerInputChange}
-                              placeholder="First Name"
+                              placeholder="Enter first name"
                               className="border-[#9FA791] dark:border-[#4A4D45] focus:border-[#FF6700] dark:focus:border-[#FF7D33] focus:ring-[#FF6700] dark:focus:ring-[#FF7D33] dark:bg-[#1F2B20] dark:text-white"
+                              disabled={isSubmitting}
+                              required
                             />
                           </div>
+
                           <div className="space-y-1.5">
-                            <Label htmlFor="lastName" className="text-sm font-medium text-[#3E5641] dark:text-gray-300">
-                              Last Name
+                            <Label
+                              htmlFor="lastName"
+                              className="text-sm font-medium text-[#3E5641] dark:text-gray-300"
+                            >
+                              Last Name <span className="text-red-500">*</span>
                             </Label>
                             <Input
                               id="lastName"
                               name="lastName"
                               value={sellerFormData.lastName}
                               onChange={handleSellerInputChange}
-                              placeholder="Last Name"
+                              placeholder="Enter last name"
                               className="border-[#9FA791] dark:border-[#4A4D45] focus:border-[#FF6700] dark:focus:border-[#FF7D33] focus:ring-[#FF6700] dark:focus:ring-[#FF7D33] dark:bg-[#1F2B20] dark:text-white"
+                              disabled={isSubmitting}
+                              required
                             />
                           </div>
                         </div>
+
                         <div className="space-y-1.5">
-                          <Label htmlFor="phone" className="text-sm font-medium text-[#3E5641] dark:text-gray-300">
-                            Phone Number
+                          <Label
+                            htmlFor="phone"
+                            className="text-sm font-medium text-[#3E5641] dark:text-gray-300"
+                          >
+                            Phone Number <span className="text-red-500">*</span>
                           </Label>
                           <Input
                             id="phone"
@@ -1032,10 +1070,16 @@ export default function UploadVehicle({
                             onChange={handleSellerInputChange}
                             placeholder="+27 12 345 6789"
                             className="border-[#9FA791] dark:border-[#4A4D45] focus:border-[#FF6700] dark:focus:border-[#FF7D33] focus:ring-[#FF6700] dark:focus:ring-[#FF7D33] dark:bg-[#1F2B20] dark:text-white"
+                            disabled={isSubmitting}
+                            required
                           />
                         </div>
+
                         <div className="space-y-1.5">
-                          <Label htmlFor="email" className="text-sm font-medium text-[#3E5641] dark:text-gray-300">
+                          <Label
+                            htmlFor="email"
+                            className="text-sm font-medium text-[#3E5641] dark:text-gray-300"
+                          >
                             Email
                           </Label>
                           <Input
@@ -1046,11 +1090,17 @@ export default function UploadVehicle({
                             disabled
                             className="opacity-70 border-[#9FA791] dark:border-[#4A4D45] dark:bg-[#1F2B20] dark:text-white"
                           />
-                          <p className="text-xs text-gray-500 dark:text-gray-400">Email cannot be changed</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                            Email cannot be changed
+                          </p>
                         </div>
+
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-1.5">
-                            <Label htmlFor="suburb" className="text-sm font-medium text-[#3E5641] dark:text-gray-300">
+                            <Label
+                              htmlFor="suburb"
+                              className="text-sm font-medium text-[#3E5641] dark:text-gray-300"
+                            >
                               Suburb
                             </Label>
                             <Input
@@ -1058,12 +1108,17 @@ export default function UploadVehicle({
                               name="suburb"
                               value={sellerFormData.suburb || ""}
                               onChange={handleSellerInputChange}
-                              placeholder="Suburb"
+                              placeholder="Enter suburb"
                               className="border-[#9FA791] dark:border-[#4A4D45] focus:border-[#FF6700] dark:focus:border-[#FF7D33] focus:ring-[#FF6700] dark:focus:ring-[#FF7D33] dark:bg-[#1F2B20] dark:text-white"
+                              disabled={isSubmitting}
                             />
                           </div>
+
                           <div className="space-y-1.5">
-                            <Label htmlFor="city" className="text-sm font-medium text-[#3E56441] dark:text-gray-300">
+                            <Label
+                              htmlFor="city"
+                              className="text-sm font-medium text-[#3E5641] dark:text-gray-300"
+                            >
                               City
                             </Label>
                             <Input
@@ -1071,13 +1126,18 @@ export default function UploadVehicle({
                               name="city"
                               value={sellerFormData.city || ""}
                               onChange={handleSellerInputChange}
-                              placeholder="City"
+                              placeholder="Enter city"
                               className="border-[#9FA791] dark:border-[#4A4D45] focus:border-[#FF6700] dark:focus:border-[#FF7D33] focus:ring-[#FF6700] dark:focus:ring-[#FF7D33] dark:bg-[#1F2B20] dark:text-white"
+                              disabled={isSubmitting}
                             />
                           </div>
                         </div>
+
                         <div className="space-y-1.5">
-                          <Label htmlFor="province" className="text-sm font-medium text-[#3E5641] dark:text-gray-300">
+                          <Label
+                            htmlFor="province"
+                            className="text-sm font-medium text-[#3E5641] dark:text-gray-300"
+                          >
                             Province
                           </Label>
                           <select
@@ -1086,6 +1146,7 @@ export default function UploadVehicle({
                             value={sellerFormData.province || ""}
                             onChange={handleSellerInputChange}
                             className="w-full px-3 py-2 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] appearance-none bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white"
+                            disabled={isSubmitting}
                           >
                             <option value="">Select Province</option>
                             <option value="Eastern Cape">Eastern Cape</option>
@@ -1102,11 +1163,13 @@ export default function UploadVehicle({
                       </>
                     )}
                   </div>
+
                   <p className="text-sm text-gray-500 dark:text-gray-400 mt-4">
                     This information will be visible to potential buyers.
                   </p>
                 </Card>
               )}
+
             </div>
             <div className="lg:w-2/3 flex">
               <Card className="rounded-3xl p-6 w-full border-[#9FA791]/20 dark:border-[#4A4D45]/20 bg-white dark:bg-[#2A352A]">
