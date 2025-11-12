@@ -203,29 +203,31 @@ export default function UploadVehicle({
   }, [editMode, existingVehicle])
 
   useEffect(() => {
-    setSellerFormData({
-      firstName: userProfile.firstName || "",
-      lastName: userProfile.lastName || "",
-      phone: userProfile.phone || "",
-      suburb: userProfile.suburb || "",
-      city: userProfile.city || "",
-      province: userProfile.province || "",
-      profilePic: userProfile.profilePic || "",
-    })
+     if (userProfile) {
+      setSellerFormData({
+        firstName: userProfile.firstName || "",
+        lastName: userProfile.lastName || "",
+        phone: userProfile.phone || "",
+        suburb: userProfile.suburb || "",
+        city: userProfile.city || "",
+        province: userProfile.province || "",
+        profilePic: userProfile.profilePic || "",
+      })
 
-    setFormData((prev) => ({
-      ...prev,
-      sellerName:
-        `${userProfile.firstName || ""} ${userProfile.lastName || ""}`.trim() ||
-        userProfile.email?.split("@")[0] ||
-        "",
-      sellerEmail: userProfile.email || "",
-      sellerPhone: userProfile.phone || "",
-      sellerSuburb: userProfile.suburb || "",
-      sellerCity: userProfile.city || "",
-      sellerProvince: userProfile.province || "",
-      sellerProfilePic: userProfile.profilePic || "",
-    }))
+      setFormData((prev) => ({
+        ...prev,
+        sellerName:
+          `${userProfile.firstName || ""} ${userProfile.lastName || ""}`.trim() ||
+          userProfile.email?.split("@")[0] ||
+          "",
+        sellerEmail: userProfile.email || "",
+        sellerPhone: userProfile.phone || "",
+        sellerSuburb: userProfile.suburb || "",
+        sellerCity: userProfile.city || "",
+        sellerProvince: userProfile.province || "",
+        sellerProfilePic: userProfile.profilePic || "",
+      }))
+    }
   }, [userProfile])
 
 
