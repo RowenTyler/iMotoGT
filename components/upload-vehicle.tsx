@@ -203,31 +203,31 @@ export default function UploadVehicle({
   }, [editMode, existingVehicle])
 
   useEffect(() => {
-    if (profile) {
-      setFormData((prev) => ({
-        ...prev,
-        sellerName:
-          profile.firstName && profile.lastName
-            ? `${profile.firstName} ${profile.lastName}`
-            : profile.firstName || profile.lastName || profile.email?.split("@")[0] || "",
-        sellerEmail: profile.email || "",
-        sellerPhone: profile.phone || "",
-        sellerSuburb: profile.suburb || "",
-        sellerCity: profile.city || "",
-        sellerProvince: profile.province || "",
-        sellerProfilePic: profile.profilePic || "",
-      }))
-      setSellerFormData({
-        firstName: profile.firstName || "",
-        lastName: profile.lastName || "",
-        phone: profile.phone || "",
-        suburb: profile.suburb || "",
-        city: profile.city || "",
-        province: profile.province || "",
-        profilePic: profile.profilePic || "",
-      })
-    }
-  }, [profile])
+  setSellerFormData({
+    firstName: userProfile.firstName || "",
+    lastName: userProfile.lastName || "",
+    phone: userProfile.phone || "",
+    suburb: userProfile.suburb || "",
+    city: userProfile.city || "",
+    province: userProfile.province || "",
+    profilePic: userProfile.profilePic || "",
+  })
+
+  setFormData((prev) => ({
+    ...prev,
+    sellerName:
+      `${userProfile.firstName || ""} ${userProfile.lastName || ""}`.trim() ||
+      userProfile.email?.split("@")[0] ||
+      "",
+    sellerEmail: userProfile.email || "",
+    sellerPhone: userProfile.phone || "",
+    sellerSuburb: userProfile.suburb || "",
+    sellerCity: userProfile.city || "",
+    sellerProvince: userProfile.province || "",
+    sellerProfilePic: userProfile.profilePic || "",
+  }))
+}, [userProfile])
+
 
   useEffect(() => {
     const selectedEngineOption = engineCapacityOptionsList.find((opt) => opt.value === formData.engineCapacity)
