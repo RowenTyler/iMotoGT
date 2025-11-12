@@ -82,7 +82,7 @@ export default function UploadVehicle({
   onCancel,
 }: UploadVehicleProps) {
   const router = useRouter()
-  const { user: authUser, userProfile, isLoading: userLoading } = useUser()
+  const { user: authUser, userProfile, isLoading: userLoading, refreshUserProfile } = useUser()
   const user = propUser || userProfile || authUser
   const profile = userProfile || propUser || authUser
   
@@ -375,6 +375,7 @@ export default function UploadVehicle({
       // Simply call onSaveProfile - let the parent component handle the database update
       if (onSaveProfile) {
         await onSaveProfile(updatedProfile)
+        await refreshUserProfile() // Refresh the user profile in the context
       }
 
       setUserClickedEdit(false)
