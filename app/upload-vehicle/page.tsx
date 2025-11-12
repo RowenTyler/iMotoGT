@@ -5,12 +5,13 @@ import { useUser } from "@/components/UserContext"
 import UploadVehicleComponent from "@/components/upload-vehicle"
 import { useEffect } from "react"
 import { vehicleService } from "@/lib/vehicle-service"
+import { authService } from "@/lib/auth"
 import type { UserProfile } from "@/types/user"
 import type { VehicleFormData } from "@/types/vehicle"
 
 export default function UploadVehiclePage() {
   const router = useRouter()
-  const { user, authUser, isEmailVerified, isLoading } = useUser()
+  const { user, authUser, isEmailVerified, isLoading, refreshUserProfile } = useUser()
 
   useEffect(() => {
     console.log("🔍 Upload Vehicle Page - Current State:", {
@@ -79,9 +80,24 @@ export default function UploadVehiclePage() {
   }
 
   const handleSaveProfile = async (updatedProfile: Partial<UserProfile>) => {
+    if (!user) {
+      throw new Error("User not found")
+    }
     try {
-      console.log("📝 Updating profile:", updatedProfile)
-      // Profile update logic would go here if needed
+      console.log("📝 Updating profile from upload-vehicle page:", updatedProfile)
+      
+      const { error } = await authService.updateUserProfile(user.id, updatedProfile)
+
+      if (error) {
+        throw new Error(error.message)
+      }
+
+      console.log("✅ Profile updated successfully from upload-vehicle page")
+      
+      // Refresh the user profile in context so both pages are in sync
+      await refreshUserProfile()
+      console.log("✅ User profile refreshed in context")
+
     } catch (err) {
       console.error("❌ Failed to save profile:", err)
       throw err
