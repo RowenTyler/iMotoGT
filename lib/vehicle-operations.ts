@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js"
 import type { Vehicle } from "./types"
-import { mapDatabaseToVehicle } from "./vehicle-services"
+import { mapDatabaseToVehicle } from "./vehicle-service"
 
 // Initialize Supabase client
 const supabase = createClient(
