@@ -39,25 +39,25 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter()
 
   const refreshUserProfile = useCallback(async () => {
-    if (!authUser) {
-      console.log("⚠️ No auth user, skipping profile refresh")
-      return
-    }
+  if (!authUser) {
+    console.log("⚠️ No auth user, skipping profile refresh");
+    return;
+  }
 
-    try {
-      console.log("🔄 Refreshing user profile for:", authUser.id)
-      const profile = await authService.getUserProfile(authUser.id)
+  try {
+    console.log("🔄 Refreshing user profile for:", authUser.id);
+    const profile = await authService.getUserProfile(authUser.id);
 
-      if (profile) {
-        console.log("✅ Profile refreshed:", profile.firstName, profile.lastName)
-        setUser(profile)
-      } else {
-        console.warn("⚠️ No profile found during refresh")
-      }
-    } catch (error) {
-      console.error("❌ Error refreshing user profile:", error)
+    if (profile) {
+      console.log("✅ Profile refreshed:", profile.firstName, profile.lastName);
+      setUser(profile); // This should update with the NEW data
+    } else {
+      console.warn("⚠️ No profile found during refresh");
     }
-  }, [authUser])
+  } catch (error) {
+    console.error("❌ Error refreshing user profile:", error);
+    }
+  }, [authUser]);
 
   const refreshVehicles = useCallback(async () => {
     if (!user) {

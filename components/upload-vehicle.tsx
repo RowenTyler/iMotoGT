@@ -85,7 +85,7 @@ export default function UploadVehicle({
   const { user: authUser, userProfile, isLoading: userLoading } = useUser()
   const user = propUser || userProfile || authUser
   const profile = userProfile || propUser || authUser
-
+  
   const isProfileIncomplete =
     !profile?.firstName ||
     !profile?.lastName ||
