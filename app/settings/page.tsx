@@ -10,7 +10,7 @@ import type { UserProfile } from "@/types/user"
 
 export default function SettingsPage() {
   const router = useRouter()
-  const { user, authUser, isLoading, refreshUserProfile, setUser } = useUser()
+  const { user, authUser, isLoading, refreshUserProfile } = useUser()
   const [isSaving, setIsSaving] = useState(false)
 
   useEffect(() => {
@@ -21,67 +21,48 @@ export default function SettingsPage() {
   }, [authUser, isLoading, router])
 
   const handleSave = async (updatedProfile: Partial<UserProfile>, profilePictureFile?: File) => {
-    if (!user || !setUser) {
-      throw new Error("User context is not properly initialized.")
+    if (!user) {
+      throw new Error("No user found")
     }
 
-    const originalUser = { ...user }
-    let temporaryProfilePicUrl: string | undefined
-
-    // --- Optimistic UI Update ---
     try {
-      const optimisticUser: UserProfile = { ...originalUser, ...updatedProfile }
+      setIsSaving(true)
+      console.log("💾 Saving profile updates:", updatedProfile)
+
+      // Handle profile picture if provided
+      let profilePicUrl = updatedProfile.profilePic
 
       if (profilePictureFile) {
-        temporaryProfilePicUrl = URL.createObjectURL(profilePictureFile)
-        optimisticUser.profilePic = temporaryProfilePicUrl
-      }
-
-      setUser(optimisticUser)
-    } catch (e) {
-      console.error("Failed to create optimistic user state", e)
-      // Don't proceed if we can't even set the optimistic state.
-      return
-    }
-    // --- End Optimistic UI Update ---
-
-    setIsSaving(true)
-    try {
-      let finalProfilePicUrl = updatedProfile.profilePic
-
-      if (profilePictureFile) {
-        finalProfilePicUrl = await new Promise<string>((resolve, reject) => {
-          const reader = new FileReader()
+        // For now, we'll store the base64 image directly
+        // In production, you'd upload to storage service
+        const reader = new FileReader()
+        profilePicUrl = await new Promise<string>((resolve) => {
           reader.onload = () => resolve(reader.result as string)
-          reader.onerror = (error) => reject(error)
           reader.readAsDataURL(profilePictureFile)
         })
       }
 
-      const updatesForDb = {
+      // Update profile in database
+      const { error } = await authService.updateUserProfile(user.id, {
         ...updatedProfile,
-        profilePic: finalProfilePicUrl,
-      }
-
-      const { error } = await authService.updateUserProfile(user.id, updatesForDb)
+        profilePic: profilePicUrl,
+      })
 
       if (error) {
         throw new Error(error.message)
       }
 
-      console.log("✅ Profile updated successfully in DB")
+      console.log("✅ Profile updated successfully")
 
+      // Refresh the user profile in context
       await refreshUserProfile()
-      console.log("✅ User profile refreshed from context")
+
+      console.log("✅ User profile refreshed in context")
     } catch (error) {
-      console.error("❌ Error saving profile, reverting UI:", error)
-      setUser(originalUser) // Rollback
-      throw error // Let the caller handle showing the UI error
+      console.error("❌ Error saving profile:", error)
+      throw error
     } finally {
       setIsSaving(false)
-      if (temporaryProfilePicUrl) {
-        URL.revokeObjectURL(temporaryProfilePicUrl) // Clean up blob URL
-      }
     }
   }
 
