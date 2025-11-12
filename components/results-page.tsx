@@ -11,16 +11,19 @@ import type { Vehicle } from "@/types/vehicle"
 import { Search, SlidersHorizontal } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import { createClientComponentClient } from "@supabase/auth-helpers-nextjs"
 
 export default function ResultsPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { user, authUser, savedVehicles, toggleSaveVehicle, logout } = useUser()
+  const supabase = createClientComponentClient()
 
   const [allVehicles, setAllVehicles] = useState<Vehicle[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null)
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false)
+  const [cities, setCities] = useState<string[]>([])
 
   const [filters, setFilters] = useState(() => {
     const params = new URLSearchParams(searchParams.toString())
@@ -29,6 +32,7 @@ export default function ResultsPage() {
       minPrice: params.get("minPrice") ? Number(params.get("minPrice")) : undefined,
       maxPrice: params.get("maxPrice") ? Number(params.get("maxPrice")) : undefined,
       province: params.get("province") || "",
+      city: params.get("city") || "",
       bodyType: params.getAll("bodyType") || [],
       minYear: params.get("minYear") || "",
       maxYear: params.get("maxYear") || "",
@@ -41,6 +45,40 @@ export default function ResultsPage() {
     }
   })
 
+  const provinces = [
+    "Gauteng",
+    "Western Cape",
+    "KwaZulu-Natal",
+    "Eastern Cape",
+    "Free State",
+    "Limpopo",
+    "Mpumalanga",
+    "North West",
+    "Northern Cape",
+  ]
+
+  // Fetch cities when province changes
+  useEffect(() => {
+    const fetchCities = async () => {
+      if (!filters.province) return
+      const { data, error } = await supabase
+        .from("users")
+        .select("city")
+        .eq("province", filters.province)
+
+      if (error) {
+        console.error("Error fetching cities:", error)
+        return
+      }
+
+      const uniqueCities = Array.from(new Set(data.map((item) => item.city).filter(Boolean)))
+      setCities(uniqueCities)
+    }
+
+    fetchCities()
+  }, [filters.province, supabase])
+
+  // Fetch vehicles
   useEffect(() => {
     const fetchAndSetVehicles = async () => {
       setLoading(true)
@@ -92,9 +130,17 @@ export default function ResultsPage() {
     [router],
   )
 
-  const filteredVehicles = useMemo(() => {
-    return allVehicles
-  }, [allVehicles])
+  const handleProvinceChange = (province: string) => {
+    const newFilters = { ...filters, province, city: "" }
+    handleFilterChange(newFilters)
+  }
+
+  const handleCityChange = (city: string) => {
+    const newFilters = { ...filters, city }
+    handleFilterChange(newFilters)
+  }
+
+  const filteredVehicles = useMemo(() => allVehicles, [allVehicles])
 
   const handleSignOut = async () => {
     await logout()
@@ -132,21 +178,58 @@ export default function ResultsPage() {
     setIsMobileFilterOpen(false)
   }
 
-  const handleResetMobileFilters = () => {
-    handleFilterChange({})
-  }
+  const handleResetMobileFilters = () => handleFilterChange({})
 
   return (
     <div className="bg-gray-50 dark:bg-gray-900 min-h-screen">
       <Header user={user} {...navigationHandlers} />
       <main className="pt-24 max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="lg:grid lg:grid-cols-4 lg:gap-8">
+          {/* Sidebar Filters */}
           <aside className="hidden lg:block lg:col-span-1">
-            <div className="sticky top-24">
+            <div className="sticky top-24 space-y-4">
+              {/* Location Selector */}
+              <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
+                <h3 className="text-lg font-semibold mb-3 text-gray-900 dark:text-white">Location</h3>
+                <select
+                  value={filters.province}
+                  onChange={(e) => handleProvinceChange(e.target.value)}
+                  className="w-full border rounded-lg p-2 mb-3"
+                >
+                  <option value="">Select Province</option>
+                  {provinces.map((prov) => (
+                    <option key={prov} value={prov}>
+                      {prov}
+                    </option>
+                  ))}
+                </select>
+
+                {filters.province && (
+                  <select
+                    value={filters.city}
+                    onChange={(e) => handleCityChange(e.target.value)}
+                    className="w-full border rounded-lg p-2"
+                  >
+                    <option value="">Select City</option>
+                    {cities.length > 0 ? (
+                      cities.map((city) => (
+                        <option key={city} value={city}>
+                          {city}
+                        </option>
+                      ))
+                    ) : (
+                      <option disabled>No cities found</option>
+                    )}
+                  </select>
+                )}
+              </div>
+
+              {/* Other filters */}
               <AdvancedFilters filters={filters} onFilterChange={handleFilterChange} />
             </div>
           </aside>
 
+          {/* Main Results */}
           <div className="lg:col-span-3">
             <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Search Results</h1>
@@ -164,6 +247,7 @@ export default function ResultsPage() {
               </div>
             </div>
 
+            {/* Vehicle Grid */}
             {loading ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
                 {Array.from({ length: 6 }).map((_, i) => (
@@ -212,7 +296,7 @@ export default function ResultsPage() {
           </div>
         </div>
 
-        {/* Mobile Filter Sheet */}
+        {/* Mobile Filter Drawer */}
         <Sheet open={isMobileFilterOpen} onOpenChange={setIsMobileFilterOpen}>
           <SheetContent side="right" className="w-full sm:max-w-sm overflow-y-auto">
             <SheetHeader>
