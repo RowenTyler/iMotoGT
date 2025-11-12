@@ -203,7 +203,7 @@ export default function UploadVehicle({
   }, [editMode, existingVehicle])
 
   useEffect(() => {
-     if (userProfile) {
+      if (userProfile) {
       setSellerFormData({
         firstName: userProfile.firstName || "",
         lastName: userProfile.lastName || "",
@@ -212,23 +212,19 @@ export default function UploadVehicle({
         city: userProfile.city || "",
         province: userProfile.province || "",
         profilePic: userProfile.profilePic || "",
-      })
-
+      });
       setFormData((prev) => ({
         ...prev,
-        sellerName:
-          `${userProfile.firstName || ""} ${userProfile.lastName || ""}`.trim() ||
-          userProfile.email?.split("@")[0] ||
-          "",
+        sellerName: `${userProfile.firstName || ""} ${userProfile.lastName || ""}`.trim() || userProfile.email?.split("@")[0] || "",
         sellerEmail: userProfile.email || "",
         sellerPhone: userProfile.phone || "",
         sellerSuburb: userProfile.suburb || "",
         sellerCity: userProfile.city || "",
         sellerProvince: userProfile.province || "",
         sellerProfilePic: userProfile.profilePic || "",
-      }))
+      }));
     }
-  }, [userProfile])
+  }, [userProfile]);
 
 
   useEffect(() => {
