@@ -214,9 +214,28 @@ export default function Dashboard({
                     </Card>
                   </div>
 
-                  {/* Progress Card */}
+                  {/* Progress Card - METRICS ADDED AND UNCOMMENTED */}
                   <Card className="col-span-1 rounded-3xl p-5 w-full h-full flex flex-col justify-between bg-gradient-to-br from-white to-gray-50">
-                    {/* Placeholder content */}
+                    <div className="flex justify-between items-center">
+                      <h3 className="text-xl font-semibold">Metrics</h3>
+                      <Eye className="w-6 h-6 text-[#FF6700]" />
+                    </div>
+                    <div className="flex-grow flex flex-col justify-center my-2">
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-5xl font-bold">{totalListings}</span>
+                        <span className="text-sm text-gray-500">listings</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2 mt-3">
+                        <div
+                          className="bg-[#3E5641] h-2 rounded-full"
+                          style={{ width: `${(totalListings / maxFreeListings) * 100}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                    <div className="flex justify-between items-center text-sm text-gray-500">
+                      <span>Total Views</span>
+                      <span className="font-bold text-black">1.2k</span>
+                    </div>
                   </Card>
 
                   {/* Vehicle Uploads Card */}
@@ -251,6 +270,7 @@ export default function Dashboard({
                         <Package className="h-5 w-5 text-[#FF6700]" />
                       </div>
                     </div>
+                    {/* SCROLL REMOVED: justify-between, overflow-hidden */}
                     <div className="p-4 flex-grow flex flex-col justify-between overflow-hidden">
                       <div className="bg-gray-50 rounded-xl p-3 mb-2">
                         <div className="flex justify-between items-center mb-1">
@@ -588,7 +608,7 @@ export default function Dashboard({
                 </div>
               </Card>
              
-             {/* Mobile Recently Listed */}
+             {/* Mobile Recently Listed - ADDED EDIT/DELETE BUTTONS */}
              <Card className="rounded-3xl w-full flex flex-col mb-4">
                 <div className="p-4 border-b flex justify-between items-center">
                   <h3 className="text-lg font-semibold">Recently Listed</h3>

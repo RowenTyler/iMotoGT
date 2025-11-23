@@ -9,13 +9,13 @@ import type { Vehicle } from "@/types/vehicle"
 export default function DashboardPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  // Added updateListedVehicle to destructuring to handle soft delete (status update)
+  // We extract updateListedVehicle to handle the soft delete
   const { 
     user, 
     listedVehicles = [], 
     savedVehicles = [], 
     deleteListedVehicle, 
-    updateListedVehicle, // <--- Using this for soft delete
+    updateListedVehicle, // Ensure this is exposed in your UserContext
     refreshVehicles, 
     isLoading 
   } = useUser()
@@ -41,22 +41,24 @@ export default function DashboardPage() {
   }
 
   // FIXED: Performs a Soft Delete by updating status to 'deleted'
+  // Now accepts the 'reason' passed from the Dashboard modal
   const handleDeleteListedCar = async (vehicleId: string, reason?: string) => {
     try {
       console.log("🗑️ Dashboard: Soft deleting vehicle:", vehicleId, "Reason:", reason)
       setIsDeletingVehicle(vehicleId)
 
       // SOFT DELETE STRATEGY:
-      // Since your table has a 'status' column, we UPDATE it to 'deleted' instead of deleting the row.
+      // Instead of calling deleteListedVehicle (which removes the row), we UPDATE the status.
       if (updateListedVehicle) {
         await updateListedVehicle(vehicleId, { 
-          status: 'deleted', 
-          deletionReason: reason // Passing the reason for data purposes
+          status: 'deleted',
+          deletion_reason: reason 
         })
       } else {
-        // Fallback: If no update function, try delete with payload (if supported)
-        console.warn("updateListedVehicle not found, attempting delete with reason payload")
-        await deleteListedVehicle(vehicleId, { reason })
+        // Fallback: If updateListedVehicle isn't in context, try deleteListedVehicle with payload
+        // or a direct patch if your backend supports it.
+        console.warn("updateListedVehicle not found, attempting delete with reason")
+        await deleteListedVehicle(vehicleId, reason) 
       }
 
       console.log("✅ Dashboard: Vehicle soft deleted successfully")
