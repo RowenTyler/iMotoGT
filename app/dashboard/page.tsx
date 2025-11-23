@@ -9,6 +9,7 @@ import type { Vehicle } from "@/types/vehicle"
 export default function DashboardPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  // Reverted to using deleteListedVehicle as requested
   const { user, listedVehicles = [], savedVehicles = [], deleteListedVehicle, refreshVehicles, isLoading } = useUser()
   const [showVerificationPrompt, setShowVerificationPrompt] = useState(false)
   const [isDeletingVehicle, setIsDeletingVehicle] = useState<string | null>(null)
@@ -29,14 +30,19 @@ export default function DashboardPage() {
     router.push(`/vehicle/${vehicle.id}/edit`)
   }
 
-  // YOUR ORIGINAL SOFT DELETE FUNCTION
+  // FIXED: Calls the standard delete function with the reason.
+  // We rely on your DB/Schema to handle the soft delete logic based on this call.
   const handleDeleteListedCar = async (vehicleId: string, reason?: string) => {
     try {
       setIsDeletingVehicle(vehicleId)
-      // Calls your original context function with the reason
+      console.log("🗑️ Dashboard requesting delete:", vehicleId, "Reason:", reason)
+      
       await deleteListedVehicle(vehicleId, reason)
+      
+      console.log("✅ Delete request successful")
       await refreshVehicles()
     } catch (error: any) {
+      console.error("❌ Delete failed:", error)
       alert(`Failed to delete listing: ${error.message}`)
     } finally {
       setIsDeletingVehicle(null)

@@ -118,7 +118,6 @@ export default function Dashboard({
 
     try {
       setIsDeleting(true)
-      // Calls page.tsx function with ID and Reason
       await onDeleteListedCar(vehicleToDelete.id, finalReason)
       setShowDeleteModal(false)
       setVehicleToDelete(null)
@@ -166,7 +165,7 @@ export default function Dashboard({
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col min-h-0 pt-20 bg-white">
         
-        {/* DESKTOP LAYOUT (LARGE SCREENS ONLY) */}
+        {/* DESKTOP LAYOUT (LARGE SCREENS ONLY - lg:block) */}
         <div className="hidden lg:block w-full mx-auto h-full px-6 pb-6 overflow-hidden">
           
           <div className="flex flex-col h-full">
@@ -215,7 +214,7 @@ export default function Dashboard({
                     </Card>
                   </div>
 
-                  {/* Progress Card (METRICS ADDED) */}
+                  {/* Progress Card - METRICS RESTORED */}
                   <Card className="col-span-1 rounded-3xl p-5 w-full h-full flex flex-col justify-between bg-gradient-to-br from-white to-gray-50">
                     <div className="flex justify-between items-center">
                       <h3 className="text-xl font-semibold">Metrics</h3>
@@ -271,7 +270,7 @@ export default function Dashboard({
                         <Package className="h-5 w-5 text-[#FF6700]" />
                       </div>
                     </div>
-                    {/* Removed scroll for fixed desktop view */}
+                    {/* Fixed overflow behavior */}
                     <div className="p-4 flex-grow flex flex-col justify-between overflow-hidden">
                       <div className="bg-gray-50 rounded-xl p-3 mb-2">
                         <div className="flex justify-between items-center mb-1">
@@ -476,6 +475,7 @@ export default function Dashboard({
 
         {/* MOBILE / TABLET / LANDSCAPE LAYOUT (lg:hidden) */}
         <div className="lg:hidden w-full mx-auto h-full overflow-y-auto px-6 pb-6">
+           {/* Added max-w-4xl mx-auto to control width on landscape/wide tablets */}
            <div className="max-w-4xl mx-auto">
              <h1 className="text-3xl font-bold mb-4">Welcome, {user.firstName}</h1>
              
