@@ -31,16 +31,12 @@ export const deploymentConfig: DeploymentConfig = {
     url: validateEnvironmentVariable(
       "NEXT_PUBLIC_SUPABASE_URL",
       process.env.NEXT_PUBLIC_SUPABASE_URL,
-      "https://gdhnyulduswsqfydkdev.supabase.co",
     ),
     anonKey: validateEnvironmentVariable(
       "NEXT_PUBLIC_SUPABASE_ANON_KEY",
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdkaG55dWxkdXN3c3FmeWRrZGV2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM0NjkyNTksImV4cCI6MjA2OTA0NTI1OX0.heqhzV_u-YasvypMA9mnA-gE1QJqJHWOzETbF1n9Yj0",
     ),
-    serviceRoleKey:
-      process.env.SUPABASE_SERVICE_ROLE_KEY ||
-      "fgya6Usww5RM4TJ6Hmi/MRGNOY5BFFk95TFKW65JVK3K3MwxpypiyDSCcrCSNNUKRGUVzijyYHuv8tq4ZlUNqA==",
+    serviceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
   },
   app: {
     url:

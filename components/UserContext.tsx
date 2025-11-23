@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation"
 import { authService, type AuthUser } from "@/lib/auth"
 import { vehicleService } from "@/lib/vehicle-service"
 import type { UserProfile } from "@/types/user"
-import type { Vehicle } from "@/lib/data"
+import type { Vehicle } from "@/types/vehicle"
 import type { VehicleFormData } from "@/types/vehicle"
 
 interface UserContextType {
