@@ -151,7 +151,6 @@ export default function Dashboard({
   }
 
   return (
-    // FIXED: Added overflow-hidden to prevent body scroll
     <div className="h-screen w-full bg-white flex flex-col overflow-hidden">
       {/* Top Header Section */}
       <Header
@@ -164,18 +163,15 @@ export default function Dashboard({
       />
 
       {/* Main Content Area */}
-      {/* FIXED: flex-1, min-h-0 and pt-20 ensures it fills space below header without pushing boundaries */}
       <main className="flex-1 flex flex-col min-h-0 pt-20 bg-white">
         
         {/* Desktop Layout */}
-        {/* FIXED: h-full ensures this grid stays exactly within the viewable area. 
-             Added px-6 pb-6 to match previous spacing but inside the container */}
         <div className="hidden md:block w-full mx-auto h-full px-6 pb-6 overflow-hidden">
           
           <div className="flex flex-col h-full">
             <h1 className="text-4xl font-bold mb-6 flex-shrink-0">Welcome, {user.firstName}</h1>
             
-            {/* Grid Container - flex-grow ensures it takes remaining height */}
+            {/* Grid Container */}
             <div className="grid grid-cols-12 gap-4 flex-grow min-h-0">
               
               {/* LEFT COLUMN (9 of 12) */}
@@ -220,7 +216,7 @@ export default function Dashboard({
 
                   {/* Progress Card */}
                   <Card className="col-span-1 rounded-3xl p-5 w-full h-full flex flex-col justify-between bg-gradient-to-br from-white to-gray-50">
-                     {/* Content commented out in original */}
+                    {/* Placeholder content */}
                   </Card>
 
                   {/* Vehicle Uploads Card */}
@@ -246,19 +242,20 @@ export default function Dashboard({
 
                 {/* ROW 2: Subscription and Saved Cars */}
                 <div className="grid grid-cols-12 md:grid-cols-9 gap-4 h-full min-h-0">
+                  
                   {/* Subscription Card */}
                   <Card className="col-span-12 md:col-span-3 rounded-3xl w-full h-full flex flex-col overflow-hidden">
-                    <div className="p-5 border-b flex-shrink-0">
+                    <div className="p-4 border-b flex-shrink-0">
                       <div className="flex justify-between items-center">
                         <h3 className="text-xl font-semibold">Subscription</h3>
                         <Package className="h-5 w-5 text-[#FF6700]" />
                       </div>
                     </div>
-                    <div className="p-5 flex-grow">
-                      <div className="bg-gray-50 rounded-xl p-4 mb-4">
-                        <div className="flex justify-between items-center mb-2">
+                    <div className="p-4 flex-grow flex flex-col justify-between overflow-hidden">
+                      <div className="bg-gray-50 rounded-xl p-3 mb-2">
+                        <div className="flex justify-between items-center mb-1">
                           <h4 className="font-medium">Free Plan</h4>
-                          <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">Active</span>
+                          <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full">Active</span>
                         </div>
                         <div className="flex items-center justify-between text-sm">
                           <span>Vehicle Listings</span>
@@ -272,15 +269,15 @@ export default function Dashboard({
                             style={{ width: `${(totalListings / maxFreeListings) * 100}%` }}
                           ></div>
                         </div>
-                        <p className="text-xs text-gray-500 mt-2">{freeListingsRemaining} free listings remaining</p>
+                        <p className="text-xs text-gray-500 mt-1">{freeListingsRemaining} free listings remaining</p>
                       </div>
 
-                      <div className="border border-dashed border-gray-300 rounded-xl p-4">
-                        <h4 className="font-medium mb-2">Premium Plans</h4>
-                        <p className="text-sm text-gray-500 mb-3">Unlock unlimited listings and premium features</p>
+                      <div className="border border-dashed border-gray-300 rounded-xl p-3">
+                        <h4 className="font-medium mb-1">Premium Plans</h4>
+                        <p className="text-sm text-gray-500 mb-2">Unlock unlimited listings and premium features</p>
                         <Button
                           variant="outline"
-                          className="w-full text-[#FF6700] border-[#FF6700] hover:bg-[#FFF8E0] bg-transparent"
+                          className="w-full text-[#FF6700] border-[#FF6700] hover:bg-[#FFF8E0] bg-transparent h-8"
                         >
                           Coming Soon
                         </Button>
@@ -456,16 +453,13 @@ export default function Dashboard({
           </div>
         </div>
 
-        {/* Mobile Layout (Remains Scrollable) */}
-        {/* Added px-6 pb-6 pt-0 to maintain spacing without double headers */}
+        {/* Mobile Layout (Scrollable) */}
         <div className="md:hidden w-full mx-auto h-full px-6 pb-6">
            <h1 className="text-3xl font-bold mb-4">Welcome, {user.firstName}</h1>
-           {/* ... Mobile Grid Content (same as original, just ensure wrapper handles scroll) ... */}
-           {/* Copy your original mobile layout code here */}
+           
+           {/* Metrics Grid */}
            <div className="grid grid-cols-4 gap-2 mb-4">
-              {/* Reuse your existing mobile card logic here */}
               <div className="col-span-1" onClick={handleProfileClick}>
-                 {/* ... */}
                   <Card className="rounded-xl overflow-hidden aspect-square transition-transform hover:scale-105 cursor-pointer flex flex-col justify-end">
                     <div className="relative w-full h-full">
                       {user.profilePic ? (
@@ -508,7 +502,7 @@ export default function Dashboard({
                 <Card className="col-span-1 rounded-xl p-2 flex flex-col items-center justify-center">
                   <div className="flex justify-between items-center mb-2">
                     <h3 className="text-xs font-semibold text-[#3E5641]">Plan</h3>
-                    <Package className="h-2 w-2 text-[#FF6700]" />
+                    <Package className="h-3 w-3 text-[#FF6700]" />
                   </div>
                   <div className="text-xl font-bold text-[#3E5641]">Free</div>
                   <div className="text-xs text-[#6F7F69]">{freeListingsRemaining} left</div>
@@ -517,29 +511,136 @@ export default function Dashboard({
            
            {/* Mobile Saved Cars */}
            <Card className="rounded-lg overflow-hidden w-full h-40 relative mb-4">
-              {/* Insert original mobile saved car logic */}
               <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-transparent z-10"></div>
-              {/* ... Image and Content ... */}
-           </Card>
+              <img
+                src={
+                  safeSavedCars.length > 0
+                    ? safeSavedCars[currentCarIndex]?.image || "/placeholder.svg?height=400&width=600"
+                    : "/placeholder.svg?height=400&width=600&text=No+Saved+Cars"
+                }
+                alt="Saved Car"
+                className="absolute inset-0 w-full h-full object-cover"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement
+                  target.src = "/placeholder.svg"
+                }}
+              />
+              <div className="relative z-20 h-full flex flex-col justify-between p-4">
+                <div className="flex justify-between items-start">
+                  {/* FIXED: "View Saved Cars" is always visible now */}
+                  <span
+                    onClick={() => router.push("/liked-cars-page")}
+                    className="bg-[#FF6700] text-white px-2 py-1 rounded-full text-xs cursor-pointer hover:bg-[#FF7D33] transition-colors"
+                  >
+                    View Saved Cars
+                  </span>
+                  {safeSavedCars.length > 0 && (
+                    <span className="bg-white/20 backdrop-blur-sm text-white px-2 py-1 rounded-full text-xs">
+                      {safeSavedCars.length} saved cars
+                    </span>
+                  )}
+                </div>
+                <div className="flex justify-between items-end">
+                  {safeSavedCars.length > 0 ? (
+                    <>
+                      <div
+                        className="text-white cursor-pointer"
+                        onClick={() => handleViewDetails(safeSavedCars[currentCarIndex])}
+                      >
+                        <h3 className="text-lg font-bold">
+                          {safeSavedCars[currentCarIndex]?.year} {safeSavedCars[currentCarIndex]?.make}{" "}
+                          {safeSavedCars[currentCarIndex]?.model}
+                        </h3>
+                        <p className="text-white/80 text-xs mb-1">
+                          {safeSavedCars[currentCarIndex]?.variant} • {safeSavedCars[currentCarIndex]?.mileage} km
+                        </p>
+                        <p className="text-lg font-bold text-[#FF6700]">{safeSavedCars[currentCarIndex]?.price}</p>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-white text-center w-full">
+                      <Car className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                      <h3 className="text-base font-bold mb-1">No Saved Cars</h3>
+                      {/* FIXED: Added Browse Cars button back */}
+                      <Button
+                        className="bg-white text-[#3E5641] hover:bg-white/90 text-xs h-auto py-1.5 px-3"
+                        onClick={onShowAllCars}
+                      >
+                        Browse Cars
+                      </Button>
+                    </div>
+                  )}
+                </div>
+                {/* Carousel indicators */}
+                {safeSavedCars.length > 1 && (
+                  <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1">
+                    {safeSavedCars.map((_, index) => (
+                      <button
+                        key={index}
+                        className={`w-1.5 h-1.5 rounded-full transition-all ${
+                          currentCarIndex === index ? "bg-white w-3" : "bg-white/40"
+                        }`}
+                        onClick={() => setCurrentCarIndex(index)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </Card>
            
-           {/* Mobile Recently Listed */}
-           <Card className="col-span-4 rounded-3xl w-full flex flex-col min-h-[300px]">
-              {/* Insert original mobile listing logic */}
+           {/* Mobile Recently Listed - FIXED: Removed fixed height constraints */}
+           <Card className="rounded-3xl w-full flex flex-col mb-4">
               <div className="p-4 border-b flex justify-between items-center">
                 <h3 className="text-lg font-semibold">Recently Listed</h3>
               </div>
-              <div className="flex-grow p-2">
-                 {/* Map listings */}
+              <div className="p-2">
+                 {safeListedCars.length > 0 ? (
+                    safeListedCars.map((vehicle) => (
+                      <div
+                        key={vehicle.id}
+                        className="flex items-center gap-2 p-2 mb-1 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+                        onClick={() => handleViewDetails(vehicle)}
+                      >
+                         <div className="w-12 h-9 rounded-md overflow-hidden bg-gray-200 flex-shrink-0">
+                           <img 
+                            src={vehicle.images?.[0] || vehicle.image || "/placeholder.svg"} 
+                            alt="car"
+                            className="w-full h-full object-cover" 
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement
+                              target.src = "/placeholder.svg"
+                            }}
+                           />
+                         </div>
+                         <div className="flex-grow min-w-0">
+                           <div className="font-medium text-sm truncate">{vehicle.year} {vehicle.make} {vehicle.model}</div>
+                           <div className="text-xs text-gray-500">{vehicle.price}</div>
+                         </div>
+                      </div>
+                    ))
+                 ) : (
+                    <div className="text-center text-gray-500 py-6">
+                      <Car className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                      <p className="text-sm">No cars listed yet.</p>
+                    </div>
+                 )}
+              </div>
+              <div className="p-3 border-t">
+                <Button variant="outline" className="w-full text-sm bg-transparent" onClick={handleUploadClick}>
+                  <Plus className="mr-1 h-3 w-3" />
+                  Add New Listing
+                </Button>
               </div>
            </Card>
         </div>
       </main>
 
-      {/* Delete Confirmation Modal (Same as before) */}
+      {/* Delete Confirmation Modal */}
       {showDeleteModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-             {/* ... Modal content ... */}
+             <h3 className="text-lg font-semibold mb-4">Delete Vehicle Listing</h3>
+             <p className="text-gray-600 mb-4">Are you sure?</p>
              <div className="flex gap-3 justify-end mt-4">
                <Button onClick={() => setShowDeleteModal(false)} variant="outline">Cancel</Button>
                <Button onClick={confirmDeleteVehicle} className="bg-red-500 text-white">Delete</Button>
