@@ -9,8 +9,17 @@ import type { Vehicle } from "@/types/vehicle"
 export default function DashboardPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  // Ensure deleteListedVehicle is available from your context
-  const { user, listedVehicles = [], savedVehicles = [], deleteListedVehicle, refreshVehicles, isLoading } = useUser()
+  // Added updateListedVehicle to destructuring to handle soft delete (status update)
+  const { 
+    user, 
+    listedVehicles = [], 
+    savedVehicles = [], 
+    deleteListedVehicle, 
+    updateListedVehicle, // <--- Using this for soft delete
+    refreshVehicles, 
+    isLoading 
+  } = useUser()
+  
   const [showVerificationPrompt, setShowVerificationPrompt] = useState(false)
   const [isDeletingVehicle, setIsDeletingVehicle] = useState<string | null>(null)
 
@@ -31,17 +40,26 @@ export default function DashboardPage() {
     router.push(`/vehicle/${vehicle.id}/edit`)
   }
 
-  // FIXED: Now accepts (vehicleId, reason) and removes the native window.confirm
+  // FIXED: Performs a Soft Delete by updating status to 'deleted'
   const handleDeleteListedCar = async (vehicleId: string, reason?: string) => {
     try {
       console.log("🗑️ Dashboard: Soft deleting vehicle:", vehicleId, "Reason:", reason)
       setIsDeletingVehicle(vehicleId)
 
-      // Pass the reason to the backend function to trigger soft delete
-      await deleteListedVehicle(vehicleId, reason)
-      console.log("✅ Dashboard: Vehicle deleted successfully")
+      // SOFT DELETE STRATEGY:
+      // Since your table has a 'status' column, we UPDATE it to 'deleted' instead of deleting the row.
+      if (updateListedVehicle) {
+        await updateListedVehicle(vehicleId, { 
+          status: 'deleted', 
+          deletionReason: reason // Passing the reason for data purposes
+        })
+      } else {
+        // Fallback: If no update function, try delete with payload (if supported)
+        console.warn("updateListedVehicle not found, attempting delete with reason payload")
+        await deleteListedVehicle(vehicleId, { reason })
+      }
 
-      // Refresh vehicles to ensure UI is in sync
+      console.log("✅ Dashboard: Vehicle soft deleted successfully")
       await refreshVehicles()
     } catch (error: any) {
       console.error("❌ Dashboard: Error deleting vehicle:", error)
@@ -73,7 +91,6 @@ export default function DashboardPage() {
     return null
   }
 
-  // Dashboard is the sole wrapper, preventing the double-scroll issue
   return (
     <Dashboard
       user={user}
@@ -89,7 +106,7 @@ export default function DashboardPage() {
       onViewProfileSettings={() => router.push("/settings")}
       onViewUploadVehicle={() => router.push("/upload-vehicle")}
       onBack={() => router.back()}
-      onSaveCar={() => {}}
+      onSaveCar={() => {}} 
       onNavigateToUpload={() => router.push("/upload-vehicle")}
     />
   )

@@ -166,7 +166,6 @@ export default function Dashboard({
       <main className="flex-1 flex flex-col min-h-0 pt-20 bg-white">
         
         {/* DESKTOP LAYOUT (LARGE SCREENS ONLY - lg:block) */}
-        {/* Changed from md:block to lg:block to prevent landscape phones from breaking */}
         <div className="hidden lg:block w-full mx-auto h-full px-6 pb-6 overflow-hidden">
           
           <div className="flex flex-col h-full">
@@ -217,7 +216,7 @@ export default function Dashboard({
 
                   {/* Progress Card */}
                   <Card className="col-span-1 rounded-3xl p-5 w-full h-full flex flex-col justify-between bg-gradient-to-br from-white to-gray-50">
-                     {/* Desktop metrics placeholder */}
+                    {/* Placeholder content */}
                   </Card>
 
                   {/* Vehicle Uploads Card */}
@@ -455,9 +454,8 @@ export default function Dashboard({
         </div>
 
         {/* MOBILE / TABLET / LANDSCAPE LAYOUT (lg:hidden) */}
-        {/* Changed from md:hidden to lg:hidden so this view persists on tablets and landscape phones */}
         <div className="lg:hidden w-full mx-auto h-full overflow-y-auto px-6 pb-6">
-           {/* Added max-w-4xl and mx-auto to center content on wide landscape screens */}
+           {/* Added max-w-4xl mx-auto to control width on landscape/wide tablets */}
            <div className="max-w-4xl mx-auto">
              <h1 className="text-3xl font-bold mb-4">Welcome, {user.firstName}</h1>
              
@@ -590,7 +588,7 @@ export default function Dashboard({
                 </div>
               </Card>
              
-             {/* Mobile Recently Listed - WITH BUTTONS */}
+             {/* Mobile Recently Listed */}
              <Card className="rounded-3xl w-full flex flex-col mb-4">
                 <div className="p-4 border-b flex justify-between items-center">
                   <h3 className="text-lg font-semibold">Recently Listed</h3>
@@ -668,7 +666,7 @@ export default function Dashboard({
         </div>
       </main>
 
-      {/* Delete Confirmation Modal - WITH SOFT DELETE REASONS */}
+      {/* Delete Confirmation Modal */}
       {showDeleteModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
