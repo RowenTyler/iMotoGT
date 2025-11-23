@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useUser } from "@/components/UserContext"
 import Dashboard from "@/components/dashboard"
-import { Header } from "@/components/ui/header"
+// Remove Header import, it is handled inside Dashboard
 import type { Vehicle } from "@/types/vehicle"
 
 export default function DashboardPage() {
@@ -20,7 +20,6 @@ export default function DashboardPage() {
       router.push("/login?redirect=/dashboard")
     }
 
-    // Check if user just signed up
     const isSignup = searchParams.get("signup")
     if (isSignup === "true" && user) {
       setShowVerificationPrompt(true)
@@ -28,7 +27,6 @@ export default function DashboardPage() {
   }, [user, isLoading, router, searchParams])
 
   const handleEditListedCar = (vehicle: Vehicle) => {
-    console.log("✏️ Editing vehicle:", vehicle.id)
     router.push(`/vehicle/${vehicle.id}/edit`)
   }
 
@@ -38,16 +36,10 @@ export default function DashboardPage() {
     }
 
     try {
-      console.log("🗑️ Dashboard: Deleting vehicle:", vehicleId)
       setIsDeletingVehicle(vehicleId)
-
       await deleteListedVehicle(vehicleId)
-      console.log("✅ Dashboard: Vehicle deleted successfully")
-
-      // Refresh vehicles to ensure UI is in sync
       await refreshVehicles()
     } catch (error: any) {
-      console.error("❌ Dashboard: Error deleting vehicle:", error)
       alert(`Failed to delete listing: ${error.message}`)
     } finally {
       setIsDeletingVehicle(null)
@@ -55,25 +47,18 @@ export default function DashboardPage() {
   }
 
   const handleViewListedCar = (vehicle: Vehicle) => {
-    console.log("👁️ Viewing vehicle:", vehicle.id)
     router.push(`/vehicle-details/${vehicle.id}`)
   }
 
   const handleViewSavedCar = (vehicle: Vehicle) => {
-    console.log("👁️ Viewing saved vehicle:", vehicle.id)
     router.push(`/vehicle-details/${vehicle.id}`)
   }
 
   if (isLoading) {
     return (
-      <>
-        <Header user={user} transparent={false} />
-        <main className="flex-1 flex items-center justify-center px-4 pt-20 md:pt-24">
-          <div className="text-center">
-            <p className="text-[#6F7F69] dark:text-gray-400">Loading...</p>
-          </div>
-        </main>
-      </>
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-[#6F7F69]">Loading...</p>
+      </div>
     )
   }
 
@@ -81,21 +66,25 @@ export default function DashboardPage() {
     return null
   }
 
+  // FIXED: Removed <Header> and <main> wrapper. 
+  // Dashboard is now the sole root element controlling the height.
   return (
-    <>
-      <Header user={user} transparent={false} />
-      <main className="pt-20 md:pt-24">
-        <Dashboard
-          user={user}
-          listedCars={Array.isArray(listedVehicles) ? listedVehicles : []}
-          savedCars={Array.isArray(savedVehicles) ? savedVehicles : []}
-          onEditListedCar={handleEditListedCar}
-          onDeleteListedCar={handleDeleteListedCar}
-          onViewListedCar={handleViewListedCar}
-          onViewSavedCar={handleViewSavedCar}
-          isDeletingVehicle={isDeletingVehicle}
-        />
-      </main>
-    </>
+    <Dashboard
+      user={user}
+      listedCars={Array.isArray(listedVehicles) ? listedVehicles : []}
+      savedCars={Array.isArray(savedVehicles) ? savedVehicles : []}
+      onEditListedCar={handleEditListedCar}
+      onDeleteListedCar={handleDeleteListedCar}
+      onViewDetails={handleViewListedCar} // Mapped to the generic detail viewer
+      onLoginClick={() => router.push("/login")}
+      onGoHome={() => router.push("/")}
+      onShowAllCars={() => router.push("/cars")}
+      onGoToSellPage={() => router.push("/upload-vehicle")}
+      onViewProfileSettings={() => router.push("/settings")}
+      onViewUploadVehicle={() => router.push("/upload-vehicle")}
+      onBack={() => router.back()}
+      onSaveCar={() => {}} // Add appropriate handler if needed
+      onNavigateToUpload={() => router.push("/upload-vehicle")}
+    />
   )
 }
