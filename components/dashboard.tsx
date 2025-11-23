@@ -254,7 +254,7 @@ export default function Dashboard({
                         <Package className="h-5 w-5 text-[#FF6700]" />
                       </div>
                     </div>
-                    <div className="p-5 flex-grow overflow-y-auto">
+                    <div className="p-5 flex-grow">
                       <div className="bg-gray-50 rounded-xl p-4 mb-4">
                         <div className="flex justify-between items-center mb-2">
                           <h4 className="font-medium">Free Plan</h4>
@@ -458,7 +458,7 @@ export default function Dashboard({
 
         {/* Mobile Layout (Remains Scrollable) */}
         {/* Added px-6 pb-6 pt-0 to maintain spacing without double headers */}
-        <div className="md:hidden w-full mx-auto h-full overflow-y-auto px-6 pb-6">
+        <div className="md:hidden w-full mx-auto h-full px-6 pb-6">
            <h1 className="text-3xl font-bold mb-4">Welcome, {user.firstName}</h1>
            {/* ... Mobile Grid Content (same as original, just ensure wrapper handles scroll) ... */}
            {/* Copy your original mobile layout code here */}
