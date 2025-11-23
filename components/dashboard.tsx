@@ -508,7 +508,7 @@ export default function Dashboard({
                 <Card className="col-span-1 rounded-xl p-2 flex flex-col items-center justify-center">
                   <div className="flex justify-between items-center mb-2">
                     <h3 className="text-xs font-semibold text-[#3E5641]">Plan</h3>
-                    <Package className="h-3 w-3 text-[#FF6700]" />
+                    <Package className="h-2 w-2 text-[#FF6700]" />
                   </div>
                   <div className="text-xl font-bold text-[#3E5641]">Free</div>
                   <div className="text-xs text-[#6F7F69]">{freeListingsRemaining} left</div>
