@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { vehicleService, VehicleError } from "@/lib/vehicle-service"
-import type { Vehicle } from "@/lib/data"
+import type { Vehicle } from "@/types/vehicle"
 
 interface UseVehiclesOptions {
   filters?: {
