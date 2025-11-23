@@ -4,12 +4,12 @@ import { useEffect, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useUser } from "@/components/UserContext"
 import Dashboard from "@/components/dashboard"
-// Remove Header import, it is handled inside Dashboard
 import type { Vehicle } from "@/types/vehicle"
 
 export default function DashboardPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  // Ensure deleteListedVehicle is available from your context
   const { user, listedVehicles = [], savedVehicles = [], deleteListedVehicle, refreshVehicles, isLoading } = useUser()
   const [showVerificationPrompt, setShowVerificationPrompt] = useState(false)
   const [isDeletingVehicle, setIsDeletingVehicle] = useState<string | null>(null)
@@ -27,19 +27,24 @@ export default function DashboardPage() {
   }, [user, isLoading, router, searchParams])
 
   const handleEditListedCar = (vehicle: Vehicle) => {
+    console.log("✏️ Editing vehicle:", vehicle.id)
     router.push(`/vehicle/${vehicle.id}/edit`)
   }
 
-  const handleDeleteListedCar = async (vehicleId: string) => {
-    if (!confirm("Are you sure you want to delete this listing?")) {
-      return
-    }
-
+  // FIXED: Now accepts (vehicleId, reason) and removes the native window.confirm
+  const handleDeleteListedCar = async (vehicleId: string, reason?: string) => {
     try {
+      console.log("🗑️ Dashboard: Soft deleting vehicle:", vehicleId, "Reason:", reason)
       setIsDeletingVehicle(vehicleId)
-      await deleteListedVehicle(vehicleId)
+
+      // Pass the reason to the backend function to trigger soft delete
+      await deleteListedVehicle(vehicleId, reason)
+      console.log("✅ Dashboard: Vehicle deleted successfully")
+
+      // Refresh vehicles to ensure UI is in sync
       await refreshVehicles()
     } catch (error: any) {
+      console.error("❌ Dashboard: Error deleting vehicle:", error)
       alert(`Failed to delete listing: ${error.message}`)
     } finally {
       setIsDeletingVehicle(null)
@@ -47,10 +52,12 @@ export default function DashboardPage() {
   }
 
   const handleViewListedCar = (vehicle: Vehicle) => {
+    console.log("👁️ Viewing vehicle:", vehicle.id)
     router.push(`/vehicle-details/${vehicle.id}`)
   }
 
   const handleViewSavedCar = (vehicle: Vehicle) => {
+    console.log("👁️ Viewing saved vehicle:", vehicle.id)
     router.push(`/vehicle-details/${vehicle.id}`)
   }
 
@@ -66,8 +73,7 @@ export default function DashboardPage() {
     return null
   }
 
-  // FIXED: Removed <Header> and <main> wrapper. 
-  // Dashboard is now the sole root element controlling the height.
+  // Dashboard is the sole wrapper, preventing the double-scroll issue
   return (
     <Dashboard
       user={user}
@@ -75,7 +81,7 @@ export default function DashboardPage() {
       savedCars={Array.isArray(savedVehicles) ? savedVehicles : []}
       onEditListedCar={handleEditListedCar}
       onDeleteListedCar={handleDeleteListedCar}
-      onViewDetails={handleViewListedCar} // Mapped to the generic detail viewer
+      onViewDetails={handleViewListedCar}
       onLoginClick={() => router.push("/login")}
       onGoHome={() => router.push("/")}
       onShowAllCars={() => router.push("/cars")}
@@ -83,7 +89,7 @@ export default function DashboardPage() {
       onViewProfileSettings={() => router.push("/settings")}
       onViewUploadVehicle={() => router.push("/upload-vehicle")}
       onBack={() => router.back()}
-      onSaveCar={() => {}} // Add appropriate handler if needed
+      onSaveCar={() => {}}
       onNavigateToUpload={() => router.push("/upload-vehicle")}
     />
   )
