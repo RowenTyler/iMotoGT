@@ -9,17 +9,7 @@ import type { Vehicle } from "@/types/vehicle"
 export default function DashboardPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  // We extract updateListedVehicle to handle the soft delete
-  const { 
-    user, 
-    listedVehicles = [], 
-    savedVehicles = [], 
-    deleteListedVehicle, 
-    updateListedVehicle, // Ensure this is exposed in your UserContext
-    refreshVehicles, 
-    isLoading 
-  } = useUser()
-  
+  const { user, listedVehicles = [], savedVehicles = [], deleteListedVehicle, refreshVehicles, isLoading } = useUser()
   const [showVerificationPrompt, setShowVerificationPrompt] = useState(false)
   const [isDeletingVehicle, setIsDeletingVehicle] = useState<string | null>(null)
 
@@ -36,35 +26,17 @@ export default function DashboardPage() {
   }, [user, isLoading, router, searchParams])
 
   const handleEditListedCar = (vehicle: Vehicle) => {
-    console.log("✏️ Editing vehicle:", vehicle.id)
     router.push(`/vehicle/${vehicle.id}/edit`)
   }
 
-  // FIXED: Performs a Soft Delete by updating status to 'deleted'
-  // Now accepts the 'reason' passed from the Dashboard modal
+  // YOUR ORIGINAL SOFT DELETE FUNCTION
   const handleDeleteListedCar = async (vehicleId: string, reason?: string) => {
     try {
-      console.log("🗑️ Dashboard: Soft deleting vehicle:", vehicleId, "Reason:", reason)
       setIsDeletingVehicle(vehicleId)
-
-      // SOFT DELETE STRATEGY:
-      // Instead of calling deleteListedVehicle (which removes the row), we UPDATE the status.
-      if (updateListedVehicle) {
-        await updateListedVehicle(vehicleId, { 
-          status: 'deleted',
-          deletion_reason: reason 
-        })
-      } else {
-        // Fallback: If updateListedVehicle isn't in context, try deleteListedVehicle with payload
-        // or a direct patch if your backend supports it.
-        console.warn("updateListedVehicle not found, attempting delete with reason")
-        await deleteListedVehicle(vehicleId, reason) 
-      }
-
-      console.log("✅ Dashboard: Vehicle soft deleted successfully")
+      // Calls your original context function with the reason
+      await deleteListedVehicle(vehicleId, reason)
       await refreshVehicles()
     } catch (error: any) {
-      console.error("❌ Dashboard: Error deleting vehicle:", error)
       alert(`Failed to delete listing: ${error.message}`)
     } finally {
       setIsDeletingVehicle(null)
@@ -72,12 +44,6 @@ export default function DashboardPage() {
   }
 
   const handleViewListedCar = (vehicle: Vehicle) => {
-    console.log("👁️ Viewing vehicle:", vehicle.id)
-    router.push(`/vehicle-details/${vehicle.id}`)
-  }
-
-  const handleViewSavedCar = (vehicle: Vehicle) => {
-    console.log("👁️ Viewing saved vehicle:", vehicle.id)
     router.push(`/vehicle-details/${vehicle.id}`)
   }
 
