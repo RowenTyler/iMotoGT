@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { vehicleService, VehicleError } from "@/lib/vehicle-service"
 import { useUser } from "@/components/UserContext"
-import type { Vehicle } from "@/types/vehicle"
+import type { Vehicle } from "@/lib/data"
 
 export function useSavedVehicles() {
   const { user } = useUser()

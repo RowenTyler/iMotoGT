@@ -1,4 +1,4 @@
-import type { Vehicle, VehicleFormData } from "@/types/vehicle"
+import type { Vehicle, VehicleFormData } from "./types" // Assuming Vehicle and VehicleFormData are declared in a types file
 import {
   getVehicles,
   getVehicleById,

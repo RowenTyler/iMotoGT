@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { useRouter } from 'next/navigation'; // Changed from next/router to next/navigation
 import { Heart, Search, ArrowLeft } from "lucide-react"
-import type { Vehicle } from "@/types/vehicle"
+import type { Vehicle } from "@/lib/data"
 import { Header } from "./ui/header"
 import type { UserProfile } from "@/types/user"; // Import UserProfile
 

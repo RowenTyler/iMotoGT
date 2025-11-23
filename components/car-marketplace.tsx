@@ -8,7 +8,7 @@ import { Search, X, ChevronDown, Truck, CarIcon, Bike, Facebook, Instagram, Twit
 import VehicleDetails from "./vehicle-details"
 import LocationPage from "./location-page"
 import { vehicleService } from "@/lib/vehicle-service"
-import type { Vehicle } from "@/types/vehicle"
+import type { Vehicle } from "@/lib/data"
 import { useUser } from "@/components/UserContext"
 import { Header } from "./ui/header"
 import VehicleCard from "./vehicle-card"

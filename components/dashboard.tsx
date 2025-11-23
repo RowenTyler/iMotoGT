@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Header } from "./ui/header"
 import VehicleDetails from "./vehicle-details"
-import type { Vehicle } from "@/types/vehicle"
+import type { Vehicle } from "@/lib/data"
 import type { UserProfile } from "@/types/user"
 
 interface DashboardProps {

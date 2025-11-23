@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import type { Vehicle } from "@/types/vehicle"
+import type { Vehicle } from "@/lib/data"
 import { Header } from "./ui/header" // Ensure Header is imported
 import type { UserProfile } from "./dashboard"; // Import UserProfile
 
