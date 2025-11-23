@@ -165,8 +165,9 @@ export default function Dashboard({
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col min-h-0 pt-20 bg-white">
         
-        {/* Desktop Layout */}
-        <div className="hidden md:block w-full mx-auto h-full px-6 pb-6 overflow-hidden">
+        {/* DESKTOP LAYOUT (LARGE SCREENS ONLY - lg:block) */}
+        {/* Changed from md:block to lg:block to prevent landscape phones from breaking */}
+        <div className="hidden lg:block w-full mx-auto h-full px-6 pb-6 overflow-hidden">
           
           <div className="flex flex-col h-full">
             <h1 className="text-4xl font-bold mb-6 flex-shrink-0">Welcome, {user.firstName}</h1>
@@ -216,7 +217,7 @@ export default function Dashboard({
 
                   {/* Progress Card */}
                   <Card className="col-span-1 rounded-3xl p-5 w-full h-full flex flex-col justify-between bg-gradient-to-br from-white to-gray-50">
-                    {/* Placeholder content */}
+                     {/* Desktop metrics placeholder */}
                   </Card>
 
                   {/* Vehicle Uploads Card */}
@@ -453,198 +454,281 @@ export default function Dashboard({
           </div>
         </div>
 
-        {/* Mobile Layout (Scrollable) */}
-        <div className="md:hidden w-full mx-auto h-full px-6 pb-6">
-           <h1 className="text-3xl font-bold mb-4">Welcome, {user.firstName}</h1>
-           
-           {/* Metrics Grid */}
-           <div className="grid grid-cols-4 gap-2 mb-4">
-              <div className="col-span-1" onClick={handleProfileClick}>
-                  <Card className="rounded-xl overflow-hidden aspect-square transition-transform hover:scale-105 cursor-pointer flex flex-col justify-end">
-                    <div className="relative w-full h-full">
-                      {user.profilePic ? (
-                        <Image
-                          src={user.profilePic || "/placeholder.svg"}
-                          alt={`${user.firstName}'s profile`}
-                          layout="fill"
-                          objectFit="cover"
-                          className="object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full bg-[#2E933C] flex items-center justify-center text-white">
-                          <div className="text-center">
-                            <div className="text-3xl font-bold">{user.firstName?.[0]?.toUpperCase() || "U"}</div>
-                            <div className="text-xs">{user.firstName}</div>
+        {/* MOBILE / TABLET / LANDSCAPE LAYOUT (lg:hidden) */}
+        {/* Changed from md:hidden to lg:hidden so this view persists on tablets and landscape phones */}
+        <div className="lg:hidden w-full mx-auto h-full overflow-y-auto px-6 pb-6">
+           {/* Added max-w-4xl and mx-auto to center content on wide landscape screens */}
+           <div className="max-w-4xl mx-auto">
+             <h1 className="text-3xl font-bold mb-4">Welcome, {user.firstName}</h1>
+             
+             {/* Metrics Grid */}
+             <div className="grid grid-cols-4 gap-2 mb-4">
+                <div className="col-span-1" onClick={handleProfileClick}>
+                    <Card className="rounded-xl overflow-hidden aspect-square transition-transform hover:scale-105 cursor-pointer flex flex-col justify-end">
+                      <div className="relative w-full h-full">
+                        {user.profilePic ? (
+                          <Image
+                            src={user.profilePic || "/placeholder.svg"}
+                            alt={`${user.firstName}'s profile`}
+                            layout="fill"
+                            objectFit="cover"
+                            className="object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-[#2E933C] flex items-center justify-center text-white">
+                            <div className="text-center">
+                              <div className="text-3xl font-bold">{user.firstName?.[0]?.toUpperCase() || "U"}</div>
+                              <div className="text-xs">{user.firstName}</div>
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        )}
+                      </div>
+                    </Card>
+                </div>
+                
+                 <Card className="col-span-1 rounded-xl p-2 flex flex-col items-center justify-center">
+                    <div className="flex justify-between items-center mb-2">
+                      <h3 className="text-xs font-semibold text-[#3E5641]">Metrics</h3>
+                      <Eye className="w-3 h-3 text-[#FF6700]" />
                     </div>
+                    <div className="text-xl font-bold text-[#3E5641]">{totalListings}</div>
+                    <div className="text-xs text-[#6F7F69]">Listings</div>
                   </Card>
-              </div>
-              
-               <Card className="col-span-1 rounded-xl p-2 flex flex-col items-center justify-center">
-                  <div className="flex justify-between items-center mb-2">
-                    <h3 className="text-xs font-semibold text-[#3E5641]">Metrics</h3>
-                    <Eye className="w-3 h-3 text-[#FF6700]" />
-                  </div>
-                  <div className="text-xl font-bold text-[#3E5641]">{totalListings}</div>
-                  <div className="text-xs text-[#6F7F69]">Listings</div>
-                </Card>
 
-                <Card
-                  className="col-span-1 rounded-xl p-2 flex flex-col items-center justify-center bg-gradient-to-br from-[#FF6700] to-[#FF9248] text-white cursor-pointer"
-                  onClick={handleUploadClick}
-                >
-                  <Plus className="w-5 h-5" />
-                  <span className="text-xs font-semibold mt-1">Upload</span>
-                </Card>
-
-                <Card className="col-span-1 rounded-xl p-2 flex flex-col items-center justify-center">
-                  <div className="flex justify-between items-center mb-2">
-                    <h3 className="text-xs font-semibold text-[#3E5641]">Plan</h3>
-                    <Package className="h-3 w-3 text-[#FF6700]" />
-                  </div>
-                  <div className="text-xl font-bold text-[#3E5641]">Free</div>
-                  <div className="text-xs text-[#6F7F69]">{freeListingsRemaining} left</div>
-                </Card>
-           </div>
-           
-           {/* Mobile Saved Cars */}
-           <Card className="rounded-lg overflow-hidden w-full h-40 relative mb-4">
-              <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-transparent z-10"></div>
-              <img
-                src={
-                  safeSavedCars.length > 0
-                    ? safeSavedCars[currentCarIndex]?.image || "/placeholder.svg?height=400&width=600"
-                    : "/placeholder.svg?height=400&width=600&text=No+Saved+Cars"
-                }
-                alt="Saved Car"
-                className="absolute inset-0 w-full h-full object-cover"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement
-                  target.src = "/placeholder.svg"
-                }}
-              />
-              <div className="relative z-20 h-full flex flex-col justify-between p-4">
-                <div className="flex justify-between items-start">
-                  {/* FIXED: "View Saved Cars" is always visible now */}
-                  <span
-                    onClick={() => router.push("/liked-cars-page")}
-                    className="bg-[#FF6700] text-white px-2 py-1 rounded-full text-xs cursor-pointer hover:bg-[#FF7D33] transition-colors"
+                  <Card
+                    className="col-span-1 rounded-xl p-2 flex flex-col items-center justify-center bg-gradient-to-br from-[#FF6700] to-[#FF9248] text-white cursor-pointer"
+                    onClick={handleUploadClick}
                   >
-                    View Saved Cars
-                  </span>
-                  {safeSavedCars.length > 0 && (
-                    <span className="bg-white/20 backdrop-blur-sm text-white px-2 py-1 rounded-full text-xs">
-                      {safeSavedCars.length} saved cars
+                    <Plus className="w-5 h-5" />
+                    <span className="text-xs font-semibold mt-1">Upload</span>
+                  </Card>
+
+                  <Card className="col-span-1 rounded-xl p-2 flex flex-col items-center justify-center">
+                    <div className="flex justify-between items-center mb-2">
+                      <h3 className="text-xs font-semibold text-[#3E5641]">Plan</h3>
+                      <Package className="h-3 w-3 text-[#FF6700]" />
+                    </div>
+                    <div className="text-xl font-bold text-[#3E5641]">Free</div>
+                    <div className="text-xs text-[#6F7F69]">{freeListingsRemaining} left</div>
+                  </Card>
+             </div>
+             
+             {/* Mobile Saved Cars */}
+             <Card className="rounded-lg overflow-hidden w-full h-40 relative mb-4">
+                <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-transparent z-10"></div>
+                <img
+                  src={
+                    safeSavedCars.length > 0
+                      ? safeSavedCars[currentCarIndex]?.image || "/placeholder.svg?height=400&width=600"
+                      : "/placeholder.svg?height=400&width=600&text=No+Saved+Cars"
+                  }
+                  alt="Saved Car"
+                  className="absolute inset-0 w-full h-full object-cover"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement
+                    target.src = "/placeholder.svg"
+                  }}
+                />
+                <div className="relative z-20 h-full flex flex-col justify-between p-4">
+                  <div className="flex justify-between items-start">
+                    <span
+                      onClick={() => router.push("/liked-cars-page")}
+                      className="bg-[#FF6700] text-white px-2 py-1 rounded-full text-xs cursor-pointer hover:bg-[#FF7D33] transition-colors"
+                    >
+                      View Saved Cars
                     </span>
-                  )}
-                </div>
-                <div className="flex justify-between items-end">
-                  {safeSavedCars.length > 0 ? (
-                    <>
-                      <div
-                        className="text-white cursor-pointer"
-                        onClick={() => handleViewDetails(safeSavedCars[currentCarIndex])}
-                      >
-                        <h3 className="text-lg font-bold">
-                          {safeSavedCars[currentCarIndex]?.year} {safeSavedCars[currentCarIndex]?.make}{" "}
-                          {safeSavedCars[currentCarIndex]?.model}
-                        </h3>
-                        <p className="text-white/80 text-xs mb-1">
-                          {safeSavedCars[currentCarIndex]?.variant} • {safeSavedCars[currentCarIndex]?.mileage} km
-                        </p>
-                        <p className="text-lg font-bold text-[#FF6700]">{safeSavedCars[currentCarIndex]?.price}</p>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="text-white text-center w-full">
-                      <Car className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                      <h3 className="text-base font-bold mb-1">No Saved Cars</h3>
-                      {/* FIXED: Added Browse Cars button back */}
-                      <Button
-                        className="bg-white text-[#3E5641] hover:bg-white/90 text-xs h-auto py-1.5 px-3"
-                        onClick={onShowAllCars}
-                      >
-                        Browse Cars
-                      </Button>
-                    </div>
-                  )}
-                </div>
-                {/* Carousel indicators */}
-                {safeSavedCars.length > 1 && (
-                  <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1">
-                    {safeSavedCars.map((_, index) => (
-                      <button
-                        key={index}
-                        className={`w-1.5 h-1.5 rounded-full transition-all ${
-                          currentCarIndex === index ? "bg-white w-3" : "bg-white/40"
-                        }`}
-                        onClick={() => setCurrentCarIndex(index)}
-                      />
-                    ))}
+                    {safeSavedCars.length > 0 && (
+                      <span className="bg-white/20 backdrop-blur-sm text-white px-2 py-1 rounded-full text-xs">
+                        {safeSavedCars.length} saved cars
+                      </span>
+                    )}
                   </div>
-                )}
-              </div>
-            </Card>
-           
-           {/* Mobile Recently Listed - FIXED: Removed fixed height constraints */}
-           <Card className="rounded-3xl w-full flex flex-col mb-4">
-              <div className="p-4 border-b flex justify-between items-center">
-                <h3 className="text-lg font-semibold">Recently Listed</h3>
-              </div>
-              <div className="p-2">
-                 {safeListedCars.length > 0 ? (
-                    safeListedCars.map((vehicle) => (
-                      <div
-                        key={vehicle.id}
-                        className="flex items-center gap-2 p-2 mb-1 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
-                        onClick={() => handleViewDetails(vehicle)}
-                      >
-                         <div className="w-12 h-9 rounded-md overflow-hidden bg-gray-200 flex-shrink-0">
-                           <img 
-                            src={vehicle.images?.[0] || vehicle.image || "/placeholder.svg"} 
-                            alt="car"
-                            className="w-full h-full object-cover" 
-                            onError={(e) => {
-                              const target = e.target as HTMLImageElement
-                              target.src = "/placeholder.svg"
-                            }}
-                           />
-                         </div>
-                         <div className="flex-grow min-w-0">
-                           <div className="font-medium text-sm truncate">{vehicle.year} {vehicle.make} {vehicle.model}</div>
-                           <div className="text-xs text-gray-500">{vehicle.price}</div>
-                         </div>
+                  <div className="flex justify-between items-end">
+                    {safeSavedCars.length > 0 ? (
+                      <>
+                        <div
+                          className="text-white cursor-pointer"
+                          onClick={() => handleViewDetails(safeSavedCars[currentCarIndex])}
+                        >
+                          <h3 className="text-lg font-bold">
+                            {safeSavedCars[currentCarIndex]?.year} {safeSavedCars[currentCarIndex]?.make}{" "}
+                            {safeSavedCars[currentCarIndex]?.model}
+                          </h3>
+                          <p className="text-white/80 text-xs mb-1">
+                            {safeSavedCars[currentCarIndex]?.variant} • {safeSavedCars[currentCarIndex]?.mileage} km
+                          </p>
+                          <p className="text-lg font-bold text-[#FF6700]">{safeSavedCars[currentCarIndex]?.price}</p>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="text-white text-center w-full">
+                        <Car className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                        <h3 className="text-base font-bold mb-1">No Saved Cars</h3>
+                        <Button
+                          className="bg-white text-[#3E5641] hover:bg-white/90 text-xs h-auto py-1.5 px-3"
+                          onClick={onShowAllCars}
+                        >
+                          Browse Cars
+                        </Button>
                       </div>
-                    ))
-                 ) : (
-                    <div className="text-center text-gray-500 py-6">
-                      <Car className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                      <p className="text-sm">No cars listed yet.</p>
+                    )}
+                  </div>
+                  {/* Carousel indicators */}
+                  {safeSavedCars.length > 1 && (
+                    <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1">
+                      {safeSavedCars.map((_, index) => (
+                        <button
+                          key={index}
+                          className={`w-1.5 h-1.5 rounded-full transition-all ${
+                            currentCarIndex === index ? "bg-white w-3" : "bg-white/40"
+                          }`}
+                          onClick={() => setCurrentCarIndex(index)}
+                        />
+                      ))}
                     </div>
-                 )}
-              </div>
-              <div className="p-3 border-t">
-                <Button variant="outline" className="w-full text-sm bg-transparent" onClick={handleUploadClick}>
-                  <Plus className="mr-1 h-3 w-3" />
-                  Add New Listing
-                </Button>
-              </div>
-           </Card>
+                  )}
+                </div>
+              </Card>
+             
+             {/* Mobile Recently Listed - WITH BUTTONS */}
+             <Card className="rounded-3xl w-full flex flex-col mb-4">
+                <div className="p-4 border-b flex justify-between items-center">
+                  <h3 className="text-lg font-semibold">Recently Listed</h3>
+                </div>
+                <div className="p-2">
+                   {safeListedCars.length > 0 ? (
+                      safeListedCars.map((vehicle) => (
+                        <div
+                          key={vehicle.id}
+                          className="flex items-center gap-2 p-2 mb-1 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+                          onClick={() => handleViewDetails(vehicle)}
+                        >
+                           <div className="w-12 h-9 rounded-md overflow-hidden bg-gray-200 flex-shrink-0">
+                             <img 
+                              src={vehicle.images?.[0] || vehicle.image || "/placeholder.svg"} 
+                              alt="car"
+                              className="w-full h-full object-cover" 
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement
+                                target.src = "/placeholder.svg"
+                              }}
+                             />
+                           </div>
+                           <div className="flex-grow min-w-0">
+                             <div className="font-medium text-sm truncate">{vehicle.year} {vehicle.make} {vehicle.model}</div>
+                             <div className="text-xs text-gray-500">{vehicle.price}</div>
+                           </div>
+                           
+                           {/* Mobile Buttons for Edit/Delete */}
+                           <div className="flex items-center ml-1">
+                             {onEditListedCar && (
+                               <Button
+                                 variant="ghost"
+                                 size="icon"
+                                 className="flex-shrink-0 h-8 w-8"
+                                 onClick={(e) => {
+                                   e.stopPropagation()
+                                   handleEditListedCar(vehicle)
+                                 }}
+                               >
+                                 <Edit className="h-4 w-4 text-blue-500" />
+                               </Button>
+                             )}
+                             {onDeleteListedCar && (
+                               <Button
+                                 variant="ghost"
+                                 size="icon"
+                                 className="flex-shrink-0 h-8 w-8"
+                                 onClick={(e) => {
+                                   e.stopPropagation()
+                                   handleDeleteVehicle(vehicle)
+                                 }}
+                               >
+                                 <Trash2 className="h-4 w-4 text-red-500" />
+                               </Button>
+                             )}
+                           </div>
+                        </div>
+                      ))
+                   ) : (
+                      <div className="text-center text-gray-500 py-6">
+                        <Car className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                        <p className="text-sm">No cars listed yet.</p>
+                      </div>
+                   )}
+                </div>
+                <div className="p-3 border-t">
+                  <Button variant="outline" className="w-full text-sm bg-transparent" onClick={handleUploadClick}>
+                    <Plus className="mr-1 h-3 w-3" />
+                    Add New Listing
+                  </Button>
+                </div>
+             </Card>
+           </div>
         </div>
       </main>
 
-      {/* Delete Confirmation Modal */}
+      {/* Delete Confirmation Modal - WITH SOFT DELETE REASONS */}
       {showDeleteModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
-             <h3 className="text-lg font-semibold mb-4">Delete Vehicle Listing</h3>
-             <p className="text-gray-600 mb-4">Are you sure?</p>
-             <div className="flex gap-3 justify-end mt-4">
-               <Button onClick={() => setShowDeleteModal(false)} variant="outline">Cancel</Button>
-               <Button onClick={confirmDeleteVehicle} className="bg-red-500 text-white">Delete</Button>
-             </div>
+            <h3 className="text-lg font-semibold mb-4">Delete Vehicle Listing</h3>
+            <p className="text-gray-600 mb-4">
+              Are you sure you want to delete your {vehicleToDelete?.year} {vehicleToDelete?.make}{" "}
+              {vehicleToDelete?.model} listing?
+            </p>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Reason for deletion:</label>
+              <select
+                value={deleteReason}
+                onChange={(e) => setDeleteReason(e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#FF6700] focus:border-transparent"
+                disabled={isDeleting}
+              >
+                <option value="">Select a reason</option>
+                <option value="sold">Vehicle has been sold</option>
+                <option value="no_longer_selling">No longer selling</option>
+                <option value="no_longer_need_service">No longer need the service</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+
+            {deleteReason === "other" && (
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Please specify:</label>
+                <textarea
+                  value={customDeleteReason}
+                  onChange={(e) => setCustomDeleteReason(e.target.value)}
+                  placeholder="Please provide your reason..."
+                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#FF6700] focus:border-transparent"
+                  rows={3}
+                  disabled={isDeleting}
+                />
+              </div>
+            )}
+
+            <div className="flex gap-3 justify-end">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowDeleteModal(false)
+                  setVehicleToDelete(null)
+                  setDeleteReason("")
+                  setCustomDeleteReason("")
+                }}
+                disabled={isDeleting}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={confirmDeleteVehicle}
+                disabled={!deleteReason || (deleteReason === "other" && !customDeleteReason.trim()) || isDeleting}
+                className="bg-red-500 hover:bg-red-600 text-white"
+              >
+                {isDeleting ? "Deleting..." : "Delete Listing"}
+              </Button>
+            </div>
           </div>
         </div>
       )}
