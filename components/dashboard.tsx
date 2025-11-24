@@ -263,50 +263,62 @@ export default function Dashboard({
                 <div className="grid grid-cols-12 md:grid-cols-9 gap-4 h-full min-h-0">
                   
                   {/* Subscription Card */}
-                  <Card className="col-span-12 md:col-span-3 rounded-3xl w-full h-full flex flex-col overflow-hidden">
-                    <div className="p-4 border-b flex-shrink-0">
-                      <div className="flex justify-between items-center">
-                        <h3 className="text-xl font-semibold">Subscription</h3>
+                  <Card className="col-span-12 md:col-span-3 rounded-3xl w-full h-full flex flex-col">
+                    <div className="px-4 py-3 border-b">
+                      <div className="flex justify-between items-center min-h-0">
+                        <h3 className="text-xl font-semibold leading-tight">Subscription</h3>
                         <Package className="h-5 w-5 text-[#FF6700]" />
                       </div>
                     </div>
-                    {/* UPDATED: Added overflow-y-auto to handle short screens and removed justify-between */}
-                    <div className="p-4 flex-grow flex flex-col gap-3">
-                      
-                      {/* Free Plan Section - Added flex-shrink-0 */}
-                      <div className="bg-gray-50 rounded-xl p-3 flex-shrink-0">
-                        <div className="flex justify-between items-center mb-1">
-                          <h4 className="font-medium">Free Plan</h4>
-                          <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full">Active</span>
+
+                    <div className="p-3 flex-grow flex flex-col gap-3 min-h-0">
+
+                      {/* Free Plan */}
+                      <div className="bg-gray-50 rounded-xl p-3 flex-1 flex flex-col min-h-0">
+                        <div className="flex justify-between items-center mb-1 min-h-0">
+                          <h4 className="font-medium leading-tight">Free Plan</h4>
+                          <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full leading-none">
+                            Active
+                          </span>
                         </div>
-                        <div className="flex items-center justify-between text-sm">
-                          <span>Vehicle Listings</span>
-                          <span className="font-medium">
+
+                        <div className="flex items-center justify-between text-sm min-h-0">
+                          <span className="leading-tight break-words">Vehicle Listings</span>
+                          <span className="font-medium leading-tight">
                             {totalListings}/{maxFreeListings} Used
                           </span>
                         </div>
+
                         <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
                           <div
                             className="bg-[#FF6700] h-2 rounded-full"
                             style={{ width: `${(totalListings / maxFreeListings) * 100}%` }}
-                          ></div>
+                          />
                         </div>
-                        <p className="text-xs text-gray-500 mt-1">{freeListingsRemaining} free listings remaining</p>
+
+                        <p className="text-xs text-gray-500 mt-1 leading-tight break-words min-h-0">
+                          {freeListingsRemaining} free listings remaining
+                        </p>
                       </div>
 
-                      {/* Premium Plan Section - Added flex-shrink-0 */}
-                      <div className="border border-dashed border-gray-300 rounded-xl p-3 flex-shrink-0">
-                        <h4 className="font-medium mb-1">Premium Plans</h4>
-                        <p className="text-sm text-gray-500 mb-2">Unlock unlimited listings and premium features</p>
+                      {/* Premium */}
+                      <div className="border border-dashed border-gray-300 rounded-xl p-3 flex-1 flex flex-col min-h-0">
+                        <h4 className="font-medium mb-1 leading-tight">Premium Plans</h4>
+
+                        <p className="text-xs text-gray-500 mb-2 leading-tight break-words min-h-0">
+                          Unlock unlimited listings and premium features
+                        </p>
+
                         <Button
                           variant="outline"
-                          className="w-full text-[#FF6700] border-[#FF6700] hover:bg-[#FFF8E0] bg-transparent h-8"
+                          className="w-full text-[#FF6700] border-[#FF6700] hover:bg-[#FFF8E0] bg-transparent h-8 text-xs"
                         >
                           Coming Soon
                         </Button>
                       </div>
                     </div>
                   </Card>
+
 
                   {/* Saved Cars Card */}
                   <Card className="col-span-12 md:col-span-6 rounded-3xl overflow-hidden w-full h-full relative">
