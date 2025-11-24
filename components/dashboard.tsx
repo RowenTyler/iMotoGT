@@ -271,7 +271,7 @@ export default function Dashboard({
                       </div>
                     </div>
                     {/* UPDATED: Added overflow-y-auto to handle short screens and removed justify-between */}
-                    <div className="p-4 flex-grow flex flex-col gap-3 overflow-y-auto scrollbar-thin">
+                    <div className="p-4 flex-grow flex flex-col gap-3">
                       
                       {/* Free Plan Section - Added flex-shrink-0 */}
                       <div className="bg-gray-50 rounded-xl p-3 flex-shrink-0">
