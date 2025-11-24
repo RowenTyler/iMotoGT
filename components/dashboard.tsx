@@ -270,9 +270,11 @@ export default function Dashboard({
                         <Package className="h-5 w-5 text-[#FF6700]" />
                       </div>
                     </div>
-                    {/* Fixed overflow behavior */}
-                    <div className="p-4 flex-grow flex flex-col justify-between overflow-hidden">
-                      <div className="bg-gray-50 rounded-xl p-3 mb-2">
+                    {/* UPDATED: Added overflow-y-auto to handle short screens and removed justify-between */}
+                    <div className="p-4 flex-grow flex flex-col gap-3 overflow-y-auto scrollbar-thin">
+                      
+                      {/* Free Plan Section - Added flex-shrink-0 */}
+                      <div className="bg-gray-50 rounded-xl p-3 flex-shrink-0">
                         <div className="flex justify-between items-center mb-1">
                           <h4 className="font-medium">Free Plan</h4>
                           <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full">Active</span>
@@ -292,7 +294,8 @@ export default function Dashboard({
                         <p className="text-xs text-gray-500 mt-1">{freeListingsRemaining} free listings remaining</p>
                       </div>
 
-                      <div className="border border-dashed border-gray-300 rounded-xl p-3">
+                      {/* Premium Plan Section - Added flex-shrink-0 */}
+                      <div className="border border-dashed border-gray-300 rounded-xl p-3 flex-shrink-0">
                         <h4 className="font-medium mb-1">Premium Plans</h4>
                         <p className="text-sm text-gray-500 mb-2">Unlock unlimited listings and premium features</p>
                         <Button
