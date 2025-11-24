@@ -119,8 +119,8 @@ export default function ResultsPage() {
             vehicle={selectedVehicle}
             onBack={() => setSelectedVehicle(null)}
             user={user}
-            isSaved={savedVehicles.has(selectedVehicle.id)}
-            onToggleSave={() => toggleSaveVehicle(selectedVehicle)}
+            // FIX: Corrected prop from onToggleSave to onSaveCar to match VehicleDetails interface
+            onSaveCar={() => toggleSaveVehicle(selectedVehicle)}
           />
         </div>
       </>
