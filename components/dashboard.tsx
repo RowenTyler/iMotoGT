@@ -57,10 +57,21 @@ export default function Dashboard({
   const [deleteReason, setDeleteReason] = useState("")
   const [customDeleteReason, setCustomDeleteReason] = useState("")
   const [isDeleting, setIsDeleting] = useState(false)
+  const [isLoadingSavedCars, setIsLoadingSavedCars] = useState(true)
 
   // Ensure arrays are properly initialized
   const safeSavedCars = Array.isArray(savedCars) ? savedCars : []
   const safeListedCars = Array.isArray(listedCars) ? listedCars : []
+
+  // Debug logging
+  useEffect(() => {
+    console.log("🔄 Dashboard: safeSavedCars updated", safeSavedCars)
+    console.log("🔄 Dashboard: safeListedCars updated", safeListedCars)
+    if (safeSavedCars.length > 0) {
+      console.log("📊 Dashboard: First saved car data", safeSavedCars[0])
+    }
+    setIsLoadingSavedCars(false)
+  }, [safeSavedCars, safeListedCars])
 
   // Auto-rotate carousel
   useEffect(() => {
@@ -89,25 +100,33 @@ export default function Dashboard({
     }
   }
 
-  // Handle viewing vehicle details - FIXED: Changed user_id to userId
+  // Handle viewing vehicle details - FIXED: Better error handling
   const handleViewDetails = (vehicle: Vehicle) => {
-    const isOwner = user && vehicle.userId === user.id
+    try {
+      console.log("🔄 Dashboard: Handling view details for vehicle:", vehicle?.id)
+      const isOwner = user && vehicle.userId === user.id
 
-    if (isOwner) {
-      router.push(`/vehicle-details/${vehicle.id}?edit=true`)
-    } else if (onViewDetails) {
-      onViewDetails(vehicle)
-    } else {
-      router.push(`/vehicle-details/${vehicle.id}`)
+      if (isOwner) {
+        router.push(`/vehicle-details/${vehicle.id}?edit=true`)
+      } else if (onViewDetails) {
+        onViewDetails(vehicle)
+      } else {
+        router.push(`/vehicle-details/${vehicle.id}`)
+      }
+    } catch (error) {
+      console.error("❌ Dashboard: Error in handleViewDetails:", error)
+      // Fallback to direct navigation
+      if (vehicle?.id) {
+        router.push(`/vehicle-details/${vehicle.id}`)
+      }
     }
   }
 
-  // Handle browse cars navigation - FIXED
+  // Handle browse cars navigation
   const handleBrowseCars = () => {
     if (onShowAllCars) {
       onShowAllCars()
     } else {
-      // Fallback: directly navigate to results page
       router.push("/results")
     }
   }
@@ -141,6 +160,16 @@ export default function Dashboard({
     }
   }
 
+  // Get image URL with better fallback logic
+  const getVehicleImage = (vehicle: Vehicle) => {
+    if (!vehicle) return "/placeholder.svg?height=400&width=600"
+    
+    // Try multiple image sources
+    const imageUrl = vehicle.images?.[0] || vehicle.image || "/placeholder.svg?height=400&width=600"
+    console.log("🖼️ Dashboard: Image URL for vehicle", vehicle.id, imageUrl)
+    return imageUrl
+  }
+
   const totalListings = safeListedCars.length
   const maxFreeListings = 5
   const freeListingsRemaining = Math.max(0, maxFreeListings - totalListings)
@@ -148,6 +177,7 @@ export default function Dashboard({
   if (!user) {
     return <div className="min-h-screen flex items-center justify-center text-xl">User not logged in.</div>
   }
+
   if (selectedVehicle) {
     return (
       <VehicleDetails
@@ -224,7 +254,7 @@ export default function Dashboard({
                     </Card>
                   </div>
 
-                  {/* Progress Card - METRICS RESTORED */}
+                  {/* Progress Card */}
                   <Card className="col-span-1 rounded-3xl p-5 w-full h-full flex flex-col justify-between bg-gradient-to-br from-white to-gray-50">
                     <div className="flex justify-between items-center">
                       <h3 className="text-xl font-semibold">Metrics</h3>
@@ -282,7 +312,6 @@ export default function Dashboard({
                     </div>
 
                     <div className="p-3 flex-grow flex flex-col gap-3 min-h-0">
-
                       {/* Free Plan */}
                       <div className="bg-gray-50 rounded-xl p-3 flex-1 flex flex-col min-h-0">
                         <div className="flex justify-between items-center mb-1 min-h-0">
@@ -329,25 +358,30 @@ export default function Dashboard({
                     </div>
                   </Card>
 
-
-                  {/* Saved Cars Card - FIXED: Updated image fallback logic */}
+                  {/* Saved Cars Card - IMPROVED: Better loading and error handling */}
                   <Card className="col-span-12 md:col-span-6 rounded-3xl overflow-hidden w-full h-full relative">
                     <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-transparent z-10"></div>
-                    <img
-                      src={
-                        safeSavedCars.length > 0
-                          ? safeSavedCars[currentCarIndex]?.images?.[0] || 
-                            safeSavedCars[currentCarIndex]?.image || 
-                            "/placeholder.svg?height=400&width=600"
-                          : "/placeholder.svg?height=400&width=600&text=No+Saved+Cars"
-                      }
-                      alt="Saved Car"
-                      className="absolute inset-0 w-full h-full object-cover"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement
-                        target.src = "/placeholder.svg"
-                      }}
-                    />
+                    
+                    {isLoadingSavedCars ? (
+                      <div className="absolute inset-0 w-full h-full bg-gray-200 flex items-center justify-center">
+                        <div className="text-white text-center">
+                          <Car className="w-12 h-12 mx-auto mb-3 opacity-50 animate-pulse" />
+                          <p>Loading saved cars...</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <img
+                        src={getVehicleImage(safeSavedCars[currentCarIndex])}
+                        alt="Saved Car"
+                        className="absolute inset-0 w-full h-full object-cover"
+                        onError={(e) => {
+                          console.error("❌ Dashboard: Image failed to load, using placeholder")
+                          const target = e.target as HTMLImageElement
+                          target.src = "/placeholder.svg?height=400&width=600"
+                        }}
+                      />
+                    )}
+
                     <div className="relative z-20 h-full flex flex-col justify-between p-6">
                       <div className="flex justify-between">
                         <span
@@ -358,7 +392,7 @@ export default function Dashboard({
                         </span>
                         {safeSavedCars.length > 0 && (
                           <span className="bg-white/20 backdrop-blur-sm text-white px-3 py-1 rounded-full text-sm">
-                            {safeSavedCars.length} saved cars
+                            {safeSavedCars.length} saved {safeSavedCars.length === 1 ? 'car' : 'cars'}
                           </span>
                         )}
                       </div>
@@ -368,7 +402,10 @@ export default function Dashboard({
                           <>
                             <div
                               className="text-white cursor-pointer"
-                              onClick={() => handleViewDetails(safeSavedCars[currentCarIndex])}
+                              onClick={() => {
+                                console.log("🔄 Dashboard: Clicking on saved car:", safeSavedCars[currentCarIndex]?.id)
+                                handleViewDetails(safeSavedCars[currentCarIndex])
+                              }}
                             >
                               <h3 className="text-2xl font-bold mb-1">
                                 {safeSavedCars[currentCarIndex]?.year} {safeSavedCars[currentCarIndex]?.make}{" "}
@@ -383,7 +420,11 @@ export default function Dashboard({
                             </div>
                             <Button
                               className="bg-white text-[#3E5641] hover:bg-white/90"
-                              onClick={() => {/* mailto logic */}}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                // mailto logic would go here
+                                console.log("📧 Contact seller clicked")
+                              }}
                             >
                               Contact Seller
                             </Button>
@@ -392,8 +433,10 @@ export default function Dashboard({
                           <div className="text-white text-center w-full">
                             <Car className="w-12 h-12 mx-auto mb-3 opacity-50" />
                             <h3 className="text-xl font-bold mb-1">No Saved Cars</h3>
-                            {/* FIXED: Use handleBrowseCars instead of onShowAllCars */}
-                            <Button className="bg-white text-[#3E5641] hover:bg-white/90" onClick={handleBrowseCars}>
+                            <Button 
+                              className="bg-white text-[#3E5641] hover:bg-white/90" 
+                              onClick={handleBrowseCars}
+                            >
                               Browse Cars
                             </Button>
                           </div>
@@ -408,7 +451,10 @@ export default function Dashboard({
                               className={`w-2 h-2 rounded-full transition-all ${
                                 currentCarIndex === index ? "bg-white w-4" : "bg-white/40"
                               }`}
-                              onClick={() => setCurrentCarIndex(index)}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setCurrentCarIndex(index)
+                              }}
                             />
                           ))}
                         </div>
@@ -434,11 +480,14 @@ export default function Dashboard({
                         <div
                           key={vehicle.id}
                           className="flex items-center gap-3 p-3 mb-2 rounded-xl hover:bg-gray-50 transition-colors cursor-pointer"
-                          onClick={() => handleViewDetails(vehicle)}
+                          onClick={() => {
+                            console.log("🔄 Dashboard: Clicking on listed car:", vehicle.id)
+                            handleViewDetails(vehicle)
+                          }}
                         >
                           <div className="w-16 h-12 rounded-lg overflow-hidden bg-gray-200 flex-shrink-0">
                             <img
-                              src={vehicle.images?.[0] || vehicle.image || "/placeholder.svg"}
+                              src={getVehicleImage(vehicle)}
                               alt="car"
                               className="w-full h-full object-cover"
                               onError={(e) => {
@@ -505,7 +554,6 @@ export default function Dashboard({
 
         {/* MOBILE / TABLET / LANDSCAPE LAYOUT (lg:hidden) */}
         <div className="lg:hidden w-full mx-auto h-full overflow-y-auto px-6 pb-6">
-           {/* Added max-w-4xl mx-auto to control width on landscape/wide tablets */}
            <div className="max-w-4xl mx-auto">
              <h1 className="text-3xl font-bold mb-4">Welcome, {user.firstName}</h1>
              
@@ -534,7 +582,6 @@ export default function Dashboard({
                     </Card>
                 </div>
                 
-                 {/* METRICS ADDED HERE AS WELL */}
                  <Card className="col-span-1 rounded-xl p-2 flex flex-col items-center justify-center">
                     <div className="flex justify-between items-center mb-2">
                       <h3 className="text-xs font-semibold text-[#3E5641]">Metrics</h3>
@@ -562,24 +609,29 @@ export default function Dashboard({
                   </Card>
              </div>
              
-             {/* Mobile Saved Cars - FIXED: Updated image fallback logic */}
+             {/* Mobile Saved Cars */}
              <Card className="rounded-lg overflow-hidden w-full h-40 relative mb-4">
                 <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-transparent z-10"></div>
-                <img
-                  src={
-                    safeSavedCars.length > 0
-                      ? safeSavedCars[currentCarIndex]?.images?.[0] || 
-                        safeSavedCars[currentCarIndex]?.image || 
-                        "/placeholder.svg?height=400&width=600"
-                      : "/placeholder.svg?height=400&width=600&text=No+Saved+Cars"
-                  }
-                  alt="Saved Car"
-                  className="absolute inset-0 w-full h-full object-cover"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement
-                    target.src = "/placeholder.svg"
-                  }}
-                />
+                
+                {isLoadingSavedCars ? (
+                  <div className="absolute inset-0 w-full h-full bg-gray-200 flex items-center justify-center">
+                    <div className="text-white text-center">
+                      <Car className="w-8 h-8 mx-auto mb-2 opacity-50 animate-pulse" />
+                      <p className="text-sm">Loading...</p>
+                    </div>
+                  </div>
+                ) : (
+                  <img
+                    src={getVehicleImage(safeSavedCars[currentCarIndex])}
+                    alt="Saved Car"
+                    className="absolute inset-0 w-full h-full object-cover"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement
+                      target.src = "/placeholder.svg"
+                    }}
+                  />
+                )}
+
                 <div className="relative z-20 h-full flex flex-col justify-between p-4">
                   <div className="flex justify-between items-start">
                     <span
@@ -590,7 +642,7 @@ export default function Dashboard({
                     </span>
                     {safeSavedCars.length > 0 && (
                       <span className="bg-white/20 backdrop-blur-sm text-white px-2 py-1 rounded-full text-xs">
-                        {safeSavedCars.length} saved cars
+                        {safeSavedCars.length} saved
                       </span>
                     )}
                   </div>
@@ -617,7 +669,6 @@ export default function Dashboard({
                       <div className="text-white text-center w-full">
                         <Car className="w-8 h-8 mx-auto mb-2 opacity-50" />
                         <h3 className="text-base font-bold mb-1">No Saved Cars</h3>
-                        {/* FIXED: Use handleBrowseCars instead of onShowAllCars */}
                         <Button
                           className="bg-white text-[#3E5641] hover:bg-white/90 text-xs h-auto py-1.5 px-3"
                           onClick={handleBrowseCars}
@@ -643,7 +694,7 @@ export default function Dashboard({
                 </div>
               </Card>
              
-             {/* Mobile Recently Listed - WITH EDIT/DELETE BUTTONS */}
+             {/* Mobile Recently Listed */}
              <Card className="rounded-3xl w-full flex flex-col mb-4">
                 <div className="p-4 border-b flex justify-between items-center">
                   <h3 className="text-lg font-semibold">Recently Listed</h3>
@@ -658,7 +709,7 @@ export default function Dashboard({
                         >
                            <div className="w-12 h-9 rounded-md overflow-hidden bg-gray-200 flex-shrink-0">
                              <img 
-                              src={vehicle.images?.[0] || vehicle.image || "/placeholder.svg"} 
+                              src={getVehicleImage(vehicle)} 
                               alt="car"
                               className="w-full h-full object-cover" 
                               onError={(e) => {
@@ -672,7 +723,6 @@ export default function Dashboard({
                              <div className="text-xs text-gray-500">${vehicle.price?.toLocaleString()}</div>
                            </div>
                            
-                           {/* Mobile Buttons for Edit/Delete */}
                            <div className="flex items-center ml-1">
                              {onEditListedCar && (
                                <Button
