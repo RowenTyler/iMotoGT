@@ -606,9 +606,20 @@ export default function VehicleDetails({
             <div className="gallery-container relative flex items-center">
               <div 
                 ref={galleryContainerRef}
-                className="gallery-scroll flex overflow-x-auto snap-x snap-mandatory w-full scrollbar-hide"
+                className="gallery-scroll flex overflow-x-auto snap-x snap-mandatory w-full [scrollbar-width:none] [-ms-overflow-style:none] [-webkit-overflow-scrolling:touch]"
+                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                 onScroll={handleGalleryScroll}
               >
+                {/* Hide scrollbar for Webkit browsers */}
+                <style jsx>{`
+                  .gallery-scroll::-webkit-scrollbar {
+                    display: none;
+                    width: 0;
+                    height: 0;
+                    background: transparent;
+                  }
+                `}</style>
+                
                 {/* Gallery 1 */}
                 {hasGalleryOne && (
                   <section className="gallery-section flex-shrink-0 w-full snap-center grid grid-cols-1 md:grid-cols-3 gap-4 h-[400px]">
