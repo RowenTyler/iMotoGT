@@ -529,3 +529,128 @@ export async function deleteVehicle(id: string): Promise<boolean> {
     return false
   }
 }
+
+// ============================================================================
+// SAVED VEHICLES OPERATIONS - NEW FUNCTIONS ADDED BELOW
+// ============================================================================
+
+/**
+ * Save a vehicle for a user
+ */
+export async function saveVehicle(userId: string, vehicleId: string): Promise<boolean> {
+  try {
+    const { data, error } = await supabase
+      .from('saved_vehicles')
+      .insert([{ user_id: userId, vehicle_id: vehicleId }])
+      .select()
+
+    if (error) {
+      console.error('[v0] Error saving vehicle:', error)
+      return false
+    }
+
+    return true
+  } catch (error) {
+    console.error('[v0] Exception saving vehicle:', error)
+    return false
+  }
+}
+
+/**
+ * Unsave a vehicle for a user
+ */
+export async function unsaveVehicle(userId: string, vehicleId: string): Promise<boolean> {
+  try {
+    const { error } = await supabase
+      .from('saved_vehicles')
+      .delete()
+      .eq('user_id', userId)
+      .eq('vehicle_id', vehicleId)
+
+    if (error) {
+      console.error('[v0] Error unsaving vehicle:', error)
+      return false
+    }
+
+    return true
+  } catch (error) {
+    console.error('[v0] Exception unsaving vehicle:', error)
+    return false
+  }
+}
+
+/**
+ * Get all saved vehicles for a user
+ */
+export async function getSavedVehicles(userId: string): Promise<Vehicle[]> {
+  try {
+    const { data, error } = await supabase
+      .from('saved_vehicles')
+      .select(`
+        vehicle_id,
+        vehicles (
+          id,
+          user_id,
+          make,
+          model,
+          variant,
+          year,
+          price,
+          mileage,
+          transmission,
+          fuel,
+          engine_capacity,
+          body_type,
+          province,
+          city,
+          description,
+          images,
+          status,
+          created_at,
+          updated_at,
+          users(id, email, first_name, last_name, phone, profile_pic, suburb, city, province)
+        )
+      `)
+      .eq('user_id', userId)
+
+    if (error) {
+      console.error('[v0] Error fetching saved vehicles:', error)
+      return []
+    }
+
+    // Extract and map the vehicle data
+    const savedVehicles = (data || [])
+      .map(item => item.vehicles)
+      .filter(vehicle => vehicle !== null)
+      .map(mapDatabaseToVehicle)
+
+    return savedVehicles
+  } catch (error) {
+    console.error('[v0] Exception fetching saved vehicles:', error)
+    return []
+  }
+}
+
+/**
+ * Check if a vehicle is saved by a user
+ */
+export async function isVehicleSaved(userId: string, vehicleId: string): Promise<boolean> {
+  try {
+    const { data, error } = await supabase
+      .from('saved_vehicles')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('vehicle_id', vehicleId)
+      .single()
+
+    if (error && error.code !== 'PGRST116') { // PGRST116 is "not found"
+      console.error('[v0] Error checking saved vehicle:', error)
+      return false
+    }
+
+    return !!data
+  } catch (error) {
+    console.error('[v0] Exception checking saved vehicle:', error)
+    return false
+  }
+}

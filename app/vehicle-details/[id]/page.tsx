@@ -69,7 +69,7 @@ export default function VehicleDetailsPage({ params }: VehicleDetailsPageProps) 
           vehicle={vehicle}
           onBack={() => router.back()}
           user={user}
-          savedCars={Array.from(savedVehicles).map(id => ({ id } as Vehicle))}
+          savedCars={[]}
           onSaveCar={() => toggleSaveVehicle(vehicle)}
         />
       </div>

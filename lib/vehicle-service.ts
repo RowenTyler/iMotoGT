@@ -7,7 +7,11 @@ import {
   updateVehicle,
   deleteVehicle,
   searchVehicles,
-  filterVehicles, // Added filterVehicles import
+  filterVehicles,
+  saveVehicle,        // ADDED: Import new saved vehicles functions
+  unsaveVehicle,      // ADDED: Import new saved vehicles functions
+  getSavedVehicles,   // ADDED: Import new saved vehicles functions
+  isVehicleSaved      // ADDED: Import new saved vehicles functions
 } from "./vehicle-operations" // Assuming these functions are declared in a vehicle-operations file
 
 /**
@@ -99,7 +103,11 @@ export const vehicleService = {
   updateVehicle,
   deleteVehicle,
   searchVehicles,
-  filterVehicles, // Added filterVehicles to export
+  filterVehicles,
+  saveVehicle,        // ADDED: Export new saved vehicles function
+  unsaveVehicle,      // ADDED: Export new saved vehicles function
+  getSavedVehicles,   // ADDED: Export new saved vehicles function
+  isVehicleSaved      // ADDED: Export new saved vehicles function
 }
 
 // Also export individual functions
@@ -112,4 +120,8 @@ export {
   deleteVehicle,
   searchVehicles,
   filterVehicles,
-} // Added filterVehicles
+  saveVehicle,        // ADDED: Export new saved vehicles function individually
+  unsaveVehicle,      // ADDED: Export new saved vehicles function individually
+  getSavedVehicles,   // ADDED: Export new saved vehicles function individually
+  isVehicleSaved      // ADDED: Export new saved vehicles function individually
+}

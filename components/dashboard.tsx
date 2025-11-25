@@ -89,9 +89,9 @@ export default function Dashboard({
     }
   }
 
-  // Handle viewing vehicle details
+  // Handle viewing vehicle details - FIXED: Changed user_id to userId
   const handleViewDetails = (vehicle: Vehicle) => {
-    const isOwner = user && vehicle.user_id === user.id
+    const isOwner = user && vehicle.userId === user.id
 
     if (isOwner) {
       router.push(`/vehicle-details/${vehicle.id}?edit=true`)
@@ -330,13 +330,15 @@ export default function Dashboard({
                   </Card>
 
 
-                  {/* Saved Cars Card */}
+                  {/* Saved Cars Card - FIXED: Updated image fallback logic */}
                   <Card className="col-span-12 md:col-span-6 rounded-3xl overflow-hidden w-full h-full relative">
                     <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-transparent z-10"></div>
                     <img
                       src={
                         safeSavedCars.length > 0
-                          ? safeSavedCars[currentCarIndex]?.image || "/placeholder.svg?height=400&width=600"
+                          ? safeSavedCars[currentCarIndex]?.images?.[0] || 
+                            safeSavedCars[currentCarIndex]?.image || 
+                            "/placeholder.svg?height=400&width=600"
                           : "/placeholder.svg?height=400&width=600&text=No+Saved+Cars"
                       }
                       alt="Saved Car"
@@ -373,9 +375,11 @@ export default function Dashboard({
                                 {safeSavedCars[currentCarIndex]?.model}
                               </h3>
                               <p className="text-white/80 mb-2">
-                                {safeSavedCars[currentCarIndex]?.variant} • {safeSavedCars[currentCarIndex]?.mileage} km
+                                {safeSavedCars[currentCarIndex]?.variant} • {safeSavedCars[currentCarIndex]?.mileage?.toLocaleString()} km
                               </p>
-                              <p className="text-xl font-bold text-[#FF6700]">{safeSavedCars[currentCarIndex]?.price}</p>
+                              <p className="text-xl font-bold text-[#FF6700]">
+                                ${safeSavedCars[currentCarIndex]?.price?.toLocaleString()}
+                              </p>
                             </div>
                             <Button
                               className="bg-white text-[#3E5641] hover:bg-white/90"
@@ -447,7 +451,7 @@ export default function Dashboard({
                             <div className="font-medium truncate">
                               {vehicle.year} {vehicle.make} {vehicle.model}
                             </div>
-                            <div className="text-sm text-gray-500">{vehicle.price}</div>
+                            <div className="text-sm text-gray-500">${vehicle.price?.toLocaleString()}</div>
                           </div>
                           <div className="flex items-center ml-2">
                             {onEditListedCar && (
@@ -558,13 +562,15 @@ export default function Dashboard({
                   </Card>
              </div>
              
-             {/* Mobile Saved Cars */}
+             {/* Mobile Saved Cars - FIXED: Updated image fallback logic */}
              <Card className="rounded-lg overflow-hidden w-full h-40 relative mb-4">
                 <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-transparent z-10"></div>
                 <img
                   src={
                     safeSavedCars.length > 0
-                      ? safeSavedCars[currentCarIndex]?.image || "/placeholder.svg?height=400&width=600"
+                      ? safeSavedCars[currentCarIndex]?.images?.[0] || 
+                        safeSavedCars[currentCarIndex]?.image || 
+                        "/placeholder.svg?height=400&width=600"
                       : "/placeholder.svg?height=400&width=600&text=No+Saved+Cars"
                   }
                   alt="Saved Car"
@@ -600,9 +606,11 @@ export default function Dashboard({
                             {safeSavedCars[currentCarIndex]?.model}
                           </h3>
                           <p className="text-white/80 text-xs mb-1">
-                            {safeSavedCars[currentCarIndex]?.variant} • {safeSavedCars[currentCarIndex]?.mileage} km
+                            {safeSavedCars[currentCarIndex]?.variant} • {safeSavedCars[currentCarIndex]?.mileage?.toLocaleString()} km
                           </p>
-                          <p className="text-lg font-bold text-[#FF6700]">{safeSavedCars[currentCarIndex]?.price}</p>
+                          <p className="text-lg font-bold text-[#FF6700]">
+                            ${safeSavedCars[currentCarIndex]?.price?.toLocaleString()}
+                          </p>
                         </div>
                       </>
                     ) : (
@@ -661,7 +669,7 @@ export default function Dashboard({
                            </div>
                            <div className="flex-grow min-w-0">
                              <div className="font-medium text-sm truncate">{vehicle.year} {vehicle.make} {vehicle.model}</div>
-                             <div className="text-xs text-gray-500">{vehicle.price}</div>
+                             <div className="text-xs text-gray-500">${vehicle.price?.toLocaleString()}</div>
                            </div>
                            
                            {/* Mobile Buttons for Edit/Delete */}

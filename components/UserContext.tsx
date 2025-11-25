@@ -22,7 +22,7 @@ interface UserContextType {
   addListedVehicle: (vehicle: VehicleFormData) => Promise<void>
   updateListedVehicle: (vehicleId: string, vehicleData: Partial<VehicleFormData>) => Promise<void>
   deleteListedVehicle: (vehicleId: string) => Promise<void>
-  toggleSaveVehicle: (vehicle: Vehicle) => void
+  toggleSaveVehicle: (vehicle: Vehicle) => Promise<void>
   refreshVehicles: () => Promise<void>
   refreshUserProfile: () => Promise<void>
 }
@@ -37,6 +37,25 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [savedVehicles, setSavedVehicles] = useState<Set<string>>(new Set())
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
+
+  // NEW: Function to load saved vehicles from database
+  const loadSavedVehicles = useCallback(async () => {
+    if (!user?.id) {
+      console.log("⚠️ No user ID, skipping saved vehicles load")
+      return
+    }
+
+    try {
+      console.log("🔄 Loading saved vehicles for user:", user.id)
+      const savedVehiclesList = await vehicleService.getSavedVehicles(user.id)
+      const savedVehicleIds = new Set(savedVehiclesList.map(vehicle => vehicle.id))
+      setSavedVehicles(savedVehicleIds)
+      console.log(`✅ Loaded ${savedVehicleIds.size} saved vehicles`)
+    } catch (error) {
+      console.error("❌ Error loading saved vehicles:", error)
+      setSavedVehicles(new Set())
+    }
+  }, [user?.id])
 
   const refreshUserProfile = useCallback(async () => {
   if (!authUser) {
@@ -118,6 +137,10 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
             if (mounted) {
               setListedVehicles(vehicles)
             }
+            // NEW: Load saved vehicles when user logs in
+            if (mounted) {
+              await loadSavedVehicles()
+            }
           } else {
             console.log("⚠️ Using fallback profile")
             setUser({
@@ -179,6 +202,10 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
           if (mounted) {
             setListedVehicles(vehicles)
           }
+          // NEW: Load saved vehicles on auth state change
+          if (mounted) {
+            await loadSavedVehicles()
+          }
         } else {
           console.log("⚠️ Using fallback profile on auth change")
           setUser({
@@ -204,7 +231,16 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       mounted = false
       unsubscribe()
     }
-  }, [])
+  }, [loadSavedVehicles]) // NEW: Added dependency
+
+  // NEW: Load saved vehicles when user changes
+  useEffect(() => {
+    if (user?.id) {
+      loadSavedVehicles()
+    } else {
+      setSavedVehicles(new Set())
+    }
+  }, [user?.id, loadSavedVehicles])
 
   const logout = async () => {
     try {
@@ -321,18 +357,50 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const toggleSaveVehicle = (vehicle: Vehicle) => {
-    setSavedVehicles((prev) => {
-      const newSet = new Set(prev)
-      if (newSet.has(vehicle.id)) {
-        console.log("❌ Unsaving vehicle:", vehicle.id)
-        newSet.delete(vehicle.id)
+  // UPDATED: toggleSaveVehicle now persists to database
+  const toggleSaveVehicle = async (vehicle: Vehicle) => {
+    if (!user?.id) {
+      console.error("❌ Cannot save vehicle: No user logged in")
+      alert("Please log in to save vehicles")
+      return
+    }
+
+    const isCurrentlySaved = savedVehicles.has(vehicle.id)
+
+    try {
+      if (isCurrentlySaved) {
+        console.log("❌ Unsaving vehicle from database:", vehicle.id)
+        const success = await vehicleService.unsaveVehicle(user.id, vehicle.id)
+        if (success) {
+          setSavedVehicles(prev => {
+            const newSet = new Set(prev)
+            newSet.delete(vehicle.id)
+            return newSet
+          })
+          console.log("✅ Vehicle unsaved successfully")
+        } else {
+          console.error("❌ Failed to unsave vehicle from database")
+          alert("Failed to unsave vehicle. Please try again.")
+        }
       } else {
-        console.log("💾 Saving vehicle:", vehicle.id)
-        newSet.add(vehicle.id)
+        console.log("💾 Saving vehicle to database:", vehicle.id)
+        const success = await vehicleService.saveVehicle(user.id, vehicle.id)
+        if (success) {
+          setSavedVehicles(prev => {
+            const newSet = new Set(prev)
+            newSet.add(vehicle.id)
+            return newSet
+          })
+          console.log("✅ Vehicle saved successfully")
+        } else {
+          console.error("❌ Failed to save vehicle to database")
+          alert("Failed to save vehicle. Please try again.")
+        }
       }
-      return newSet
-    })
+    } catch (error) {
+      console.error("❌ Error toggling save vehicle:", error)
+      alert("Failed to save vehicle. Please try again.")
+    }
   }
 
   const value: UserContextType = {
