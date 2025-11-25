@@ -1,21 +1,21 @@
 "use client"
 import { useState, useEffect, useMemo, useRef } from "react"
 import type React from "react"
-import Image from "next/image" // Add this import
+import Image from "next/image"
 
 import { Car, Shield, Phone, Mail, X, Star, UploadCloud, Search, MapPin } from "lucide-react"
 import type { Vehicle } from "@/types/vehicle"
-import type { UserProfile } from "@/types/user" // Added import
+import type { UserProfile } from "@/types/user"
 import { Heart, ChevronLeft, ChevronRight } from "lucide-react"
 
 interface VehicleDetailsProps {
-  vehicle: Vehicle // Assumes Vehicle type now has vehicle.images?: string[]
+  vehicle: Vehicle
   onBack: () => void
-  user?: UserProfile // Changed 'any' to 'UserProfile'
-  onSaveCar?: (vehicle: Vehicle) => void // Add callback for saving cars
-  savedCars?: Vehicle[] // Add array of saved cars to check if this car is saved
-  isEditMode?: boolean // To enable editing UI
-  onUpdateVehicle?: (updatedVehicle: Vehicle) => void // Callback to save changes
+  user?: UserProfile
+  onSaveCar?: (vehicle: Vehicle) => void
+  savedCars?: Vehicle[]
+  isEditMode?: boolean
+  onUpdateVehicle?: (updatedVehicle: Vehicle) => void
 }
 
 export default function VehicleDetails({
@@ -92,6 +92,7 @@ export default function VehicleDetails({
     vehicle.images && vehicle.images.length > 0 ? [...vehicle.images] : vehicle.image ? [vehicle.image] : [],
   )
   const imageUploadRef = useRef<HTMLInputElement>(null)
+  const galleryScrollRef = useRef<HTMLDivElement>(null)
 
   // Helper function to format raw price string to "R X XXX.XX" for display
   const formatPriceForDisplay = (rawValue: string | number | undefined | null): string => {
@@ -354,6 +355,7 @@ export default function VehicleDetails({
   }
 
   const openImageModal = (index: number) => {
+    console.log("Opening modal for image:", index)
     setSelectedImageIndex(index)
     setIsImageModalOpen(true)
     // Prevent body scrolling when modal is open
@@ -397,7 +399,7 @@ export default function VehicleDetails({
     return () => {
       window.removeEventListener("keydown", handleKeyDown)
     }
-  }, [isImageModalOpen, selectedImageIndex, allDisplayableImages.length]) // Added allDisplayableImages.length
+  }, [isImageModalOpen, selectedImageIndex, allDisplayableImages.length])
 
   const handleTriggerImageUpload = () => {
     if (imageUploadRef.current) {
@@ -430,6 +432,25 @@ export default function VehicleDetails({
       })
 
       if (imageUploadRef.current) imageUploadRef.current.value = "" // Reset file input
+    }
+  }
+
+  // Desktop gallery scroll functionality
+  const scrollToSection = (sectionIndex: number) => {
+    if (galleryScrollRef.current) {
+      const sectionWidth = galleryScrollRef.current.offsetWidth
+      galleryScrollRef.current.scrollTo({
+        left: sectionIndex * sectionWidth,
+        behavior: 'smooth'
+      })
+    }
+  }
+
+  const handleGalleryScroll = () => {
+    if (galleryScrollRef.current) {
+      const scrollLeft = galleryScrollRef.current.scrollLeft
+      const sectionWidth = galleryScrollRef.current.offsetWidth
+      const currentSection = Math.round(scrollLeft / sectionWidth)
     }
   }
 
@@ -562,134 +583,140 @@ export default function VehicleDetails({
                 {currentImageIndex + 1} / {allDisplayableImages.length}
               </div>
 
-              {/* 3-Button Navigation - Circles */}
-              <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-3">
+              {/* 3-Circle Navigation for Mobile */}
+              <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
                 {[0, 1, 2].map((sectionIndex) => (
                   <button
                     key={sectionIndex}
-                    className={`w-3 h-3 rounded-full transition-all duration-300 ${
-                      getCurrentSection() === sectionIndex 
+                    className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                      Math.floor(currentImageIndex / 5) === sectionIndex 
                         ? "bg-white scale-110" 
                         : "bg-white/50 hover:bg-white/70"
                     }`}
-                    onClick={() => navigateToSection(sectionIndex)}
+                    onClick={() => {
+                      const targetIndex = sectionIndex === 0 ? 0 : sectionIndex === 1 ? 5 : 13
+                      setCurrentImageIndex(Math.min(targetIndex, allDisplayableImages.length - 1))
+                    }}
                   />
                 ))}
-              </div>
-
-              {/* Scroll hint */}
-              <div className="absolute bottom-12 left-1/2 transform -translate-x-1/2 text-white text-xs bg-black/50 px-2 py-1 rounded-full animate-pulse">
-                Swipe to browse
               </div>
             </div>
           </div>
 
           {/* Desktop: Three-section horizontal scrolling gallery */}
           <div className="hidden md:block">
-            <div className="gallery-container relative flex items-center">
-              <div className="gallery-scroll flex overflow-x-auto snap-x snap-mandatory w-full">
-                {/* Gallery 1 */}
+            <div className="relative">
+              <div 
+                ref={galleryScrollRef}
+                className="flex overflow-x-auto snap-x snap-mandatory w-full scrollbar-hide"
+                onScroll={handleGalleryScroll}
+              >
+                {/* Gallery 1 - Main + 4 small */}
                 {galleryOneDisplayImages.length > 0 && (
-                  <section className="gallery-section flex-shrink-0 w-full snap-center grid grid-cols-1 md:grid-cols-3 gap-4 h-[400px]">
-                    <div className="md:col-span-2 h-full overflow-hidden rounded-lg group relative m-0 p-0">
-                      <Image
-                        src={galleryOneDisplayImages[0] || "/placeholder.svg"}
-                        alt={`${vehicle.make} ${vehicle.model} main view`}
-                        fill
-                        className="object-cover group-hover:scale-105 transition-transform duration-300 cursor-pointer"
-                        onClick={() => openImageModal(0)}
-                      />
-                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                        <div className="bg-white/80 rounded-full p-2">
-                          <Search className="w-6 h-6 text-[#3E5641]" />
+                  <section className="flex-shrink-0 w-full snap-center">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-[400px]">
+                      <div className="md:col-span-2 h-full overflow-hidden rounded-lg group relative">
+                        <Image
+                          src={galleryOneDisplayImages[0] || "/placeholder.svg"}
+                          alt={`${vehicle.make} ${vehicle.model} main view`}
+                          fill
+                          className="object-cover group-hover:scale-105 transition-transform duration-300 cursor-pointer"
+                          onClick={() => openImageModal(0)}
+                        />
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                          <div className="bg-white/80 rounded-full p-2">
+                            <Search className="w-6 h-6 text-[#3E5641]" />
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    {galleryOneDisplayImages.length > 1 && (
-                      <div className="grid grid-cols-2 gap-4 h-full">
-                        {galleryOneDisplayImages.slice(1).map((imgSrc, index) => (
-                          <div
-                            key={`g1-thumb-${index}`}
-                            className="aspect-square overflow-hidden rounded-lg group relative m-0 p-0"
-                          >
-                            <Image
-                              src={imgSrc || "/placeholder.svg"}
-                              alt={`${vehicle.make} ${vehicle.model} view ${index + 1}`}
-                              fill
-                              className="object-cover group-hover:scale-105 transition-transform duration-300 cursor-pointer"
-                              onClick={() => openImageModal(index + 1)}
-                            />
-                            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                              <div className="bg-white/80 rounded-full p-2">
-                                <Search className="w-4 h-4 text-[#3E5641]" />
+                      {galleryOneDisplayImages.length > 1 && (
+                        <div className="grid grid-cols-2 gap-4 h-full">
+                          {galleryOneDisplayImages.slice(1, 5).map((imgSrc, index) => (
+                            <div
+                              key={`g1-thumb-${index}`}
+                              className="aspect-square overflow-hidden rounded-lg group relative"
+                            >
+                              <Image
+                                src={imgSrc || "/placeholder.svg"}
+                                alt={`${vehicle.make} ${vehicle.model} view ${index + 1}`}
+                                fill
+                                className="object-cover group-hover:scale-105 transition-transform duration-300 cursor-pointer"
+                                onClick={() => openImageModal(index + 1)}
+                              />
+                              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                <div className="bg-white/80 rounded-full p-2">
+                                  <Search className="w-4 h-4 text-[#3E5641]" />
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </section>
                 )}
 
-                {/* Gallery 2 */}
+                {/* Gallery 2 - 8 images */}
                 {galleryTwoDisplayImages.length > 0 && (
-                  <section className="gallery-section flex-shrink-0 w-full snap-center grid grid-cols-2 sm:grid-cols-4 gap-4 h-[400px]">
-                    {galleryTwoDisplayImages.map((imgSrc, index) => (
-                      <div key={`g2-img-${index}`} className="w-full h-full overflow-hidden rounded-lg group relative">
-                        <Image
-                          src={imgSrc || "/placeholder.svg"}
-                          alt={`${vehicle.make} ${vehicle.model} additional view ${index + 5}`}
-                          fill
-                          className="object-cover group-hover:scale-105 transition-transform duration-300 cursor-pointer"
-                          onClick={() => openImageModal(index + 5)}
-                        />
-                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                          <div className="bg-white/80 rounded-full p-2">
-                            <Search className="w-4 h-4 text-[#3E5641]" />
+                  <section className="flex-shrink-0 w-full snap-center">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 h-[400px]">
+                      {galleryTwoDisplayImages.map((imgSrc, index) => (
+                        <div key={`g2-img-${index}`} className="w-full h-full overflow-hidden rounded-lg group relative">
+                          <Image
+                            src={imgSrc || "/placeholder.svg"}
+                            alt={`${vehicle.make} ${vehicle.model} additional view ${index + 5}`}
+                            fill
+                            className="object-cover group-hover:scale-105 transition-transform duration-300 cursor-pointer"
+                            onClick={() => openImageModal(index + 5)}
+                          />
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                            <div className="bg-white/80 rounded-full p-2">
+                              <Search className="w-4 h-4 text-[#3E5641]" />
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </section>
                 )}
 
-                {/* Gallery 3 */}
+                {/* Gallery 3 - 8 images */}
                 {galleryThreeDisplayImages.length > 0 && (
-                  <section className="gallery-section flex-shrink-0 w-full snap-center grid grid-cols-2 sm:grid-cols-4 gap-4 h-[400px]">
-                    {galleryThreeDisplayImages.map((imgSrc, index) => (
-                      <div key={`g3-img-${index}`} className="w-full h-full overflow-hidden rounded-lg group relative">
-                        <Image
-                          src={imgSrc || "/placeholder.svg"}
-                          alt={`${vehicle.make} ${vehicle.model} additional view ${index + 13}`}
-                          fill
-                          className="object-cover group-hover:scale-105 transition-transform duration-300 cursor-pointer"
-                          onClick={() => openImageModal(index + 13)}
-                        />
-                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                          <div className="bg-white/80 rounded-full p-2">
-                            <Search className="w-4 h-4 text-[#3E5641]" />
+                  <section className="flex-shrink-0 w-full snap-center">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 h-[400px]">
+                      {galleryThreeDisplayImages.map((imgSrc, index) => (
+                        <div key={`g3-img-${index}`} className="w-full h-full overflow-hidden rounded-lg group relative">
+                          <Image
+                            src={imgSrc || "/placeholder.svg"}
+                            alt={`${vehicle.make} ${vehicle.model} additional view ${index + 13}`}
+                            fill
+                            className="object-cover group-hover:scale-105 transition-transform duration-300 cursor-pointer"
+                            onClick={() => openImageModal(index + 13)}
+                          />
+                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                            <div className="bg-white/80 rounded-full p-2">
+                              <Search className="w-4 h-4 text-[#3E5641]" />
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
                   </section>
                 )}
               </div>
 
-              {/* 3-Button Navigation for Desktop */}
-              <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-4">
+              {/* 3-Circle Navigation for Desktop */}
+              <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-3">
                 {[0, 1, 2].map((sectionIndex) => (
                   <button
                     key={sectionIndex}
-                    onClick={() => navigateToSection(sectionIndex)}
-                    className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
-                      getCurrentSection() === sectionIndex
-                        ? "bg-[#FF6700] text-white shadow-lg"
-                        : "bg-white/80 text-[#3E5641] hover:bg-white"
+                    onClick={() => scrollToSection(sectionIndex)}
+                    className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                      sectionIndex === 0 
+                        ? "bg-[#FF6700] scale-110" 
+                        : "bg-white/80 hover:bg-white"
                     }`}
-                  >
-                    {sectionIndex === 0 ? "Main" : sectionIndex === 1 ? "Gallery" : "More"}
-                  </button>
+                  />
                 ))}
               </div>
             </div>
@@ -704,9 +731,6 @@ export default function VehicleDetails({
           role="dialog"
           aria-modal="true"
           aria-label="Enlarged image view"
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
         >
           {/* Close Button */}
           <button
@@ -718,23 +742,25 @@ export default function VehicleDetails({
           </button>
 
           {/* Navigation Arrows */}
-          <div className="absolute inset-0 flex items-center justify-between px-4">
-            <button
-              onClick={() => navigateImage("prev")}
-              className="text-white bg-black/50 hover:bg-black/70 p-3 rounded-full transition-colors z-50"
-              aria-label="Previous image"
-            >
-              <ChevronLeft className="w-6 h-6" />
-            </button>
+          {allDisplayableImages.length > 1 && (
+            <div className="absolute inset-0 flex items-center justify-between px-4">
+              <button
+                onClick={() => navigateImage("prev")}
+                className="text-white bg-black/50 hover:bg-black/70 p-3 rounded-full transition-colors z-50"
+                aria-label="Previous image"
+              >
+                <ChevronLeft className="w-6 h-6" />
+              </button>
 
-            <button
-              onClick={() => navigateImage("next")}
-              className="text-white bg-black/50 hover:bg-black/70 p-3 rounded-full transition-colors z-50"
-              aria-label="Next image"
-            >
-              <ChevronRight className="w-6 h-6" />
-            </button>
-          </div>
+              <button
+                onClick={() => navigateImage("next")}
+                className="text-white bg-black/50 hover:bg-black/70 p-3 rounded-full transition-colors z-50"
+                aria-label="Next image"
+              >
+                <ChevronRight className="w-6 h-6" />
+              </button>
+            </div>
+          )}
 
           {/* Image Container */}
           <div className="relative max-h-[90vh] max-w-[90vw] w-full h-full flex items-center justify-center">
@@ -747,16 +773,16 @@ export default function VehicleDetails({
               </div>
             ) : (
               <div
-                className={`relative w-full h-full transition-transform duration-300 ${
-                  isZoomed ? "cursor-zoom-out" : "cursor-zoom-in"
-                }`}
+                className="relative w-full h-full cursor-zoom-in"
                 onClick={() => setIsZoomed(!isZoomed)}
               >
                 <Image
                   src={allDisplayableImages[selectedImageIndex] || "/placeholder.svg"}
                   alt={`${vehicle.make} ${vehicle.model} enlarged view`}
                   fill
-                  className={`object-contain transition-transform duration-300 ${isZoomed ? "scale-150" : "scale-100"}`}
+                  className={`object-contain transition-transform duration-300 ${
+                    isZoomed ? "scale-150 cursor-zoom-out" : "scale-100"
+                  }`}
                   priority
                   onError={() => setImageError(true)}
                 />
@@ -767,16 +793,10 @@ export default function VehicleDetails({
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/50 text-white px-3 py-1 rounded-full text-sm">
               {selectedImageIndex + 1} / {allDisplayableImages.length}
             </div>
-
-            {/* Zoom Hint */}
-            <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-black/50 text-white px-3 py-1 rounded-full text-sm">
-              Click image to {isZoomed ? "zoom out" : "zoom in"}
-            </div>
           </div>
         </div>
       )}
 
-      {/* Rest of the component remains exactly the same */}
       {/* Vehicle Title and Details */}
       <div className="px-6 max-w-7xl mx-auto mt-4">
         <div className="flex justify-between items-center mb-2">
@@ -900,27 +920,6 @@ export default function VehicleDetails({
           >
             Details
           </button>
-      {/*
-          <button
-            className={`py-3 font-medium filter blur-sm ${activeTab === "report" ? "border-b-2 border-[#FF6700] dark:border-[#FF7D33] text-[#3E5641] dark:text-white" : "text-[#6F7F69] dark:text-gray-400 hover:text-[#3E5641] dark:hover:text-white"}`}
-            onClick={() => setActiveTab("report")}
-          >
-          
-            Vehicle Report
-          </button>
-          <button
-            className={`py-3 font-medium filter blur-sm ${activeTab === "insurance" ? "border-b-2 border-[#FF6700] dark:border-[#FF7D33] text-[#3E5641] dark:text-white" : "text-[#6F7F69] dark:text-gray-400 hover:text-[#3E5641] dark:hover:text-white"}`}
-            onClick={() => setActiveTab("insurance")}
-          >
-            Insurance Quote
-          </button>
-          <button
-            className={`py-3 font-medium filter blur-sm ${activeTab === "review" ? "border-b-2 border-[#FF6700] dark:border-[#FF7D33] text-[#3E5641] dark:text-white" : "text-[#6F7F69] dark:text-gray-400 hover:text-[#3E5641] dark:hover:text-white"}`}
-            onClick={() => setActiveTab("review")}
-          >
-            Vehicle Review
-          </button>
-      */}    
         </div>
       </div>
 
@@ -1078,81 +1077,6 @@ export default function VehicleDetails({
                 </div>
               </>
             )}
-          
-            {/* Commented out sections - keeping the comments but fixing syntax */}
-            {/*
-            {activeTab === "report" && (
-              <div className="relative">
-                <h2 className="text-2xl font-bold mb-4 text-[#3E5641] dark:text-white filter blur-sm">
-                  Vehicle Report
-                </h2>
-                <div className="relative h-[400px] w-full rounded-lg">
-                  <div className="h-full w-full bg-[#f5f5f5] dark:bg-[#2A352A] rounded-lg flex items-center justify-center filter blur-sm">
-                    <div className="text-center">
-                      <Car className="w-16 h-16 mx-auto mb-4 text-[#9FA791] dark:text-[#4A4D45]" />
-                      <p className="text-lg font-medium text-[#6F7F69] dark:text-gray-400">
-                        Comprehensive vehicle history report
-                      </p>
-                      <p className="text-sm text-[#9FA791] dark:text-[#4A4D45] mt-2">
-                        Including accident history, service records, and ownership details
-                      </p>
-                    </div>
-                  </div>
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-lg">
-                    <p className="text-white text-2xl font-semibold">Coming Soon</p>
-                  </div>
-                </div>
-              </div>
-            )}
-            */}
-
-            {/*
-            {activeTab === "insurance" && (
-              <div className="relative">
-                <h2 className="text-2xl font-bold mb-4 text-[#3E5641] dark:text-white filter blur-sm">
-                  Insurance Quote
-                </h2>
-                <div className="relative h-[400px] w-full rounded-lg">
-                  <div className="h-full w-full bg-[#f5f5f5] dark:bg-[#2A352A] rounded-lg flex items-center justify-center filter blur-sm">
-                    <div className="text-center">
-                      <Shield className="w-16 h-16 mx-auto mb-4 text-[#9FA791] dark:text-[#4A4D45]" />
-                      <p className="text-lg font-medium text-[#6F7F69] dark:text-gray-400">
-                        Get instant insurance quotes
-                      </p>
-                      <p className="text-sm text-[#9FA791] dark:text-[#4A4D45] mt-2">
-                        Compare rates from multiple providers
-                      </p>
-                    </div>
-                  </div>
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-lg">
-                    <p className="text-white text-2xl font-semibold">Coming Soon</p>
-                  </div>
-                </div>
-              </div>
-            )}
-            */}
-
-            {/*
-            {activeTab === "review" && (
-              <div className="relative">
-                <h2 className="text-2xl font-bold mb-4 text-[#3E5641] dark:text-white filter blur-sm">
-                  Vehicle Review
-                </h2>
-                <div className="relative h-[400px] w-full rounded-lg">
-                  <div className="h-full w-full bg-[#f5f5f5] dark:bg-[#2A352A] rounded-lg flex items-center justify-center filter blur-sm">
-                    <div className="text-center">
-                      <Star className="w-16 h-16 mx-auto mb-4 text-[#9FA791] dark:text-[#4A4D45]" />
-                      <p className="text-lg font-medium text-[#6F7F69] dark:text-gray-400">Expert vehicle reviews</p>
-                      <p className="text-sm text-[#9FA791] dark:text-[#4A4D45] mt-2">Detailed analysis and ratings</p>
-                    </div>
-                  </div>
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-lg">
-                    <p className="text-white text-2xl font-semibold">Coming Soon</p>
-                  </div>
-                </div>
-              </div>
-            )}
-            */}
           </div>
 
           {/* Contact Seller Section */}
