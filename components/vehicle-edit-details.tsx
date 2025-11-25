@@ -25,6 +25,7 @@ export default function VehicleEditDetails({ vehicle, onBack }: VehicleEditDetai
   const [error, setError] = useState<string | null>(null)
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null)
   const [isImageModalOpen, setIsImageModalOpen] = useState(false)
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
   const imageUploadRef = useRef<HTMLInputElement>(null)
 
   const nextImage = () => {
@@ -138,6 +139,28 @@ export default function VehicleEditDetails({ vehicle, onBack }: VehicleEditDetai
     }
   }
 
+  // Drag and drop functions for image rearrangement
+  const handleDragStart = (index: number) => {
+    setDraggedIndex(index)
+  }
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>, index: number) => {
+    e.preventDefault()
+  }
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>, targetIndex: number) => {
+    e.preventDefault()
+    if (draggedIndex === null) return
+
+    const newImages = [...editableImages]
+    const draggedImage = newImages[draggedIndex]
+    newImages.splice(draggedIndex, 1)
+    newImages.splice(targetIndex, 0, draggedImage)
+
+    setEditableImages(newImages)
+    setDraggedIndex(null)
+  }
+
   const openImageModal = (index: number) => {
     setSelectedImageIndex(index)
     setIsImageModalOpen(true)
@@ -205,16 +228,18 @@ export default function VehicleEditDetails({ vehicle, onBack }: VehicleEditDetai
           <button onClick={onBack} className="text-[#3E5641] dark:text-white hover:text-[#FF6700]">
             <ChevronLeft className="w-6 h-6" />
           </button>
-          <div className="flex items-center gap-2">
-            <span className="text-[#FF6700] dark:text-[#FF7D33] text-2xl md:text-3xl font-bold">$</span>
-            <input
-              type="text"
-              name="price"
-              value={editableData.price || ""}
-              onChange={handleInputChange}
-              className="text-[#FF6700] dark:text-[#FF7D33] text-2xl md:text-3xl font-bold bg-transparent border-b-2 border-[#FF6700]/50 focus:border-[#FF6700] dark:focus:border-[#FF7D33] outline-none p-1 text-right w-48"
-              placeholder="Enter Price"
-            />
+          <div className="flex flex-col items-end">
+            <label className="block text-sm font-medium text-[#3E5641] dark:text-white mb-2">Price</label>
+            <div className="flex items-center gap-2">
+              <span className="text-[#FF6700] dark:text-[#FF7D33] text-2xl md:text-3xl font-bold">R</span>
+              <input
+                type="text"
+                name="price"
+                value={editableData.price || ""}
+                onChange={handleInputChange}
+                className="text-[#FF6700] dark:text-[#FF7D33] text-2xl md:text-3xl font-bold bg-transparent border-b-2 border-[#FF6700]/50 focus:border-[#FF6700] dark:focus:border-[#FF7D33] outline-none p-1 text-right w-48"
+              />
+            </div>
           </div>
         </div>
         {error && <div className="text-red-600 dark:text-red-400 text-sm mb-4">{error}</div>}
@@ -227,7 +252,14 @@ export default function VehicleEditDetails({ vehicle, onBack }: VehicleEditDetai
         </h3>
         <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-2 mb-4">
           {editableImages.map((imgSrc, index) => (
-            <div key={`edit-img-${index}`} className="relative aspect-square group">
+            <div 
+              key={`edit-img-${index}`} 
+              className="relative aspect-square group"
+              draggable
+              onDragStart={() => handleDragStart(index)}
+              onDragOver={(e) => handleDragOver(e, index)}
+              onDrop={(e) => handleDrop(e, index)}
+            >
               <img
                 src={imgSrc || "/placeholder.svg"}
                 alt={`Editable view ${index + 1}`}
@@ -264,73 +296,89 @@ export default function VehicleEditDetails({ vehicle, onBack }: VehicleEditDetai
       {/* Vehicle Title and Details Form */}
       <div className="px-6 max-w-7xl mx-auto mt-4">
         <div className="flex flex-col sm:flex-row gap-2 mb-4">
-          <input
-            type="number"
-            name="year"
-            placeholder="Year"
-            value={editableData.year || ""}
-            onChange={handleInputChange}
-            className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-[#3E5641] dark:text-white bg-white dark:bg-[#2A352A] focus:ring-2 focus:ring-[#FF6700]"
-          />
-          <input
-            type="text"
-            name="make"
-            placeholder="Make"
-            value={editableData.make || ""}
-            onChange={handleInputChange}
-            className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-[#3E5641] dark:text-white bg-white dark:bg-[#2A352A] focus:ring-2 focus:ring-[#FF6700]"
-          />
-          <input
-            type="text"
-            name="model"
-            placeholder="Model"
-            value={editableData.model || ""}
-            onChange={handleInputChange}
-            className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-[#3E5641] dark:text-white bg-white dark:bg-[#2A352A] focus:ring-2 focus:ring-[#FF6700]"
-          />
-          <input
-            type="text"
-            name="variant"
-            placeholder="Variant (Optional)"
-            value={editableData.variant || ""}
-            onChange={handleInputChange}
-            className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-[#3E5641] dark:text-white bg-white dark:bg-[#2A352A] focus:ring-2 focus:ring-[#FF6700]"
-          />
+          <div className="flex-1">
+            <label className="block text-sm font-medium text-[#3E5641] dark:text-white mb-2">Year</label>
+            <input
+              type="number"
+              name="year"
+              value={editableData.year || ""}
+              onChange={handleInputChange}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-[#3E5641] dark:text-white bg-white dark:bg-[#2A352A] focus:ring-2 focus:ring-[#FF6700]"
+            />
+          </div>
+          <div className="flex-1">
+            <label className="block text-sm font-medium text-[#3E5641] dark:text-white mb-2">Make</label>
+            <input
+              type="text"
+              name="make"
+              value={editableData.make || ""}
+              onChange={handleInputChange}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-[#3E5641] dark:text-white bg-white dark:bg-[#2A352A] focus:ring-2 focus:ring-[#FF6700]"
+            />
+          </div>
+          <div className="flex-1">
+            <label className="block text-sm font-medium text-[#3E5641] dark:text-white mb-2">Model</label>
+            <input
+              type="text"
+              name="model"
+              value={editableData.model || ""}
+              onChange={handleInputChange}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-[#3E5641] dark:text-white bg-white dark:bg-[#2A352A] focus:ring-2 focus:ring-[#FF6700]"
+            />
+          </div>
+          <div className="flex-1">
+            <label className="block text-sm font-medium text-[#3E5641] dark:text-white mb-2">Variant (Optional)</label>
+            <input
+              type="text"
+              name="variant"
+              value={editableData.variant || ""}
+              onChange={handleInputChange}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-[#3E5641] dark:text-white bg-white dark:bg-[#2A352A] focus:ring-2 focus:ring-[#FF6700]"
+            />
+          </div>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-          <input
-            type="number"
-            name="mileage"
-            placeholder="Mileage (km)"
-            value={editableData.mileage || ""}
-            onChange={handleInputChange}
-            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-[#3E5641] dark:text-white bg-white dark:bg-[#2A352A] focus:ring-2 focus:ring-[#FF6700]"
-          />
-          <input
-            type="text"
-            name="transmission"
-            placeholder="Transmission"
-            value={editableData.transmission || ""}
-            onChange={handleInputChange}
-            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-[#3E5641] dark:text-white bg-white dark:bg-[#2A352A] focus:ring-2 focus:ring-[#FF6700]"
-          />
-          <input
-            type="text"
-            name="fuel"
-            placeholder="Fuel Type"
-            value={editableData.fuel || ""}
-            onChange={handleInputChange}
-            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-[#3E5641] dark:text-white bg-white dark:bg-[#2A352A] focus:ring-2 focus:ring-[#FF6700]"
-          />
-          <input
-            type="text"
-            name="engineCapacity"
-            placeholder="Engine (e.g., 2.0L)"
-            value={editableData.engineCapacity || ""}
-            onChange={handleInputChange}
-            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-[#3E5641] dark:text-white bg-white dark:bg-[#2A352A] focus:ring-2 focus:ring-[#FF6700]"
-          />
+          <div>
+            <label className="block text-sm font-medium text-[#3E5641] dark:text-white mb-2">Mileage (km)</label>
+            <input
+              type="number"
+              name="mileage"
+              value={editableData.mileage || ""}
+              onChange={handleInputChange}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-[#3E5641] dark:text-white bg-white dark:bg-[#2A352A] focus:ring-2 focus:ring-[#FF6700]"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-[#3E5641] dark:text-white mb-2">Transmission</label>
+            <input
+              type="text"
+              name="transmission"
+              value={editableData.transmission || ""}
+              onChange={handleInputChange}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-[#3E5641] dark:text-white bg-white dark:bg-[#2A352A] focus:ring-2 focus:ring-[#FF6700]"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-[#3E5641] dark:text-white mb-2">Fuel Type</label>
+            <input
+              type="text"
+              name="fuel"
+              value={editableData.fuel || ""}
+              onChange={handleInputChange}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-[#3E5641] dark:text-white bg-white dark:bg-[#2A352A] focus:ring-2 focus:ring-[#FF6700]"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-[#3E5641] dark:text-white mb-2">Engine (e.g., 2.0L)</label>
+            <input
+              type="text"
+              name="engineCapacity"
+              value={editableData.engineCapacity || ""}
+              onChange={handleInputChange}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-[#3E5641] dark:text-white bg-white dark:bg-[#2A352A] focus:ring-2 focus:ring-[#FF6700]"
+            />
+          </div>
         </div>
 
         {/* Description */}
@@ -341,36 +389,41 @@ export default function VehicleEditDetails({ vehicle, onBack }: VehicleEditDetai
             value={editableData.description || ""}
             onChange={handleInputChange}
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg min-h-[150px] text-[#3E5641] dark:text-white bg-white dark:bg-[#2A352A] focus:ring-2 focus:ring-[#FF6700]"
-            placeholder="Enter vehicle description..."
           />
         </div>
 
         {/* Additional Details */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-          <input
-            type="text"
-            name="bodyType"
-            placeholder="Body Type"
-            value={editableData.bodyType || ""}
-            onChange={handleInputChange}
-            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-[#3E5641] dark:text-white bg-white dark:bg-[#2A352A] focus:ring-2 focus:ring-[#FF6700]"
-          />
-          <input
-            type="text"
-            name="city"
-            placeholder="City"
-            value={editableData.city || ""}
-            onChange={handleInputChange}
-            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-[#3E5641] dark:text-white bg-white dark:bg-[#2A352A] focus:ring-2 focus:ring-[#FF6700]"
-          />
-          <input
-            type="text"
-            name="province"
-            placeholder="Province"
-            value={editableData.province || ""}
-            onChange={handleInputChange}
-            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-[#3E5641] dark:text-white bg-white dark:bg-[#2A352A] focus:ring-2 focus:ring-[#FF6700]"
-          />
+          <div>
+            <label className="block text-sm font-medium text-[#3E5641] dark:text-white mb-2">Body Type</label>
+            <input
+              type="text"
+              name="bodyType"
+              value={editableData.bodyType || ""}
+              onChange={handleInputChange}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-[#3E5641] dark:text-white bg-white dark:bg-[#2A352A] focus:ring-2 focus:ring-[#FF6700]"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-[#3E5641] dark:text-white mb-2">City</label>
+            <input
+              type="text"
+              name="city"
+              value={editableData.city || ""}
+              onChange={handleInputChange}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-[#3E5641] dark:text-white bg-white dark:bg-[#2A352A] focus:ring-2 focus:ring-[#FF6700]"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-[#3E5641] dark:text-white mb-2">Province</label>
+            <input
+              type="text"
+              name="province"
+              value={editableData.province || ""}
+              onChange={handleInputChange}
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-[#3E5641] dark:text-white bg-white dark:bg-[#2A352A] focus:ring-2 focus:ring-[#FF6700]"
+            />
+          </div>
         </div>
 
         {/* Image Modal */}
