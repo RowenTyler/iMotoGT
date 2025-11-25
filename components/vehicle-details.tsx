@@ -93,6 +93,10 @@ export default function VehicleDetails({
   )
   const imageUploadRef = useRef<HTMLInputElement>(null)
 
+  // Add ref for gallery container and state for active gallery
+  const galleryContainerRef = useRef<HTMLDivElement>(null)
+  const [activeGallery, setActiveGallery] = useState(0)
+
   // Helper function to format raw price string to "R X XXX.XX" for display
   const formatPriceForDisplay = (rawValue: string | number | undefined | null): string => {
     if (rawValue === undefined || rawValue === null || String(rawValue).trim() === "") {
@@ -432,9 +436,40 @@ export default function VehicleDetails({
     }
   }
 
+  // Handle gallery navigation with dots
+  const navigateToGallery = (galleryIndex: number) => {
+    if (galleryContainerRef.current) {
+      const container = galleryContainerRef.current
+      const scrollAmount = container.clientWidth * galleryIndex
+      container.scrollTo({
+        left: scrollAmount,
+        behavior: 'smooth'
+      })
+      setActiveGallery(galleryIndex)
+    }
+  }
+
+  // Handle scroll events to update active gallery dot
+  const handleGalleryScroll = () => {
+    if (galleryContainerRef.current) {
+      const container = galleryContainerRef.current
+      const scrollPosition = container.scrollLeft
+      const containerWidth = container.clientWidth
+      const newActiveGallery = Math.round(scrollPosition / containerWidth)
+      setActiveGallery(newActiveGallery)
+    }
+  }
+
   const galleryOneDisplayImages = getGalleryOneImages()
   const galleryTwoDisplayImages = getGalleryTwoImages()
   const galleryThreeDisplayImages = getGalleryThreeImages()
+
+  // Determine which galleries should be visible
+  const hasGalleryOne = galleryOneDisplayImages.length > 0
+  const hasGalleryTwo = galleryTwoDisplayImages.length > 0
+  const hasGalleryThree = galleryThreeDisplayImages.length > 0
+  const totalGalleries = [hasGalleryOne, hasGalleryTwo, hasGalleryThree].filter(Boolean).length
+
   return (
     <div className="min-h-screen">
       {/* Header Section with Back Button and Price */}
@@ -569,9 +604,13 @@ export default function VehicleDetails({
           {/* Desktop: Three-section horizontal scrolling gallery */}
           <div className="hidden md:block">
             <div className="gallery-container relative flex items-center">
-              <div className="gallery-scroll flex overflow-x-auto snap-x snap-mandatory w-full">
+              <div 
+                ref={galleryContainerRef}
+                className="gallery-scroll flex overflow-x-auto snap-x snap-mandatory w-full scrollbar-hide"
+                onScroll={handleGalleryScroll}
+              >
                 {/* Gallery 1 */}
-                {galleryOneDisplayImages.length > 0 && (
+                {hasGalleryOne && (
                   <section className="gallery-section flex-shrink-0 w-full snap-center grid grid-cols-1 md:grid-cols-3 gap-4 h-[400px]">
                     <div 
                       className="md:col-span-2 h-full overflow-hidden rounded-lg group relative m-0 p-0 cursor-pointer"
@@ -616,7 +655,7 @@ export default function VehicleDetails({
                 )}
 
                 {/* Gallery 2 */}
-                {galleryTwoDisplayImages.length > 0 && (
+                {hasGalleryTwo && (
                   <section className="gallery-section flex-shrink-0 w-full snap-center grid grid-cols-2 sm:grid-cols-4 gap-4 h-[400px]">
                     {galleryTwoDisplayImages.map((imgSrc, index) => (
                       <div 
@@ -641,7 +680,7 @@ export default function VehicleDetails({
                 )}
 
                 {/* Gallery 3 */}
-                {galleryThreeDisplayImages.length > 0 && (
+                {hasGalleryThree && (
                   <section className="gallery-section flex-shrink-0 w-full snap-center grid grid-cols-2 sm:grid-cols-4 gap-4 h-[400px]">
                     {galleryThreeDisplayImages.map((imgSrc, index) => (
                       <div 
@@ -666,6 +705,45 @@ export default function VehicleDetails({
                 )}
               </div>
             </div>
+
+            {/* Custom dot navigation */}
+            {totalGalleries > 1 && (
+              <div className="flex justify-center mt-4 space-x-3">
+                {hasGalleryOne && (
+                  <button
+                    onClick={() => navigateToGallery(0)}
+                    className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                      activeGallery === 0 
+                        ? 'bg-[#FF6700] dark:bg-[#FF7D33] scale-110' 
+                        : 'bg-gray-400 hover:bg-gray-500'
+                    }`}
+                    aria-label="Go to gallery 1"
+                  />
+                )}
+                {hasGalleryTwo && (
+                  <button
+                    onClick={() => navigateToGallery(1)}
+                    className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                      activeGallery === 1 
+                        ? 'bg-[#FF6700] dark:bg-[#FF7D33] scale-110' 
+                        : 'bg-gray-400 hover:bg-gray-500'
+                    }`}
+                    aria-label="Go to gallery 2"
+                  />
+                )}
+                {hasGalleryThree && (
+                  <button
+                    onClick={() => navigateToGallery(2)}
+                    className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                      activeGallery === 2 
+                        ? 'bg-[#FF6700] dark:bg-[#FF7D33] scale-110' 
+                        : 'bg-gray-400 hover:bg-gray-500'
+                    }`}
+                    aria-label="Go to gallery 3"
+                  />
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}
