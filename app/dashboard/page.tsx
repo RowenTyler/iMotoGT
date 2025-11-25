@@ -75,7 +75,7 @@ export default function DashboardPage() {
       onViewDetails={handleViewListedCar}
       onLoginClick={() => router.push("/login")}
       onGoHome={() => router.push("/")}
-      onShowAllCars={() => router.push("/cars")}
+      onShowAllCars={() => router.push("/results")}
       onGoToSellPage={() => router.push("/upload-vehicle")}
       onViewProfileSettings={() => router.push("/settings")}
       onViewUploadVehicle={() => router.push("/upload-vehicle")}
