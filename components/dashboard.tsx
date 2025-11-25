@@ -102,6 +102,16 @@ export default function Dashboard({
     }
   }
 
+  // Handle browse cars navigation - FIXED
+  const handleBrowseCars = () => {
+    if (onShowAllCars) {
+      onShowAllCars()
+    } else {
+      // Fallback: directly navigate to results page
+      router.push("/results")
+    }
+  }
+
   const handleDeleteVehicle = (vehicle: Vehicle) => {
     setVehicleToDelete(vehicle)
     setShowDeleteModal(true)
@@ -378,7 +388,8 @@ export default function Dashboard({
                           <div className="text-white text-center w-full">
                             <Car className="w-12 h-12 mx-auto mb-3 opacity-50" />
                             <h3 className="text-xl font-bold mb-1">No Saved Cars</h3>
-                            <Button className="bg-white text-[#3E5641] hover:bg-white/90" onClick={onShowAllCars}>
+                            {/* FIXED: Use handleBrowseCars instead of onShowAllCars */}
+                            <Button className="bg-white text-[#3E5641] hover:bg-white/90" onClick={handleBrowseCars}>
                               Browse Cars
                             </Button>
                           </div>
@@ -598,9 +609,10 @@ export default function Dashboard({
                       <div className="text-white text-center w-full">
                         <Car className="w-8 h-8 mx-auto mb-2 opacity-50" />
                         <h3 className="text-base font-bold mb-1">No Saved Cars</h3>
+                        {/* FIXED: Use handleBrowseCars instead of onShowAllCars */}
                         <Button
                           className="bg-white text-[#3E5641] hover:bg-white/90 text-xs h-auto py-1.5 px-3"
-                          onClick={onShowAllCars}
+                          onClick={handleBrowseCars}
                         >
                           Browse Cars
                         </Button>
