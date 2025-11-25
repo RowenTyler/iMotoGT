@@ -363,6 +363,7 @@ export default function VehicleDetails({
   const closeImageModal = () => {
     setIsImageModalOpen(false)
     setSelectedImageIndex(null)
+    setIsZoomed(false)
     // Restore body scrolling
     document.body.style.overflow = "auto"
   }
@@ -435,29 +436,36 @@ export default function VehicleDetails({
   const galleryOneDisplayImages = getGalleryOneImages()
   const galleryTwoDisplayImages = getGalleryTwoImages()
   const galleryThreeDisplayImages = getGalleryThreeImages()
+
+  // Calculate which section we're in for the 3-button navigation
+  const getCurrentSection = () => {
+    if (currentImageIndex < 5) return 0
+    if (currentImageIndex < 13) return 1
+    return 2
+  }
+
+  const navigateToSection = (sectionIndex: number) => {
+    switch (sectionIndex) {
+      case 0:
+        setCurrentImageIndex(0)
+        break
+      case 1:
+        setCurrentImageIndex(5)
+        break
+      case 2:
+        setCurrentImageIndex(13)
+        break
+    }
+  }
+
   return (
     <div className="min-h-screen">
-      {/* Header Section with Back Button and Price */}
+      {/* Header Section with Back Button Only */}
       <section className="px-6 pt-6 md:pt-10">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
-
-          {isEditMode ? (
-            <div className="flex items-center gap-2 pl-6">
-              <span className="text-[#FF6700] dark:text-[#FF7D33] text-2xl md:text-3xl font-bold">$</span>
-              <input
-                type="text"
-                name="price"
-                value={editableData.price || ""}
-                onChange={handleInputChange}
-                className="text-[#FF6700] dark:text-[#FF7D33] text-2xl md:text-3xl font-bold bg-transparent border-b-2 border-[#FF6700]/50 focus:border-[#FF6700] dark:focus:border-[#FF7D33] outline-none p-1 text-right w-48"
-                placeholder="Enter Price"
-              />
-            </div>
-          ) : (
-            <p className="text-[#FF6700] dark:text-[#FF7D33] text-2xl md:text-3xl font-bold">
-              {formatPriceForDisplay(vehicle.price)}
-            </p>
-          )}
+          <button onClick={onBack} className="text-[#3E5641] dark:text-white hover:text-[#FF6700]">
+            <ChevronLeft className="w-6 h-6" />
+          </button>
         </div>
         {isEditMode && (
           <p className="text-sm text-gray-500 dark:text-gray-400 max-w-7xl mx-auto mt-1">
@@ -516,6 +524,14 @@ export default function VehicleDetails({
         </div>
       ) : (
         <div className="px-6 max-w-7xl mx-auto mt-4 relative">
+          {/* Price Display - Moved to be in line with first image */}
+          <div className="mb-4 flex justify-between items-center">
+            <div></div> {/* Spacer for alignment */}
+            <p className="text-[#FF6700] dark:text-[#FF7D33] text-2xl md:text-3xl font-bold">
+              {formatPriceForDisplay(vehicle.price)}
+            </p>
+          </div>
+
           {/* Mobile: Single carousel */}
           <div className="block md:hidden">
             <div className="relative h-[33vh] w-full overflow-hidden rounded-lg">
@@ -546,21 +562,23 @@ export default function VehicleDetails({
                 {currentImageIndex + 1} / {allDisplayableImages.length}
               </div>
 
-              {/* Dots indicator */}
-              <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
-                {allDisplayableImages.map((_, index) => (
+              {/* 3-Button Navigation - Circles */}
+              <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-3">
+                {[0, 1, 2].map((sectionIndex) => (
                   <button
-                    key={index}
-                    className={`w-2 h-2 rounded-full transition-colors ${
-                      index === currentImageIndex ? "bg-white" : "bg-white/50"
+                    key={sectionIndex}
+                    className={`w-3 h-3 rounded-full transition-all duration-300 ${
+                      getCurrentSection() === sectionIndex 
+                        ? "bg-white scale-110" 
+                        : "bg-white/50 hover:bg-white/70"
                     }`}
-                    onClick={() => setCurrentImageIndex(index)}
+                    onClick={() => navigateToSection(sectionIndex)}
                   />
                 ))}
               </div>
 
               {/* Scroll hint */}
-              <div className="absolute bottom-16 left-1/2 transform -translate-x-1/2 text-white text-xs bg-black/50 px-2 py-1 rounded-full animate-pulse">
+              <div className="absolute bottom-12 left-1/2 transform -translate-x-1/2 text-white text-xs bg-black/50 px-2 py-1 rounded-full animate-pulse">
                 Swipe to browse
               </div>
             </div>
@@ -589,8 +607,7 @@ export default function VehicleDetails({
                     </div>
                     {galleryOneDisplayImages.length > 1 && (
                       <div className="grid grid-cols-2 gap-4 h-full">
-                        {galleryOneDisplayImages.slice(1).map((imgSrc, index) => {
-                          return ( // Ensure we only render up to 4 small images
+                        {galleryOneDisplayImages.slice(1).map((imgSrc, index) => (
                           <div
                             key={`g1-thumb-${index}`}
                             className="aspect-square overflow-hidden rounded-lg group relative m-0 p-0"
@@ -608,7 +625,7 @@ export default function VehicleDetails({
                               </div>
                             </div>
                           </div>
-                        )}) /* Removed extra curly brace here */}
+                        ))}
                       </div>
                     )}
                   </section>
@@ -658,6 +675,23 @@ export default function VehicleDetails({
                   </section>
                 )}
               </div>
+
+              {/* 3-Button Navigation for Desktop */}
+              <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-4">
+                {[0, 1, 2].map((sectionIndex) => (
+                  <button
+                    key={sectionIndex}
+                    onClick={() => navigateToSection(sectionIndex)}
+                    className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ${
+                      getCurrentSection() === sectionIndex
+                        ? "bg-[#FF6700] text-white shadow-lg"
+                        : "bg-white/80 text-[#3E5641] hover:bg-white"
+                    }`}
+                  >
+                    {sectionIndex === 0 ? "Main" : sectionIndex === 1 ? "Gallery" : "More"}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -677,7 +711,7 @@ export default function VehicleDetails({
           {/* Close Button */}
           <button
             onClick={closeImageModal}
-            className="absolute top-4 right-4 text-white bg-black/50 hover:bg-black/70 p-2 rounded-full transition-colors z-50"
+            className="absolute top-4 right-4 text-white bg-black/50 hover:bg-black/70 p-3 rounded-full transition-colors z-50"
             aria-label="Close image"
           >
             <X className="w-6 h-6" />
@@ -687,7 +721,7 @@ export default function VehicleDetails({
           <div className="absolute inset-0 flex items-center justify-between px-4">
             <button
               onClick={() => navigateImage("prev")}
-              className="text-white bg-black/50 hover:bg-black/70 p-2 rounded-full transition-colors z-50"
+              className="text-white bg-black/50 hover:bg-black/70 p-3 rounded-full transition-colors z-50"
               aria-label="Previous image"
             >
               <ChevronLeft className="w-6 h-6" />
@@ -695,7 +729,7 @@ export default function VehicleDetails({
 
             <button
               onClick={() => navigateImage("next")}
-              className="text-white bg-black/50 hover:bg-black/70 p-2 rounded-full transition-colors z-50"
+              className="text-white bg-black/50 hover:bg-black/70 p-3 rounded-full transition-colors z-50"
               aria-label="Next image"
             >
               <ChevronRight className="w-6 h-6" />
@@ -716,6 +750,7 @@ export default function VehicleDetails({
                 className={`relative w-full h-full transition-transform duration-300 ${
                   isZoomed ? "cursor-zoom-out" : "cursor-zoom-in"
                 }`}
+                onClick={() => setIsZoomed(!isZoomed)}
               >
                 <Image
                   src={allDisplayableImages[selectedImageIndex] || "/placeholder.svg"}
@@ -724,7 +759,6 @@ export default function VehicleDetails({
                   className={`object-contain transition-transform duration-300 ${isZoomed ? "scale-150" : "scale-100"}`}
                   priority
                   onError={() => setImageError(true)}
-                  onDoubleClick={() => setIsZoomed(!isZoomed)}
                 />
               </div>
             )}
@@ -733,10 +767,16 @@ export default function VehicleDetails({
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/50 text-white px-3 py-1 rounded-full text-sm">
               {selectedImageIndex + 1} / {allDisplayableImages.length}
             </div>
+
+            {/* Zoom Hint */}
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-black/50 text-white px-3 py-1 rounded-full text-sm">
+              Click image to {isZoomed ? "zoom out" : "zoom in"}
+            </div>
           </div>
         </div>
       )}
 
+      {/* Rest of the component remains exactly the same */}
       {/* Vehicle Title and Details */}
       <div className="px-6 max-w-7xl mx-auto mt-4">
         <div className="flex justify-between items-center mb-2">
