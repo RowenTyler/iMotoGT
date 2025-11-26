@@ -61,9 +61,13 @@ export default function Dashboard({
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   const [uploadBlocked, setUploadBlocked] = useState(false)
 
-  // Ensure arrays are properly initialized
-  const safeSavedCars = Array.isArray(savedCars) ? savedCars : []
-  const safeListedCars = Array.isArray(listedCars) ? listedCars : []
+  // Ensure arrays are properly initialized and filter out soft-deleted vehicles
+  const safeSavedCars = Array.isArray(savedCars) 
+    ? savedCars.filter(car => !car.isDeleted) 
+    : []
+  const safeListedCars = Array.isArray(listedCars) 
+    ? listedCars.filter(car => !car.isDeleted)
+    : []
 
   // Debug logging
   useEffect(() => {
@@ -162,20 +166,40 @@ export default function Dashboard({
     router.push(`/vehicle/${vehicle.id}/edit`)
   }
 
+  // UPDATED: Enhanced soft delete function with better error handling and validation
   const confirmDeleteVehicle = async () => {
     if (!vehicleToDelete || !onDeleteListedCar) return
 
-    const finalReason = deleteReason === "other" ? customDeleteReason : deleteReason
+    const finalReason = deleteReason === "other" 
+      ? (customDeleteReason.trim() || "No reason provided")
+      : deleteReason
+
+    // Validate that a reason is provided
+    if (!finalReason) {
+      alert("Please provide a reason for deletion")
+      return
+    }
 
     try {
       setIsDeleting(true)
+      console.log("🗑️ Dashboard: Soft deleting vehicle with reason:", {
+        vehicleId: vehicleToDelete.id,
+        reason: finalReason
+      })
+      
       await onDeleteListedCar(vehicleToDelete.id, finalReason)
+      
+      // Reset modal state
       setShowDeleteModal(false)
       setVehicleToDelete(null)
       setDeleteReason("")
       setCustomDeleteReason("")
+      
+      // Show success message
+      console.log("✅ Dashboard: Vehicle soft deleted successfully")
+      
     } catch (error) {
-      console.error("Error deleting vehicle:", error)
+      console.error("❌ Dashboard: Error deleting vehicle:", error)
       alert("Failed to delete vehicle. Please try again.")
     } finally {
       setIsDeleting(false)
@@ -827,7 +851,10 @@ export default function Dashboard({
             </p>
 
             <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Reason for deletion:</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Reason for deletion:
+                <span className="text-red-500 ml-1">*</span>
+              </label>
               <select
                 value={deleteReason}
                 onChange={(e) => setDeleteReason(e.target.value)}
@@ -844,7 +871,10 @@ export default function Dashboard({
 
             {deleteReason === "other" && (
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Please specify:</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Please specify:
+                  <span className="text-red-500 ml-1">*</span>
+                </label>
                 <textarea
                   value={customDeleteReason}
                   onChange={(e) => setCustomDeleteReason(e.target.value)}

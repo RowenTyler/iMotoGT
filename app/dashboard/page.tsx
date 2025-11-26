@@ -60,17 +60,35 @@ export default function DashboardPage() {
     router.push(`/vehicle/${vehicle.id}/edit`)
   }
 
+  // UPDATED: Enhanced soft delete function with proper error handling
   const handleDeleteListedCar = async (vehicleId: string, reason?: string) => {
     try {
       setIsDeletingVehicle(vehicleId)
-      console.log("🗑️ Dashboard requesting delete:", vehicleId, "Reason:", reason)
+      console.log("🗑️ DashboardPage: Requesting soft delete for vehicle:", {
+        vehicleId,
+        reason,
+        timestamp: new Date().toISOString()
+      })
       
-      await deleteListedVehicle(vehicleId, reason)
+      // Validate that we have a reason
+      const finalReason = reason || "No reason provided"
       
-      console.log("✅ Delete request successful")
+      // Call the delete function with the reason
+      await deleteListedVehicle(vehicleId, finalReason)
+      
+      console.log("✅ DashboardPage: Soft delete request completed successfully")
+      
+      // Refresh the vehicles list to reflect the soft delete
       await refreshVehicles()
+      
+      console.log("🔄 DashboardPage: Vehicles list refreshed after soft delete")
+      
     } catch (error: any) {
-      console.error("❌ Delete failed:", error)
+      console.error("❌ DashboardPage: Soft delete failed:", {
+        error: error.message,
+        vehicleId,
+        reason
+      })
       alert(`Failed to delete listing: ${error.message}`)
     } finally {
       setIsDeletingVehicle(null)
@@ -94,6 +112,13 @@ export default function DashboardPage() {
     }
   }
 
+  // Filter out soft-deleted vehicles from the displayed lists
+  const activeListedVehicles = Array.isArray(listedVehicles) 
+    ? listedVehicles.filter(vehicle => !vehicle.isDeleted)
+    : []
+
+  const activeSavedVehicles = savedVehiclesData.filter(vehicle => !vehicle.isDeleted)
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -109,8 +134,8 @@ export default function DashboardPage() {
   return (
     <Dashboard
       user={user}
-      listedCars={Array.isArray(listedVehicles) ? listedVehicles : []}
-      savedCars={savedVehiclesData} // Pass the actual vehicle objects
+      listedCars={activeListedVehicles} // Only show non-deleted vehicles
+      savedCars={activeSavedVehicles} // Only show non-deleted vehicles
       onEditListedCar={handleEditListedCar}
       onDeleteListedCar={handleDeleteListedCar}
       onViewDetails={handleViewListedCar}
