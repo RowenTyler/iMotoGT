@@ -45,7 +45,7 @@ const MAKE_ABBREVIATIONS: Record<string, string> = {
 
 export default function CarMarketplace() {
   const router = useRouter()
-  const { user, setUser } = useUser()
+  const { user, setUser, savedVehicles, toggleSaveVehicle } = useUser() // ← ADD UserContext here
   const [search, setSearch] = useState("")
   const [showMoreOptions, setShowMoreOptions] = useState(false)
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null)
@@ -53,8 +53,8 @@ export default function CarMarketplace() {
   const [allVehicles, setAllVehicles] = useState<Vehicle[]>([])
   const [filteredVehicles, setFilteredVehicles] = useState<Vehicle[]>([])
   const [isSearchPage, setIsSearchPage] = useState(true)
-  const [savedCars, setSavedCars] = useState<Vehicle[]>([])
   const [loading, setLoading] = useState(true)
+  const [savedVehiclesData, setSavedVehiclesData] = useState<Vehicle[]>([]) // ← ADD this state
 
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedTerms, setSelectedTerms] = useState<string[]>([])
@@ -69,6 +69,25 @@ export default function CarMarketplace() {
   const [engineCapacityRange, setEngineCapacityRange] = useState<[number, number]>([1.0, 8.0])
   const [showEngineCapacitySlider, setShowEngineCapacitySlider] = useState(false)
   const [currentSliderEngineValues, setCurrentSliderEngineValues] = useState<[number, number]>([1.0, 8.0])
+
+  // Load saved vehicles data from database
+  useEffect(() => {
+    const loadSavedVehiclesData = async () => {
+      if (!user?.id) return
+      
+      try {
+        console.log("🔄 HomePage: Loading saved vehicles data for user:", user.id)
+        const savedData = await vehicleService.getSavedVehicles(user.id)
+        console.log("✅ HomePage: Loaded saved vehicles:", savedData)
+        setSavedVehiclesData(savedData)
+      } catch (error) {
+        console.error("❌ HomePage: Error loading saved vehicles:", error)
+        setSavedVehiclesData([])
+      }
+    }
+
+    loadSavedVehiclesData()
+  }, [user?.id, savedVehicles]) // ← Reload when savedVehicles Set changes
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -277,16 +296,7 @@ export default function CarMarketplace() {
     { name: "Convertible", icon: CarIcon },
   ]
 
-  const handleSaveCar = (vehicle: Vehicle) => {
-    setSavedCars((prevSavedCars) => {
-      const alreadySaved = prevSavedCars.some((car) => car.id === vehicle.id)
-      if (alreadySaved) {
-        return prevSavedCars.filter((car) => car.id !== vehicle.id)
-      } else {
-        return [...prevSavedCars, vehicle]
-      }
-    })
-  }
+  // REMOVED: Local handleSaveCar function - using UserContext instead
 
   const handleSignOut = () => {
     setUser(null)
@@ -335,12 +345,13 @@ export default function CarMarketplace() {
       <>
         <Header user={user} {...navigationHandlers} />
         <div className="pt-16 md:pt-20">
+          {/* FIXED: Use savedVehiclesData instead of local savedCars */}
           <VehicleDetails
             vehicle={selectedVehicle}
             onBack={() => setSelectedVehicle(null)}
             user={user}
-            savedCars={savedCars}
-            onSaveCar={handleSaveCar}
+            savedCars={savedVehiclesData} // ← Use the fetched saved vehicles data
+            onSaveCar={() => toggleSaveVehicle(selectedVehicle)}
           />
         </div>
       </>
@@ -757,8 +768,9 @@ export default function CarMarketplace() {
                           key={vehicle.id}
                           vehicle={vehicle}
                           onViewDetails={() => setSelectedVehicle(vehicle)}
-                          isSaved={savedCars.some((saved) => saved.id === vehicle.id)}
-                          onToggleSave={() => handleSaveCar(vehicle)}
+                          // FIXED: Use the actual saved vehicles data instead of local state
+                          isSaved={savedVehiclesData.some((saved) => saved.id === vehicle.id)}
+                          onToggleSave={() => toggleSaveVehicle(vehicle)}
                           isLoggedIn={!!user}
                         />
                       ))
