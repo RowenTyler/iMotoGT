@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
-import { Plus, Edit, Eye, Heart, MessageSquare, Car, Package } from "lucide-react"
+import { Plus, Edit, Eye, Heart, MessageSquare, Car, Package, X } from "lucide-react"
 import { Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -58,6 +58,8 @@ export default function Dashboard({
   const [customDeleteReason, setCustomDeleteReason] = useState("")
   const [isDeleting, setIsDeleting] = useState(false)
   const [isLoadingSavedCars, setIsLoadingSavedCars] = useState(true)
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false)
+  const [uploadBlocked, setUploadBlocked] = useState(false)
 
   // Ensure arrays are properly initialized
   const safeSavedCars = Array.isArray(savedCars) ? savedCars : []
@@ -91,13 +93,33 @@ export default function Dashboard({
     }
   }
 
-  // Handle upload vehicle navigation
+  // Handle upload vehicle navigation with upgrade check
   const handleUploadClick = () => {
+    // Check if user has reached the free listing limit
+    if (totalListings >= maxFreeListings) {
+      setShowUpgradeModal(true)
+      setUploadBlocked(true)
+      return
+    }
+
     if (onViewUploadVehicle) {
       onViewUploadVehicle()
     } else {
       router.push("/upload-vehicle")
     }
+  }
+
+  // Handle upgrade modal actions
+  const handleUpgradeAction = (action: 'contact' | 'upgrade') => {
+    setShowUpgradeModal(false)
+    if (action === 'contact') {
+      // Open email client for contact
+      window.location.href = 'mailto:support@imoto.com?subject=Upgrade%20Request&body=Hello,%20I%20would%20like%20to%20upgrade%20my%20account%20to%20list%20more%20vehicles.'
+    } else if (action === 'upgrade') {
+      // Navigate to upgrade page (you can create this later)
+      router.push('/upgrade')
+    }
+    setUploadBlocked(false)
   }
 
   // Handle viewing vehicle details - FIXED: Better error handling
@@ -171,7 +193,7 @@ export default function Dashboard({
   }
 
   const totalListings = safeListedCars.length
-  const maxFreeListings = 5
+  const maxFreeListings = 3 // Updated from 5 to 3
   const freeListingsRemaining = Math.max(0, maxFreeListings - totalListings)
 
   if (!user) {
@@ -280,11 +302,16 @@ export default function Dashboard({
 
                   {/* Vehicle Uploads Card */}
                   <Card
-                    className="col-span-1 rounded-3xl p-5 w-full h-full flex flex-col justify-between bg-gradient-to-br from-[#FF6700] to-[#FF9248] text-white cursor-pointer hover:shadow-lg transition-all"
+                    className={`col-span-1 rounded-3xl p-5 w-full h-full flex flex-col justify-between bg-gradient-to-br from-[#FF6700] to-[#FF9248] text-white cursor-pointer hover:shadow-lg transition-all ${
+                      totalListings >= maxFreeListings ? 'opacity-90' : ''
+                    }`}
                     onClick={handleUploadClick}
                   >
                     <div className="flex justify-between items-center">
                       <h3 className="text-xl font-semibold">Vehicle Uploads</h3>
+                      {totalListings >= maxFreeListings && (
+                        <span className="bg-white/20 text-xs px-2 py-1 rounded-full">Limit Reached</span>
+                      )}
                       <Car className="w-6 h-6" />
                     </div>
                     <div className="flex-grow flex flex-col justify-center items-center my-4">
@@ -292,8 +319,12 @@ export default function Dashboard({
                         <Plus className="w-8 h-8" />
                       </div>
                       <div className="text-center">
-                        <p className="text-lg font-bold">List a New Vehicle</p>
-                        <p className="text-sm opacity-80">Quick and easy process</p>
+                        <p className="text-lg font-bold">
+                          {totalListings >= maxFreeListings ? 'Upgrade to List More' : 'List a New Vehicle'}
+                        </p>
+                        <p className="text-sm opacity-80">
+                          {totalListings >= maxFreeListings ? 'Unlock unlimited listings' : 'Quick and easy process'}
+                        </p>
                       </div>
                     </div>
                   </Card>
@@ -541,9 +572,14 @@ export default function Dashboard({
                   </div>
 
                   <div className="p-4 border-t flex-shrink-0">
-                    <Button variant="outline" className="w-full bg-transparent" onClick={handleUploadClick}>
+                    <Button 
+                      variant="outline" 
+                      className="w-full bg-transparent" 
+                      onClick={handleUploadClick}
+                      disabled={uploadBlocked}
+                    >
                       <Plus className="mr-2 h-4 w-4" />
-                      Add New Listing
+                      {totalListings >= maxFreeListings ? "Upgrade to List More" : "Add New Listing"}
                     </Button>
                   </div>
                 </Card>
@@ -592,11 +628,15 @@ export default function Dashboard({
                   </Card>
 
                   <Card
-                    className="col-span-1 rounded-xl p-2 flex flex-col items-center justify-center bg-gradient-to-br from-[#FF6700] to-[#FF9248] text-white cursor-pointer"
+                    className={`col-span-1 rounded-xl p-2 flex flex-col items-center justify-center bg-gradient-to-br from-[#FF6700] to-[#FF9248] text-white cursor-pointer ${
+                      totalListings >= maxFreeListings ? 'opacity-90' : ''
+                    }`}
                     onClick={handleUploadClick}
                   >
                     <Plus className="w-5 h-5" />
-                    <span className="text-xs font-semibold mt-1">Upload</span>
+                    <span className="text-xs font-semibold mt-1">
+                      {totalListings >= maxFreeListings ? 'Upgrade' : 'Upload'}
+                    </span>
                   </Card>
 
                   <Card className="col-span-1 rounded-xl p-2 flex flex-col items-center justify-center">
@@ -761,9 +801,14 @@ export default function Dashboard({
                    )}
                 </div>
                 <div className="p-3 border-t">
-                  <Button variant="outline" className="w-full text-sm bg-transparent" onClick={handleUploadClick}>
+                  <Button 
+                    variant="outline" 
+                    className="w-full text-sm bg-transparent" 
+                    onClick={handleUploadClick}
+                    disabled={uploadBlocked}
+                  >
                     <Plus className="mr-1 h-3 w-3" />
-                    Add New Listing
+                    {totalListings >= maxFreeListings ? "Upgrade Plan" : "Add New Listing"}
                   </Button>
                 </div>
              </Card>
@@ -832,6 +877,95 @@ export default function Dashboard({
                 {isDeleting ? "Deleting..." : "Delete Listing"}
               </Button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Upgrade Plan Modal */}
+      {showUpgradeModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4 shadow-xl">
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 bg-[#FF6700] rounded-full flex items-center justify-center mx-auto mb-4">
+                <Package className="w-8 h-8 text-white" />
+              </div>
+              <h3 className="text-2xl font-bold text-[#3E5641] mb-2">Upgrade Your Plan</h3>
+              <p className="text-[#6F7F69]">
+                You've reached your free listing limit of {maxFreeListings} vehicles.
+              </p>
+            </div>
+
+            <div className="bg-[#FFF8E0] border border-[#FF6700]/20 rounded-xl p-4 mb-6">
+              <h4 className="font-semibold text-[#3E5641] mb-2">Current Usage</h4>
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-sm text-[#6F7F69]">Listings Used</span>
+                <span className="font-bold">{totalListings}/{maxFreeListings}</span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div
+                  className="bg-[#FF6700] h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${(totalListings / maxFreeListings) * 100}%` }}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-4 mb-6">
+              <div className="flex items-start space-x-3">
+                <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="text-green-600 text-sm">✓</span>
+                </div>
+                <div>
+                  <h5 className="font-semibold text-[#3E5641]">Unlimited Listings</h5>
+                  <p className="text-sm text-[#6F7F69]">List as many vehicles as you want</p>
+                </div>
+              </div>
+              
+              <div className="flex items-start space-x-3">
+                <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="text-green-600 text-sm">✓</span>
+                </div>
+                <div>
+                  <h5 className="font-semibold text-[#3E5641]">Premium Placement</h5>
+                  <p className="text-sm text-[#6F7F69]">Get featured at the top of search results</p>
+                </div>
+              </div>
+
+              <div className="flex items-start space-x-3">
+                <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="text-green-600 text-sm">✓</span>
+                </div>
+                <div>
+                  <h5 className="font-semibold text-[#3E5641]">Priority Support</h5>
+                  <p className="text-sm text-[#6F7F69]">Dedicated support team and faster response times</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                className="flex-1 border-[#3E5641] text-[#3E5641] hover:bg-[#3E5641] hover:text-white"
+                onClick={() => handleUpgradeAction('contact')}
+              >
+                Contact Sales
+              </Button>
+              <Button
+                className="flex-1 bg-[#FF6700] hover:bg-[#FF6700]/90 text-white"
+                onClick={() => handleUpgradeAction('upgrade')}
+              >
+                Upgrade Plan
+              </Button>
+            </div>
+
+            <button
+              onClick={() => {
+                setShowUpgradeModal(false)
+                setUploadBlocked(false)
+              }}
+              className="absolute top-4 right-4 text-[#6F7F69] hover:text-[#3E5641]"
+            >
+              <X className="w-5 h-5" />
+            </button>
           </div>
         </div>
       )}
