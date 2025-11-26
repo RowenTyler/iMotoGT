@@ -9,10 +9,40 @@ import type { Vehicle } from "@/types/vehicle"
 export default function DashboardPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  // Reverted to using deleteListedVehicle as requested
-  const { user, listedVehicles = [], savedVehicles = [], deleteListedVehicle, refreshVehicles, isLoading } = useUser()
+  const { 
+    user, 
+    listedVehicles = [], 
+    savedVehicles, // This is a Set<string> of IDs
+    deleteListedVehicle, 
+    refreshVehicles, 
+    isLoading,
+    refreshUserProfile // We'll use this to reload saved vehicles
+  } = useUser()
+  
   const [showVerificationPrompt, setShowVerificationPrompt] = useState(false)
   const [isDeletingVehicle, setIsDeletingVehicle] = useState<string | null>(null)
+  const [savedVehiclesData, setSavedVehiclesData] = useState<Vehicle[]>([])
+
+  // Load saved vehicles data
+  useEffect(() => {
+    const loadSavedVehiclesData = async () => {
+      if (!user?.id) return
+      
+      try {
+        console.log("🔄 DashboardPage: Loading saved vehicles data for user:", user.id)
+        // We need to fetch the actual vehicle objects for the saved IDs
+        const { getSavedVehicles } = await import("@/lib/vehicle-service")
+        const savedData = await getSavedVehicles(user.id)
+        console.log("✅ DashboardPage: Loaded saved vehicles:", savedData)
+        setSavedVehiclesData(savedData)
+      } catch (error) {
+        console.error("❌ DashboardPage: Error loading saved vehicles:", error)
+        setSavedVehiclesData([])
+      }
+    }
+
+    loadSavedVehiclesData()
+  }, [user?.id, savedVehicles]) // Reload when savedVehicles Set changes
 
   useEffect(() => {
     if (!isLoading && !user) {
@@ -30,8 +60,6 @@ export default function DashboardPage() {
     router.push(`/vehicle/${vehicle.id}/edit`)
   }
 
-  // FIXED: Calls the standard delete function with the reason.
-  // We rely on your DB/Schema to handle the soft delete logic based on this call.
   const handleDeleteListedCar = async (vehicleId: string, reason?: string) => {
     try {
       setIsDeletingVehicle(vehicleId)
@@ -53,6 +81,19 @@ export default function DashboardPage() {
     router.push(`/vehicle-details/${vehicle.id}`)
   }
 
+  // Refresh saved vehicles when needed
+  const refreshSavedVehicles = async () => {
+    if (user?.id) {
+      try {
+        const { getSavedVehicles } = await import("@/lib/vehicle-service")
+        const savedData = await getSavedVehicles(user.id)
+        setSavedVehiclesData(savedData)
+      } catch (error) {
+        console.error("Error refreshing saved vehicles:", error)
+      }
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -69,7 +110,7 @@ export default function DashboardPage() {
     <Dashboard
       user={user}
       listedCars={Array.isArray(listedVehicles) ? listedVehicles : []}
-      savedCars={Array.isArray(savedVehicles) ? savedVehicles : []}
+      savedCars={savedVehiclesData} // Pass the actual vehicle objects
       onEditListedCar={handleEditListedCar}
       onDeleteListedCar={handleDeleteListedCar}
       onViewDetails={handleViewListedCar}
@@ -80,7 +121,7 @@ export default function DashboardPage() {
       onViewProfileSettings={() => router.push("/settings")}
       onViewUploadVehicle={() => router.push("/upload-vehicle")}
       onBack={() => router.back()}
-      onSaveCar={() => {}} 
+      onSaveCar={refreshSavedVehicles} // Refresh when a vehicle is saved
       onNavigateToUpload={() => router.push("/upload-vehicle")}
     />
   )

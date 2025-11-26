@@ -19,6 +19,26 @@ export default function VehicleDetailsPage({ params }: VehicleDetailsPageProps) 
   const { user, savedVehicles, toggleSaveVehicle } = useUser()
   const [vehicle, setVehicle] = useState<Vehicle | null>(null)
   const [loading, setLoading] = useState(true)
+  const [savedVehiclesData, setSavedVehiclesData] = useState<Vehicle[]>([])
+
+  // Load saved vehicles data
+  useEffect(() => {
+    const loadSavedVehiclesData = async () => {
+      if (!user?.id) return
+      
+      try {
+        console.log("🔄 VehicleDetailsPage: Loading saved vehicles data")
+        const savedData = await vehicleService.getSavedVehicles(user.id)
+        console.log("✅ VehicleDetailsPage: Loaded saved vehicles:", savedData)
+        setSavedVehiclesData(savedData)
+      } catch (error) {
+        console.error("❌ VehicleDetailsPage: Error loading saved vehicles:", error)
+        setSavedVehiclesData([])
+      }
+    }
+
+    loadSavedVehiclesData()
+  }, [user?.id, savedVehicles]) // Reload when savedVehicles Set changes
 
   useEffect(() => {
     async function fetchVehicle() {
@@ -36,6 +56,12 @@ export default function VehicleDetailsPage({ params }: VehicleDetailsPageProps) 
     }
     fetchVehicle()
   }, [params.id])
+
+  // Debug logging
+  useEffect(() => {
+    console.log("🔍 VehicleDetailsPage - savedVehiclesData:", savedVehiclesData)
+    console.log("🔍 VehicleDetailsPage - user:", user)
+  }, [savedVehiclesData, user])
 
   if (loading) {
     return (
@@ -65,11 +91,12 @@ export default function VehicleDetailsPage({ params }: VehicleDetailsPageProps) 
         transparent={false}
       />
       <div className="pt-16 md:pt-20">
+        {/* FIXED: Pass actual saved vehicles data instead of empty array */}
         <VehicleDetails
           vehicle={vehicle}
           onBack={() => router.back()}
           user={user}
-          savedCars={[]}
+          savedCars={savedVehiclesData} // ← THIS IS THE CRITICAL FIX
           onSaveCar={() => toggleSaveVehicle(vehicle)}
         />
       </div>
