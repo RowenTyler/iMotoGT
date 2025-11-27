@@ -54,11 +54,7 @@ const CACHE_KEYS = {
 const CACHE_DURATION = 5 * 60 * 1000
 
 interface VehicleHierarchy {
-  [make: string]: {
-    models: {
-      [model: string]: string[] // variants
-    }
-  }
+  [make: string]: string[] // models only
 }
 
 export default function CarMarketplace() {
@@ -83,19 +79,16 @@ export default function CarMarketplace() {
   const searchRef = useRef<HTMLDivElement>(null)
   const engineCapacityRef = useRef<HTMLDivElement>(null)
 
-  // NEW: State for hierarchical dropdown
+  // NEW: State for hierarchical dropdown (makes → models only)
   const [vehicleHierarchy, setVehicleHierarchy] = useState<VehicleHierarchy>({})
   const [expandedMakes, setExpandedMakes] = useState<Set<string>>(new Set())
-  const [selectedMake, setSelectedMake] = useState<string>("")
-  const [selectedModel, setSelectedModel] = useState<string>("")
-  const [selectedVariant, setSelectedVariant] = useState<string>("")
 
   // State for Engine Capacity Slider
   const [engineCapacityRange, setEngineCapacityRange] = useState<[number, number]>([1.0, 8.0])
   const [showEngineCapacitySlider, setShowEngineCapacitySlider] = useState(false)
   const [currentSliderEngineValues, setCurrentSliderEngineValues] = useState<[number, number]>([1.0, 8.0])
 
-  // NEW: Cache functions
+  // Cache functions
   const getCachedData = <T,>(key: string): T | null => {
     if (typeof window === 'undefined') return null
     
@@ -127,24 +120,25 @@ export default function CarMarketplace() {
     return Date.now() - timestamp < CACHE_DURATION
   }
 
-  // NEW: Build vehicle hierarchy from vehicles
+  // Build vehicle hierarchy from vehicles (makes → models only)
   const buildVehicleHierarchy = (vehicles: Vehicle[]): VehicleHierarchy => {
     const hierarchy: VehicleHierarchy = {}
     
     vehicles.forEach(vehicle => {
-      const { make, model, variant } = vehicle
+      const { make, model } = vehicle
       
       if (!hierarchy[make]) {
-        hierarchy[make] = { models: {} }
+        hierarchy[make] = []
       }
       
-      if (!hierarchy[make].models[model]) {
-        hierarchy[make].models[model] = []
+      if (!hierarchy[make].includes(model)) {
+        hierarchy[make].push(model)
       }
-      
-      if (variant && !hierarchy[make].models[model].includes(variant)) {
-        hierarchy[make].models[model].push(variant)
-      }
+    })
+    
+    // Sort models alphabetically
+    Object.keys(hierarchy).forEach(make => {
+      hierarchy[make].sort()
     })
     
     return hierarchy
@@ -284,7 +278,7 @@ export default function CarMarketplace() {
     return `R ${formattedInteger || "0"}.${decimalPart}`
   }
 
-  // NEW: Hierarchical search functions
+  // NEW: Hierarchical search functions (makes → models only)
   const toggleMakeExpansion = (make: string) => {
     setExpandedMakes(prev => {
       const newSet = new Set(prev)
@@ -298,10 +292,6 @@ export default function CarMarketplace() {
   }
 
   const handleMakeSelect = (make: string) => {
-    setSelectedMake(make)
-    setSelectedModel("")
-    setSelectedVariant("")
-    
     const term = make
     if (!selectedTerms.includes(term)) {
       setSelectedTerms([...selectedTerms, term])
@@ -311,24 +301,7 @@ export default function CarMarketplace() {
   }
 
   const handleModelSelect = (make: string, model: string) => {
-    setSelectedMake(make)
-    setSelectedModel(model)
-    setSelectedVariant("")
-    
     const term = `${make} ${model}`
-    if (!selectedTerms.includes(term)) {
-      setSelectedTerms([...selectedTerms, term])
-    }
-    setSearchTerm("")
-    setShowSuggestions(false)
-  }
-
-  const handleVariantSelect = (make: string, model: string, variant: string) => {
-    setSelectedMake(make)
-    setSelectedModel(model)
-    setSelectedVariant(variant)
-    
-    const term = `${make} ${model} ${variant}`
     if (!selectedTerms.includes(term)) {
       setSelectedTerms([...selectedTerms, term])
     }
@@ -361,15 +334,6 @@ export default function CarMarketplace() {
       ) {
         uniqueSuggestions.add(modelTerm)
       }
-      if (vehicle.variant) {
-        const variantTerm = `${vehicle.make} ${vehicle.model} ${vehicle.variant}`
-        if (
-          variantTerm.toLowerCase().includes(lowerInput) ||
-          (abbrFull && variantTerm.toLowerCase().includes(abbrFull.toLowerCase()))
-        ) {
-          uniqueSuggestions.add(variantTerm)
-        }
-      }
     })
 
     if (abbrFull && !uniqueSuggestions.has(abbrFull)) {
@@ -389,14 +353,6 @@ export default function CarMarketplace() {
 
   const removeSelectedTerm = (term: string) => {
     setSelectedTerms(selectedTerms.filter((t) => t !== term))
-    // Clear hierarchical selection if this term matches
-    if (term === selectedMake) {
-      setSelectedMake("")
-    } else if (term === `${selectedMake} ${selectedModel}`) {
-      setSelectedModel("")
-    } else if (term === `${selectedMake} ${selectedModel} ${selectedVariant}`) {
-      setSelectedVariant("")
-    }
   }
 
   const handleSearch = () => {
@@ -538,7 +494,7 @@ export default function CarMarketplace() {
     )
   }
 
-  // NEW: Render hierarchical dropdown
+  // NEW: Render hierarchical dropdown (makes → models only)
   const renderHierarchicalDropdown = () => {
     const makes = Object.keys(vehicleHierarchy).sort()
     
@@ -552,13 +508,6 @@ export default function CarMarketplace() {
               onClick={() => toggleMakeExpansion(make)}
             >
               <div className="flex items-center">
-                <div className="w-4 h-4 flex items-center justify-center mr-3">
-                  {selectedMake === make ? (
-                    <div className="w-3 h-3 bg-[#FF6700] dark:bg-[#FF7D33] rounded-sm" />
-                  ) : (
-                    <div className="w-3 h-3 border border-[#9FA791] dark:border-[#4A4D45] rounded-sm" />
-                  )}
-                </div>
                 <span className="font-medium text-[#3E5641] dark:text-white">{make}</span>
               </div>
               <div className="flex items-center">
@@ -574,54 +523,16 @@ export default function CarMarketplace() {
             {/* Models Level */}
             {expandedMakes.has(make) && (
               <div className="ml-6 border-l border-[#9FA791]/20 dark:border-[#4A4D45]/20">
-                {Object.keys(vehicleHierarchy[make].models).sort().map((model) => (
-                  <div key={model}>
-                    <div 
-                      className="flex items-center justify-between px-4 py-2 hover:bg-[#FFF8E0] dark:hover:bg-[#2A352A] cursor-pointer"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleModelSelect(make, model)
-                      }}
-                    >
-                      <div className="flex items-center">
-                        <div className="w-4 h-4 flex items-center justify-center mr-3">
-                          {selectedModel === model && selectedMake === make ? (
-                            <div className="w-3 h-3 bg-[#FF6700] dark:bg-[#FF7D33] rounded-sm" />
-                          ) : (
-                            <div className="w-3 h-3 border border-[#9FA791] dark:border-[#4A4D45] rounded-sm" />
-                          )}
-                        </div>
-                        <span className="text-[#3E5641] dark:text-white">{model}</span>
-                      </div>
-                      {vehicleHierarchy[make].models[model].length > 0 && (
-                        <ChevronDown className="w-3 h-3 text-[#6F7F69] dark:text-gray-400" />
-                      )}
-                    </div>
-                    
-                    {/* Variants Level */}
-                    {vehicleHierarchy[make].models[model].length > 0 && (
-                      <div className="ml-6 border-l border-[#9FA791]/20 dark:border-[#4A4D45]/20">
-                        {vehicleHierarchy[make].models[model].sort().map((variant) => (
-                          <div 
-                            key={variant}
-                            className="flex items-center px-4 py-2 hover:bg-[#FFF8E0] dark:hover:bg-[#2A352A] cursor-pointer"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleVariantSelect(make, model, variant)
-                            }}
-                          >
-                            <div className="w-4 h-4 flex items-center justify-center mr-3">
-                              {selectedVariant === variant && selectedModel === model && selectedMake === make ? (
-                                <div className="w-2 h-2 bg-[#FF6700] dark:bg-[#FF7D33] rounded-full" />
-                              ) : (
-                                <div className="w-2 h-2 border border-[#9FA791] dark:border-[#4A4D45] rounded-full" />
-                              )}
-                            </div>
-                            <span className="text-sm text-[#3E5641] dark:text-white">{variant}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                {vehicleHierarchy[make].map((model) => (
+                  <div 
+                    key={model}
+                    className="flex items-center px-4 py-2 hover:bg-[#FFF8E0] dark:hover:bg-[#2A352A] cursor-pointer"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleModelSelect(make, model)
+                    }}
+                  >
+                    <span className="text-[#3E5641] dark:text-white">{model}</span>
                   </div>
                 ))}
               </div>
@@ -663,7 +574,7 @@ export default function CarMarketplace() {
               </p>
             </div>
 
-            {/* Search Card */}
+            {/* Search Card - EXACTLY THE SAME UI/UX */}
             <div className="bg-white dark:bg-[#1F2B20] p-6 md:p-8 rounded-2xl shadow-xl max-w-3xl w-full border border-[#9FA791]/20 dark:border-[#4A4D45]/20">
               {/* Search Input with Hierarchical Dropdown */}
               <div className="mb-4 relative" ref={searchRef}>
@@ -717,8 +628,7 @@ export default function CarMarketplace() {
                 )}
               </div>
 
-              {/* Rest of the component remains exactly the same */}
-              {/* Filters Row */}
+              {/* Filters Row - EXACTLY THE SAME */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                 <input
                   id="min-price-input"
@@ -752,7 +662,7 @@ export default function CarMarketplace() {
                   <option value="Northern Cape">Northern Cape</option>
                   <option value="Limpopo">Limpopo</option>
                 </select>
-                {/* Body Type Dropdown */}
+                {/* Body Type Dropdown - EXACTLY THE SAME */}
                 <div className="relative">
                   <button
                     onClick={() => setShowBodyTypes(!showBodyTypes)}
@@ -790,13 +700,251 @@ export default function CarMarketplace() {
                 </div>
               </div>
 
-              {/* More Options Section - REST OF THE COMPONENT REMAINS EXACTLY THE SAME */}
-              {/* ... (All the existing code for filters, buttons, featured vehicles, and footer remains unchanged) ... */}
+              {/* More Options Section - EXACTLY THE SAME */}
+              {showMoreOptions && (
+                <div
+                  id="more-options-section"
+                  className="mt-6 border-t border-[#9FA791]/20 dark:border-[#4A4D45]/20 pt-6"
+                >
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                    {/* Min/Max Year */}
+                    <div className="flex flex-col">
+                      <label
+                        htmlFor="min-year-select"
+                        className="mb-1 font-medium text-sm text-[#6F7F69] dark:text-gray-300"
+                      >
+                        Min Year
+                      </label>
+                      <select
+                        id="min-year-select"
+                        className="px-4 py-3 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white"
+                      >
+                        <option value="">Any</option>
+                        {Array.from({ length: 30 }, (_, i) => new Date().getFullYear() - i).map((year) => (
+                          <option key={year} value={year}>
+                            {year}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="flex flex-col">
+                      <label
+                        htmlFor="max-year-select"
+                        className="mb-1 font-medium text-sm text-[#6F7F69] dark:text-gray-300"
+                      >
+                        Max Year
+                      </label>
+                      <select
+                        id="max-year-select"
+                        className="px-4 py-3 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white"
+                      >
+                        <option value="">Any</option>
+                        {Array.from({ length: 30 }, (_, i) => new Date().getFullYear() - i).map((year) => (
+                          <option key={year} value={year}>
+                            {year}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    {/* Min/Max Mileage */}
+                    <div className="flex flex-col">
+                      <label
+                        htmlFor="min-mileage-input"
+                        className="mb-1 font-medium text-sm text-[#6F7F69] dark:text-gray-300"
+                      >
+                        Min Mileage
+                      </label>
+                      <input
+                        id="min-mileage-input"
+                        type="number"
+                        placeholder="e.g., 10000"
+                        min="0"
+                        step="1000"
+                        className="px-4 py-3 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white placeholder-[#6F7F69] dark:placeholder-gray-400"
+                      />
+                    </div>
+                    <div className="flex flex-col">
+                      <label
+                        htmlFor="max-mileage-input"
+                        className="mb-1 font-medium text-sm text-[#6F7F69] dark:text-gray-300"
+                      >
+                        Max Mileage
+                      </label>
+                      <input
+                        id="max-mileage-input"
+                        type="number"
+                        placeholder="e.g., 100000"
+                        min="0"
+                        step="1000"
+                        className="px-4 py-3 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white placeholder-[#6F7F69] dark:placeholder-gray-400"
+                      />
+                    </div>
+                    {/* Fuel Type */}
+                    <div className="flex flex-col">
+                      <label
+                        htmlFor="fuel-type-select"
+                        className="mb-1 font-medium text-sm text-[#6F7F69] dark:text-gray-300"
+                      >
+                        Fuel Type
+                      </label>
+                      <select
+                        id="fuel-type-select"
+                        className="px-4 py-3 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white"
+                      >
+                        <option value="All">All</option>
+                        <option value="Petrol">Petrol</option>
+                        <option value="Diesel">Diesel</option>
+                        <option value="Electric">Electric</option>
+                        <option value="Hybrid">Hybrid</option>
+                      </select>
+                    </div>
+                    {/* Engine Capacity Slider */}
+                    <div className="relative flex flex-col" ref={engineCapacityRef}>
+                      <label className="mb-1 font-medium text-sm text-[#6F7F69] dark:text-gray-300">
+                        Engine Capacity
+                      </label>
+                      <button
+                        onClick={() => {
+                          setCurrentSliderEngineValues(engineCapacityRange)
+                          setShowEngineCapacitySlider(!showEngineCapacitySlider)
+                        }}
+                        className="w-full px-4 py-3 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] text-left flex justify-between items-center bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white"
+                        aria-haspopup="true"
+                        aria-expanded={showEngineCapacitySlider}
+                      >
+                        {formatEngineCapacityDisplay(engineCapacityRange)}
+                        <ChevronDown
+                          className={`w-4 h-4 transition-transform ${showEngineCapacitySlider ? "rotate-180" : ""}`}
+                        />
+                      </button>
 
+                      {showEngineCapacitySlider && (
+                        <div className="absolute z-30 mt-1 w-full md:w-[320px] bg-white dark:bg-[#1F2B20] border border-[#9FA791] dark:border-[#4A4D45] rounded-lg shadow-xl p-5 top-full right-0 md:left-0 md:right-auto">
+                          <div className="mb-4 text-center">
+                            <span className="font-bold text-xl text-[#3E5641] dark:text-white">
+                              {currentSliderEngineValues[0].toFixed(1)}L
+                            </span>
+                            <span className="text-xl text-[#6F7F69] dark:text-gray-400"> - </span>
+                            <span className="font-bold text-xl text-[#3E5641] dark:text-white">
+                              {currentSliderEngineValues[1].toFixed(1)}L
+                            </span>
+                          </div>
+
+                          <SliderPrimitive.Root
+                            value={currentSliderEngineValues}
+                            onValueChange={handleSliderValueChange}
+                            min={1.0}
+                            max={8.0}
+                            step={0.1}
+                            minStepsBetweenThumbs={0}
+                            className="relative flex w-full touch-none select-none items-center h-10"
+                          >
+                            <SliderPrimitive.Track className="relative h-2 w-full grow overflow-hidden rounded-full bg-[#9FA791]/40 dark:bg-[#4A4D45]/60">
+                              <SliderPrimitive.Range className="absolute h-full bg-[#FF6700] dark:bg-[#FF7D33]" />
+                            </SliderPrimitive.Track>
+                            {[0, 1].map((thumbIndex) => (
+                              <SliderPrimitive.Thumb
+                                key={thumbIndex}
+                                aria-label={thumbIndex === 0 ? "Minimum engine capacity" : "Maximum engine capacity"}
+                                className="block h-6 w-6 rounded-full border-2 border-[#FF6700] dark:border-[#FF7D33] bg-white ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6700]/50 dark:focus-visible:ring-[#FF7D33]/50 focus-visible:ring-offset-2 cursor-grab active:cursor-grabbing"
+                              />
+                            ))}
+                          </SliderPrimitive.Root>
+
+                          <div className="mt-5 flex gap-4">
+                            <input
+                              id="min-engine-input"
+                              type="number"
+                              value={currentSliderEngineValues[0].toFixed(1)}
+                              onChange={handleMinEngineInputChange}
+                              min="1.0"
+                              max="8.0"
+                              step="0.1"
+                              className="w-full px-3 py-2 rounded-md border border-[#9FA791] dark:border-[#4A4D45] bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white text-sm focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33]"
+                              placeholder="Min L"
+                            />
+                            <input
+                              id="max-engine-input"
+                              type="number"
+                              value={currentSliderEngineValues[1].toFixed(1)}
+                              onChange={handleMaxEngineInputChange}
+                              min="1.0"
+                              max="8.0"
+                              step="0.1"
+                              className="w-full px-3 py-2 rounded-md border border-[#9FA791] dark:border-[#4A4D45] bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white text-sm focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33]"
+                              placeholder="Max L"
+                            />
+                          </div>
+
+                          <button
+                            onClick={handleApplyEngineCapacity}
+                            className="mt-5 w-full bg-[#FF6700] text-white dark:bg-[#FF7D33] px-4 py-2.5 rounded-lg hover:bg-[#FF6700]/90 dark:hover:bg-[#FF7D33]/90 transition-colors font-medium text-sm"
+                          >
+                            Apply Range
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    {/* Transmission */}
+                    <div className="flex flex-col">
+                      <label
+                        htmlFor="transmission-select"
+                        className="mb-1 font-medium text-sm text-[#6F7F69] dark:text-gray-300"
+                      >
+                        Transmission
+                      </label>
+                      <select
+                        id="transmission-select"
+                        className="px-4 py-3 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white"
+                      >
+                        <option value="All">All</option>
+                        <option value="Manual">Manual</option>
+                        <option value="Automatic">Automatic</option>
+                      </select>
+                    </div>
+                    {/* Condition */}
+                    <div className="flex flex-col">
+                      <label
+                        htmlFor="condition-select"
+                        className="mb-1 font-medium text-sm text-[#6F7F69] dark:text-gray-300"
+                      >
+                        Condition
+                      </label>
+                      <select
+                        id="condition-select"
+                        className="px-4 py-3 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white"
+                      >
+                        <option value="All">All</option>
+                        <option value="New">New</option>
+                        <option value="Used">Used</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Action Buttons - EXACTLY THE SAME */}
+              <div className="flex flex-col sm:flex-row gap-4 mt-6">
+                <button
+                  onClick={() => setShowMoreOptions(!showMoreOptions)}
+                  className="border border-[#FF6700] text-[#FF6700] dark:border-[#FF7D33] dark:text-[#FF7D33] px-4 py-3 rounded-lg w-full sm:w-auto sm:flex-1 hover:bg-[#FFF8E0] dark:hover:bg-[#2A352A] transition-colors font-medium"
+                  aria-controls="more-options-section"
+                  aria-expanded={showMoreOptions}
+                >
+                  {showMoreOptions ? "Fewer Options" : "More Options"}
+                </button>
+                <button
+                  onClick={handleSearch}
+                  className="bg-[#FF6700] text-white dark:bg-[#FF7D33] px-4 py-3 rounded-lg w-full sm:w-auto sm:flex-[2] hover:bg-[#FF6700]/90 dark:hover:bg-[#FF7D33]/90 transition-colors flex items-center justify-center font-medium"
+                >
+                  <Search className="w-5 h-5 mr-2" />
+                  Search Cars
+                </button>
+              </div>
             </div>
           </div>
 
-          {/* Featured Vehicles Section */}
+          {/* Featured Vehicles Section - EXACTLY THE SAME */}
           <div className="py-16 px-4 bg-white dark:bg-[#1F2B20]">
             <div className="max-w-7xl mx-auto">
               <div className="text-center mb-12">
@@ -846,7 +994,7 @@ export default function CarMarketplace() {
             </div>
           </div>
 
-          {/* Footer */}
+          {/* Footer - EXACTLY THE SAME */}
           <footer className="bg-[#3E5641] dark:bg-[#1F2B20] py-8 text-white">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
