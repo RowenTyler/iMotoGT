@@ -79,7 +79,7 @@ export default function CarMarketplace() {
   const searchRef = useRef<HTMLDivElement>(null)
   const engineCapacityRef = useRef<HTMLDivElement>(null)
 
-  // NEW: State for hierarchical dropdown (makes → models only)
+  // State for hierarchical dropdown (makes → models only)
   const [vehicleHierarchy, setVehicleHierarchy] = useState<VehicleHierarchy>({})
   const [expandedMakes, setExpandedMakes] = useState<Set<string>>(new Set())
 
@@ -144,27 +144,34 @@ export default function CarMarketplace() {
     return hierarchy
   }
 
-  // UPDATED: Fetch vehicles with caching
+  // UPDATED: Fetch vehicles with caching and background updates
   useEffect(() => {
-    const fetchVehicles = async () => {
+    const fetchVehicles = async (forceRefresh = false) => {
       try {
-        setLoading(true)
+        if (!forceRefresh) setLoading(true)
         
-        // Check cache first
+        // Check cache first unless forcing refresh
         const cachedVehicles = getCachedData<Vehicle[]>(CACHE_KEYS.VEHICLES)
         const cachedHierarchy = getCachedData<VehicleHierarchy>(CACHE_KEYS.VEHICLE_HIERARCHY)
         const isCacheStillValid = isCacheValid(CACHE_KEYS.VEHICLES_TIMESTAMP)
         
-        if (cachedVehicles && cachedHierarchy && isCacheStillValid) {
+        if (cachedVehicles && cachedHierarchy && isCacheStillValid && !forceRefresh) {
           console.log("🚀 Loading vehicles from cache")
           setAllVehicles(cachedVehicles)
           setFilteredVehicles(cachedVehicles)
           setVehicleHierarchy(cachedHierarchy)
-          setLoading(false)
+          if (!forceRefresh) setLoading(false)
+          
+          // Schedule background refresh if cache is older than 2 minutes
+          const cacheAge = Date.now() - (getCachedData<number>(CACHE_KEYS.VEHICLES_TIMESTAMP) || 0)
+          if (cacheAge > 2 * 60 * 1000) {
+            console.log("🔄 Scheduling background cache refresh...")
+            setTimeout(() => fetchVehicles(true), 1000) // Refresh in background after 1 second
+          }
           return
         }
         
-        console.log("🔄 Fetching fresh vehicle data...")
+        console.log(forceRefresh ? "🔄 Background refreshing vehicle data..." : "🔄 Fetching fresh vehicle data...")
         const result = await vehicleService.getVehicles()
         console.log("✅ getVehicles returned:", result)
         const vehicles = Array.isArray(result) ? result : result.vehicles || []
@@ -201,7 +208,7 @@ export default function CarMarketplace() {
           setVehicleHierarchy({})
         }
       } finally {
-        setLoading(false)
+        if (!forceRefresh) setLoading(false)
       }
     }
     
@@ -278,8 +285,21 @@ export default function CarMarketplace() {
     return `R ${formattedInteger || "0"}.${decimalPart}`
   }
 
-  // NEW: Hierarchical search functions (makes → models only)
-  const toggleMakeExpansion = (make: string) => {
+  // NEW: Check if a make is selected
+  const isMakeSelected = (make: string): boolean => {
+    return selectedTerms.includes(make)
+  }
+
+  // NEW: Check if a model is selected
+  const isModelSelected = (make: string, model: string): boolean => {
+    return selectedTerms.includes(`${make} ${model}`)
+  }
+
+  // Hierarchical search functions (makes → models only)
+  const toggleMakeExpansion = (make: string, e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation()
+    }
     setExpandedMakes(prev => {
       const newSet = new Set(prev)
       if (newSet.has(make)) {
@@ -293,7 +313,12 @@ export default function CarMarketplace() {
 
   const handleMakeSelect = (make: string) => {
     const term = make
-    if (!selectedTerms.includes(term)) {
+    if (selectedTerms.includes(term)) {
+      // Remove make and all its models
+      const termsToRemove = [term, ...vehicleHierarchy[make].map(model => `${make} ${model}`)]
+      setSelectedTerms(selectedTerms.filter(t => !termsToRemove.includes(t)))
+    } else {
+      // Add make only
       setSelectedTerms([...selectedTerms, term])
     }
     setSearchTerm("")
@@ -302,8 +327,22 @@ export default function CarMarketplace() {
 
   const handleModelSelect = (make: string, model: string) => {
     const term = `${make} ${model}`
-    if (!selectedTerms.includes(term)) {
+    if (selectedTerms.includes(term)) {
+      // Remove model
+      setSelectedTerms(selectedTerms.filter(t => t !== term))
+      
+      // If make was selected individually, keep it
+      if (selectedTerms.includes(make)) {
+        // Make remains selected
+      }
+    } else {
+      // Add model
       setSelectedTerms([...selectedTerms, term])
+      
+      // If make was selected individually, remove it (since we're selecting specific models)
+      if (selectedTerms.includes(make)) {
+        setSelectedTerms(prev => prev.filter(t => t !== make).concat(term))
+      }
     }
     setSearchTerm("")
     setShowSuggestions(false)
@@ -494,7 +533,7 @@ export default function CarMarketplace() {
     )
   }
 
-  // NEW: Render hierarchical dropdown (makes → models only)
+  // UPDATED: Render hierarchical dropdown with visual indicators and make selection
   const renderHierarchicalDropdown = () => {
     const makes = Object.keys(vehicleHierarchy).sort()
     
@@ -505,12 +544,23 @@ export default function CarMarketplace() {
             {/* Make Level */}
             <div 
               className="flex items-center justify-between px-4 py-3 hover:bg-[#FFF8E0] dark:hover:bg-[#2A352A] cursor-pointer"
-              onClick={() => toggleMakeExpansion(make)}
+              onClick={() => handleMakeSelect(make)}
             >
               <div className="flex items-center">
+                {/* Visual indicator for make selection */}
+                <div className="w-4 h-4 flex items-center justify-center mr-3">
+                  {isMakeSelected(make) ? (
+                    <div className="w-3 h-3 bg-[#FF6700] dark:bg-[#FF7D33] rounded-sm" />
+                  ) : (
+                    <div className="w-3 h-3 border border-[#9FA791] dark:border-[#4A4D45] rounded-sm" />
+                  )}
+                </div>
                 <span className="font-medium text-[#3E5641] dark:text-white">{make}</span>
               </div>
-              <div className="flex items-center">
+              <div 
+                className="flex items-center"
+                onClick={(e) => toggleMakeExpansion(make, e)}
+              >
                 <span className="text-sm text-[#6F7F69] dark:text-gray-400 mr-2">
                   Models
                 </span>
@@ -532,6 +582,14 @@ export default function CarMarketplace() {
                       handleModelSelect(make, model)
                     }}
                   >
+                    {/* Visual indicator for model selection */}
+                    <div className="w-4 h-4 flex items-center justify-center mr-3">
+                      {isModelSelected(make, model) ? (
+                        <div className="w-2 h-2 bg-[#FF6700] dark:bg-[#FF7D33] rounded-full" />
+                      ) : (
+                        <div className="w-2 h-2 border border-[#9FA791] dark:border-[#4A4D45] rounded-full" />
+                      )}
+                    </div>
                     <span className="text-[#3E5641] dark:text-white">{model}</span>
                   </div>
                 ))}
@@ -574,7 +632,7 @@ export default function CarMarketplace() {
               </p>
             </div>
 
-            {/* Search Card - EXACTLY THE SAME UI/UX */}
+            {/* Search Card */}
             <div className="bg-white dark:bg-[#1F2B20] p-6 md:p-8 rounded-2xl shadow-xl max-w-3xl w-full border border-[#9FA791]/20 dark:border-[#4A4D45]/20">
               {/* Search Input with Hierarchical Dropdown */}
               <div className="mb-4 relative" ref={searchRef}>
@@ -628,7 +686,7 @@ export default function CarMarketplace() {
                 )}
               </div>
 
-              {/* Filters Row - EXACTLY THE SAME */}
+              {/* Filters Row */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                 <input
                   id="min-price-input"
@@ -662,7 +720,7 @@ export default function CarMarketplace() {
                   <option value="Northern Cape">Northern Cape</option>
                   <option value="Limpopo">Limpopo</option>
                 </select>
-                {/* Body Type Dropdown - EXACTLY THE SAME */}
+                {/* Body Type Dropdown */}
                 <div className="relative">
                   <button
                     onClick={() => setShowBodyTypes(!showBodyTypes)}
@@ -700,7 +758,7 @@ export default function CarMarketplace() {
                 </div>
               </div>
 
-              {/* More Options Section - EXACTLY THE SAME */}
+              {/* More Options Section */}
               {showMoreOptions && (
                 <div
                   id="more-options-section"
@@ -923,7 +981,7 @@ export default function CarMarketplace() {
                 </div>
               )}
 
-              {/* Action Buttons - EXACTLY THE SAME */}
+              {/* Action Buttons */}
               <div className="flex flex-col sm:flex-row gap-4 mt-6">
                 <button
                   onClick={() => setShowMoreOptions(!showMoreOptions)}
@@ -944,7 +1002,7 @@ export default function CarMarketplace() {
             </div>
           </div>
 
-          {/* Featured Vehicles Section - EXACTLY THE SAME */}
+          {/* Featured Vehicles Section */}
           <div className="py-16 px-4 bg-white dark:bg-[#1F2B20]">
             <div className="max-w-7xl mx-auto">
               <div className="text-center mb-12">
@@ -994,7 +1052,7 @@ export default function CarMarketplace() {
             </div>
           </div>
 
-          {/* Footer - EXACTLY THE SAME */}
+          {/* Footer */}
           <footer className="bg-[#3E5641] dark:bg-[#1F2B20] py-8 text-white">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
