@@ -1,7 +1,7 @@
 import { createClient } from "@supabase/supabase-js"
 import type { Database } from "@/types/supabase"
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://gdhnyulduswsqfydkdev.supabase.co"
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "https://mwzrrrnmtyiyrwdqhcqb.supabase.co"
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
 
 if (!supabaseUrl) {

@@ -17,7 +17,7 @@ The application uses Supabase as the backend-as-a-service (BaaS) solution, provi
 The following environment variables are configured:
 
 \`\`\`env
-NEXT_PUBLIC_SUPABASE_URL=https://gdhnyulduswsqfydkdev.supabase.co
+NEXT_PUBLIC_SUPABASE_URL=https://mwzrrrnmtyiyrwdqhcqb.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 SUPABASE_SERVICE_ROLE_KEY=fgya6Usww5RM4TJ6Hmi/MRGNOY5BFFk95TFKW65JVK3K3MwxpypiyDSCcrCSNNUKRGUVzijyYHuv8tq4ZlUNqA==
 \`\`\`
