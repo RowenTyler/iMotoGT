@@ -8,7 +8,7 @@ import { ThemeProvider } from "@/components/theme-provider"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "iMoto - Find Your Perfect Car",
+  title: "iMoto GT - Find Your Perfect Car",
   description: "Browse and discover amazing cars in South Africa",
     generator: 'v0.app'
 }
@@ -21,6 +21,8 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        {/* Favicon for website tab */}
+        <link rel="icon" href="/imoto-icon-metadate-image.png" type="image/png" />
         <script
           dangerouslySetInnerHTML={{
             __html: `
