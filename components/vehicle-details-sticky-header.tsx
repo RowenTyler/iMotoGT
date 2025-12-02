@@ -121,7 +121,7 @@ export default function VehicleDetailsStickyHeader({
               title="Click to scroll to top"
             >
               <Image
-                src="/iMoto icon.png"
+                src="\imoto-icon.png"
                 alt="iMoto Logo"
                 width={32}
                 height={32}
