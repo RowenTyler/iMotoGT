@@ -298,7 +298,7 @@ export function Header({
       >
         <div className="bg-black/20 border border-white/50 backdrop-blur-sm rounded-full p-2 hover:bg-black/30 transition-colors">
           <Image
-            src="/imoto-icon-new.png"
+            src="/imoto-icon.png"
             alt="MOTO GT Logo"
             width={100}
             height={30}
