@@ -1,7 +1,7 @@
 "use client"
 
 import { useRouter, usePathname } from "next/navigation"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Menu, X, User } from "lucide-react"
 import { useUser } from "@/components/UserContext"
 import { useMobile } from "@/hooks/use-mobile"
@@ -33,10 +33,34 @@ export function Header({
   transparent = true,
 }: HeaderProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [isScrolled, setIsScrolled] = useState(false)
+  const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false)
   const router = useRouter()
   const pathname = usePathname()
   const { user: contextUser, authUser, isEmailVerified, logout } = useUser()
   const isMobile = useMobile()
+
+  useEffect(() => {
+    if (isMobile) return
+
+    const handleScroll = () => {
+      const scrollY = window.scrollY
+      const scrollThreshold = 50
+
+      if (scrollY > scrollThreshold && !isScrolled) {
+        setIsScrolled(true)
+        setIsHeaderCollapsed(true)
+      }
+    }
+
+    window.addEventListener("scroll", handleScroll, { passive: true })
+    return () => window.removeEventListener("scroll", handleScroll)
+  }, [isMobile, isScrolled])
+
+  const handleExpandHeader = () => {
+    setIsHeaderCollapsed(false)
+    setIsScrolled(false)
+  }
 
   const currentUser = contextUser || propUser
   const isLoggedIn = !!authUser
@@ -263,90 +287,116 @@ export function Header({
   }
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 p-4">
-      <nav className="mx-auto max-w-4xl w-[95%] flex items-center justify-between">
-        <div className="hidden md:flex items-center bg-black/20 border border-white/50 backdrop-blur-sm rounded-full px-10 h-14">
-          <div className="flex items-center justify-evenly w-full gap-8">
-            <button
-              onClick={() => handleNavigation("browse")}
-              className="text-white hover:text-orange-500 transition-colors font-medium"
-            >
-              Browse
-            </button>
-            <button
-              onClick={() => handleNavigation("sell")}
-              className="text-white hover:text-orange-500 transition-colors font-medium"
-            >
-              Sell
-            </button>
-            <button
-              onClick={() => handleNavigation("about")}
-              className="text-white hover:text-orange-500 transition-colors font-medium"
-            >
-              About
-            </button>
-          </div>
+    <>
+      <div
+        className={`fixed top-4 left-4 z-50 cursor-pointer transition-all duration-500 ease-in-out ${
+          isHeaderCollapsed
+            ? "opacity-100 scale-100 translate-x-0"
+            : "opacity-0 scale-75 -translate-x-full pointer-events-none"
+        }`}
+        onClick={handleExpandHeader}
+      >
+        <div className="bg-black/20 border border-white/50 backdrop-blur-sm rounded-full p-2 hover:bg-black/30 transition-colors">
+          <Image
+            src="/imoto-icon-new.png"
+            alt="MOTO GT Logo"
+            width={100}
+            height={30}
+            className="object-contain"
+            priority
+          />
         </div>
+      </div>
 
-        <div className="flex items-center justify-center flex-grow">
-          <div className="flex items-center cursor-pointer" onClick={() => handleNavigation("home")}>
-            <Image
-              src="\imoto-icon-new.png"
-              alt="MOTO GT Logo"
-              width={280}
-              height={84}
-              className="object-contain"
-              priority
-            />
+      <header
+        className={`fixed top-0 left-0 right-0 z-50 p-4 transition-all duration-500 ease-in-out ${
+          isHeaderCollapsed ? "opacity-0 -translate-x-full pointer-events-none" : "opacity-100 translate-x-0"
+        }`}
+      >
+        <nav className="mx-auto max-w-4xl w-[95%] flex items-center justify-between">
+          <div className="hidden md:flex items-center bg-black/20 border border-white/50 backdrop-blur-sm rounded-full px-10 h-14">
+            <div className="flex items-center justify-evenly w-full gap-8">
+              <button
+                onClick={() => handleNavigation("browse")}
+                className="text-white hover:text-orange-500 transition-colors font-medium"
+              >
+                Browse
+              </button>
+              <button
+                onClick={() => handleNavigation("sell")}
+                className="text-white hover:text-orange-500 transition-colors font-medium"
+              >
+                Sell
+              </button>
+              <button
+                onClick={() => handleNavigation("about")}
+                className="text-white hover:text-orange-500 transition-colors font-medium"
+              >
+                About
+              </button>
+            </div>
           </div>
-        </div>
 
-        <div className="hidden md:flex items-center bg-black/20 border border-white/50 backdrop-blur-sm rounded-l-[100px] rounded-r-[100px] px-8 h-14">
-          <div className="flex items-center justify-evenly w-full gap-6">
-            <button
-              onClick={() => handleNavigation("services")}
-              className="text-white hover:text-orange-500 transition-colors font-medium"
-            >
-              Services
-            </button>
-            <button
-              onClick={() => handleNavigation("contact")}
-              className="text-white hover:text-orange-500 transition-colors font-medium"
-            >
-              Contact
-            </button>
-            {isLoggedIn ? (
-              <button
-                onClick={handleUserButtonClick}
-                className="flex items-center space-x-2 text-white hover:text-orange-500 transition-colors font-medium"
-              >
-                {currentUser?.profilePic ? (
-                  <Image
-                    src={currentUser.profilePic || "/placeholder.svg"}
-                    alt="Profile"
-                    width={32}
-                    height={32}
-                    className="rounded-full object-cover border-2 border-white"
-                    style={{ aspectRatio: "1/1" }}
-                  />
-                ) : (
-                  <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center border-2 border-white">
-                    <User className="w-4 h-4 text-white" />
-                  </div>
-                )}
-                <span>{displayName}</span>
-              </button>
-            ) : (
-              <button
-                onClick={() => handleNavigation("login")}
-                className="bg-orange-500 text-white px-6 py-2 rounded-full hover:bg-orange-600 transition-colors font-medium"
-              >
-                Login
-              </button>
-            )}
+          <div className="flex items-center justify-center flex-grow">
+            <div className="flex items-center cursor-pointer" onClick={() => handleNavigation("home")}>
+              <Image
+                src="/imoto-icon-new.png"
+                alt="MOTO GT Logo"
+                width={280}
+                height={84}
+                className="object-contain"
+                priority
+              />
+            </div>
           </div>
-        </div>
-      </nav>
-    </header>
+
+          <div className="hidden md:flex items-center bg-black/20 border border-white/50 backdrop-blur-sm rounded-l-[100px] rounded-r-[100px] px-8 h-14">
+            <div className="flex items-center justify-evenly w-full gap-6">
+              <button
+                onClick={() => handleNavigation("services")}
+                className="text-white hover:text-orange-500 transition-colors font-medium"
+              >
+                Services
+              </button>
+              <button
+                onClick={() => handleNavigation("contact")}
+                className="text-white hover:text-orange-500 transition-colors font-medium"
+              >
+                Contact
+              </button>
+              {isLoggedIn ? (
+                <button
+                  onClick={handleUserButtonClick}
+                  className="flex items-center space-x-2 text-white hover:text-orange-500 transition-colors font-medium"
+                >
+                  {currentUser?.profilePic ? (
+                    <Image
+                      src={currentUser.profilePic || "/placeholder.svg"}
+                      alt="Profile"
+                      width={32}
+                      height={32}
+                      className="rounded-full object-cover border-2 border-white"
+                      style={{ aspectRatio: "1/1" }}
+                    />
+                  ) : (
+                    <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center border-2 border-white">
+                      <User className="w-4 h-4 text-white" />
+                    </div>
+                  )}
+                  <span>{displayName}</span>
+                </button>
+              ) : (
+                <button
+                  onClick={() => handleNavigation("login")}
+                  className="bg-orange-500 text-white px-6 py-2 rounded-full hover:bg-orange-600 transition-colors font-medium"
+                >
+                  Login
+                </button>
+              )}
+            </div>
+          </div>
+        </nav>
+      </header>
+    </>
   )
 }
