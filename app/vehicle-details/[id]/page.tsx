@@ -1,11 +1,10 @@
 "use client"
 
-import { notFound, useRouter } from "next/navigation"
+import { notFound } from "next/navigation"
 import { useEffect, useState } from "react"
 import VehicleDetails from "@/components/vehicle-details"
 import VehicleDetailsStickyHeader from "@/components/vehicle-details-sticky-header"
 import { vehicleService } from "@/lib/vehicle-service"
-import { Header } from "@/components/ui/header"
 import { useUser } from "@/components/UserContext"
 import type { Vehicle } from "@/types/vehicle"
 
@@ -16,7 +15,6 @@ interface VehicleDetailsPageProps {
 }
 
 export default function VehicleDetailsPage({ params }: VehicleDetailsPageProps) {
-  const router = useRouter()
   const { user, savedVehicles, toggleSaveVehicle } = useUser()
   const [vehicle, setVehicle] = useState<Vehicle | null>(null)
   const [loading, setLoading] = useState(true)
@@ -61,8 +59,7 @@ export default function VehicleDetailsPage({ params }: VehicleDetailsPageProps) 
   if (loading) {
     return (
       <div className="min-h-screen bg-[var(--light-bg)] dark:bg-[var(--dark-bg)]">
-        <Header user={user} transparent={false} />
-        <div className="pt-16 md:pt-20 flex items-center justify-center min-h-[50vh]">
+        <div className="pt-20 flex items-center justify-center min-h-[50vh]">
           <p className="text-[#3E5641] dark:text-white">Loading...</p>
         </div>
       </div>
@@ -77,31 +74,17 @@ export default function VehicleDetailsPage({ params }: VehicleDetailsPageProps) 
 
   return (
     <div className="min-h-screen bg-[var(--light-bg)] dark:bg-[var(--dark-bg)]">
-      <Header
-        user={user}
-        onLoginClick={() => router.push("/login")}
-        onDashboardClick={() => router.push("/dashboard")}
-        onGoHome={() => router.push("/home")}
-        onShowAllCars={() => router.push("/results")}
-        onGoToSellPage={() => router.push("/upload-vehicle")}
-        onSignOut={() => router.push("/login")}
-        transparent={false}
-      />
-
       <VehicleDetailsStickyHeader
         vehicle={vehicle}
         isSaved={isSaved}
         onToggleSave={() => toggleSaveVehicle(vehicle)}
         user={user}
-        onLoginClick={() => router.push("/login")}
-        onDashboardClick={() => router.push("/dashboard")}
       />
 
-      <div className="pt-16 md:pt-20">
-        {/* FIXED: Pass actual saved vehicles data instead of empty array */}
+      <div className="pt-24 md:pt-28">
         <VehicleDetails
           vehicle={vehicle}
-          onBack={() => router.back()}
+          onBack={() => window.history.back()}
           user={user}
           savedCars={savedVehiclesData}
           onSaveCar={() => toggleSaveVehicle(vehicle)}
