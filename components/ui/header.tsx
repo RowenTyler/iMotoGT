@@ -296,10 +296,10 @@ export function Header({
         }`}
         onClick={handleExpandHeader}
       >
-        <div className="bg-black/20 border border-white/50 backdrop-blur-sm rounded-full p-2 hover:bg-black/30 transition-colors">
+        <div>
           <Image
             src="/imoto-icon.png"
-            alt="MOTO GT Logo"
+            alt="IMOTO GT Logo"
             width={100}
             height={30}
             className="object-contain"
