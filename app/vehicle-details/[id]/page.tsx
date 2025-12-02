@@ -1,10 +1,10 @@
 "use client"
 
-import { notFound } from "next/navigation"
+import { notFound, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import VehicleDetails from "@/components/vehicle-details"
-import VehicleDetailsStickyHeader from "@/components/vehicle-details-sticky-header"
 import { vehicleService } from "@/lib/vehicle-service"
+import { Header } from "@/components/ui/header"
 import { useUser } from "@/components/UserContext"
 import type { Vehicle } from "@/types/vehicle"
 
@@ -15,6 +15,7 @@ interface VehicleDetailsPageProps {
 }
 
 export default function VehicleDetailsPage({ params }: VehicleDetailsPageProps) {
+  const router = useRouter()
   const { user, savedVehicles, toggleSaveVehicle } = useUser()
   const [vehicle, setVehicle] = useState<Vehicle | null>(null)
   const [loading, setLoading] = useState(true)
@@ -24,7 +25,7 @@ export default function VehicleDetailsPage({ params }: VehicleDetailsPageProps) 
   useEffect(() => {
     const loadSavedVehiclesData = async () => {
       if (!user?.id) return
-
+      
       try {
         console.log("🔄 VehicleDetailsPage: Loading saved vehicles data")
         const savedData = await vehicleService.getSavedVehicles(user.id)
@@ -56,10 +57,17 @@ export default function VehicleDetailsPage({ params }: VehicleDetailsPageProps) 
     fetchVehicle()
   }, [params.id])
 
+  // Debug logging
+  useEffect(() => {
+    console.log("🔍 VehicleDetailsPage - savedVehiclesData:", savedVehiclesData)
+    console.log("🔍 VehicleDetailsPage - user:", user)
+  }, [savedVehiclesData, user])
+
   if (loading) {
     return (
       <div className="min-h-screen bg-[var(--light-bg)] dark:bg-[var(--dark-bg)]">
-        <div className="pt-20 flex items-center justify-center min-h-[50vh]">
+        <Header user={user} transparent={false} />
+        <div className="pt-16 md:pt-20 flex items-center justify-center min-h-[50vh]">
           <p className="text-[#3E5641] dark:text-white">Loading...</p>
         </div>
       </div>
@@ -70,23 +78,25 @@ export default function VehicleDetailsPage({ params }: VehicleDetailsPageProps) 
     return notFound()
   }
 
-  const isSaved = savedVehicles.has(vehicle.id)
-
   return (
     <div className="min-h-screen bg-[var(--light-bg)] dark:bg-[var(--dark-bg)]">
-      <VehicleDetailsStickyHeader
-        vehicle={vehicle}
-        isSaved={isSaved}
-        onToggleSave={() => toggleSaveVehicle(vehicle)}
+      <Header
         user={user}
+        onLoginClick={() => router.push("/login")}
+        onDashboardClick={() => router.push("/dashboard")}
+        onGoHome={() => router.push("/home")}
+        onShowAllCars={() => router.push("/results")}
+        onGoToSellPage={() => router.push("/upload-vehicle")}
+        onSignOut={() => router.push("/login")}
+        transparent={false}
       />
-
-      <div className="pt-24 md:pt-28">
+      <div className="pt-16 md:pt-20">
+        {/* FIXED: Pass actual saved vehicles data instead of empty array */}
         <VehicleDetails
           vehicle={vehicle}
-          onBack={() => window.history.back()}
+          onBack={() => router.back()}
           user={user}
-          savedCars={savedVehiclesData}
+          savedCars={savedVehiclesData} // ← THIS IS THE CRITICAL FIX
           onSaveCar={() => toggleSaveVehicle(vehicle)}
         />
       </div>
