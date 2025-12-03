@@ -26,6 +26,7 @@ export interface Vehicle {
   sellerProfilePic?: string
   createdAt?: string
   updatedAt?: string
+  hideContactInfo?: boolean
 }
 
 export interface VehicleFormData {
@@ -43,4 +44,5 @@ export interface VehicleFormData {
   city: string
   description?: string
   images?: string[]
+  hideContactInfo?: boolean
 }

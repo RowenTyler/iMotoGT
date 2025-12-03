@@ -2,8 +2,9 @@
 import { useState, useEffect, useMemo, useRef } from "react"
 import type React from "react"
 import Image from "next/image" // Add this import
+import { useRouter } from "next/navigation" // Import useRouter
 
-import { Car, Shield, Phone, Mail, X, Star, UploadCloud, Search, MapPin } from "lucide-react"
+import { Phone, Mail, X, UploadCloud, Search, MapPin } from "lucide-react"
 import type { Vehicle } from "@/types/vehicle"
 import type { UserProfile } from "@/types/user" // Added import
 import { Heart, ChevronLeft, ChevronRight } from "lucide-react"
@@ -443,7 +444,7 @@ export default function VehicleDetails({
       const scrollAmount = container.clientWidth * galleryIndex
       container.scrollTo({
         left: scrollAmount,
-        behavior: 'smooth'
+        behavior: "smooth",
       })
       setActiveGallery(galleryIndex)
     }
@@ -470,12 +471,13 @@ export default function VehicleDetails({
   const hasGalleryThree = galleryThreeDisplayImages.length > 0
   const totalGalleries = [hasGalleryOne, hasGalleryTwo, hasGalleryThree].filter(Boolean).length
 
+  const router = useRouter() // Initialize useRouter
+
   return (
     <div className="min-h-screen">
       {/* Header Section with Back Button and Price */}
       <section className="px-6 pt-6 md:pt-10">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
-
           {isEditMode ? (
             <div className="flex items-center gap-2 pl-6">
               <span className="text-[#FF6700] dark:text-[#FF7D33] text-2xl md:text-3xl font-bold">$</span>
@@ -604,10 +606,10 @@ export default function VehicleDetails({
           {/* Desktop: Three-section horizontal scrolling gallery */}
           <div className="hidden md:block">
             <div className="gallery-container relative flex items-center">
-              <div 
+              <div
                 ref={galleryContainerRef}
                 className="gallery-scroll flex overflow-x-auto snap-x snap-mandatory w-full [scrollbar-width:none] [-ms-overflow-style:none] [-webkit-overflow-scrolling:touch]"
-                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
                 onScroll={handleGalleryScroll}
               >
                 {/* Hide scrollbar for Webkit browsers */}
@@ -619,11 +621,11 @@ export default function VehicleDetails({
                     background: transparent;
                   }
                 `}</style>
-                
+
                 {/* Gallery 1 */}
                 {hasGalleryOne && (
                   <section className="gallery-section flex-shrink-0 w-full snap-center grid grid-cols-1 md:grid-cols-3 gap-4 h-[400px]">
-                    <div 
+                    <div
                       className="md:col-span-2 h-full overflow-hidden rounded-lg group relative m-0 p-0 cursor-pointer"
                       onClick={() => openImageModal(0)}
                     >
@@ -669,8 +671,8 @@ export default function VehicleDetails({
                 {hasGalleryTwo && (
                   <section className="gallery-section flex-shrink-0 w-full snap-center grid grid-cols-2 sm:grid-cols-4 gap-4 h-[400px]">
                     {galleryTwoDisplayImages.map((imgSrc, index) => (
-                      <div 
-                        key={`g2-img-${index}`} 
+                      <div
+                        key={`g2-img-${index}`}
                         className="w-full h-full overflow-hidden rounded-lg group relative cursor-pointer"
                         onClick={() => openImageModal(index + 5)}
                       >
@@ -694,8 +696,8 @@ export default function VehicleDetails({
                 {hasGalleryThree && (
                   <section className="gallery-section flex-shrink-0 w-full snap-center grid grid-cols-2 sm:grid-cols-4 gap-4 h-[400px]">
                     {galleryThreeDisplayImages.map((imgSrc, index) => (
-                      <div 
-                        key={`g3-img-${index}`} 
+                      <div
+                        key={`g3-img-${index}`}
                         className="w-full h-full overflow-hidden rounded-lg group relative cursor-pointer"
                         onClick={() => openImageModal(index + 13)}
                       >
@@ -724,9 +726,7 @@ export default function VehicleDetails({
                   <button
                     onClick={() => navigateToGallery(0)}
                     className={`w-3 h-3 rounded-full transition-all duration-300 ${
-                      activeGallery === 0 
-                        ? 'bg-[#FF6700] dark:bg-[#FF7D33] scale-110' 
-                        : 'bg-gray-400 hover:bg-gray-500'
+                      activeGallery === 0 ? "bg-[#FF6700] dark:bg-[#FF7D33] scale-110" : "bg-gray-400 hover:bg-gray-500"
                     }`}
                     aria-label="Go to gallery 1"
                   />
@@ -735,9 +735,7 @@ export default function VehicleDetails({
                   <button
                     onClick={() => navigateToGallery(1)}
                     className={`w-3 h-3 rounded-full transition-all duration-300 ${
-                      activeGallery === 1 
-                        ? 'bg-[#FF6700] dark:bg-[#FF7D33] scale-110' 
-                        : 'bg-gray-400 hover:bg-gray-500'
+                      activeGallery === 1 ? "bg-[#FF6700] dark:bg-[#FF7D33] scale-110" : "bg-gray-400 hover:bg-gray-500"
                     }`}
                     aria-label="Go to gallery 2"
                   />
@@ -746,9 +744,7 @@ export default function VehicleDetails({
                   <button
                     onClick={() => navigateToGallery(2)}
                     className={`w-3 h-3 rounded-full transition-all duration-300 ${
-                      activeGallery === 2 
-                        ? 'bg-[#FF6700] dark:bg-[#FF7D33] scale-110' 
-                        : 'bg-gray-400 hover:bg-gray-500'
+                      activeGallery === 2 ? "bg-[#FF6700] dark:bg-[#FF7D33] scale-110" : "bg-gray-400 hover:bg-gray-500"
                     }`}
                     aria-label="Go to gallery 3"
                   />
@@ -956,27 +952,27 @@ export default function VehicleDetails({
           >
             Details
           </button>
-      {/*
+          {/*
           <button
-            className={`py-3 font-medium filter blur-sm ${activeTab === "report" ? "border-b-2 border-[#FF6700] dark:border-[#FF7D33] text-[#3E5641] dark:text-white" : "text-[#6F7F69] dark:text-gray-400 hover:text-[#3E5641] dark:hover:text-white"}`}
+            className={`py-3 font-medium ${activeTab === "report" ? "border-b-2 border-[#FF6700] dark:border-[#FF7D33] text-[#3E5641] dark:text-white" : "text-[#6F7F69] dark:text-gray-400 hover:text-[#3E5641] dark:hover:text-white"}`}
             onClick={() => setActiveTab("report")}
           >
           
             Vehicle Report
           </button>
           <button
-            className={`py-3 font-medium filter blur-sm ${activeTab === "insurance" ? "border-b-2 border-[#FF6700] dark:border-[#FF7D33] text-[#3E5641] dark:text-white" : "text-[#6F7F69] dark:text-gray-400 hover:text-[#3E5641] dark:hover:text-white"}`}
+            className={`py-3 font-medium ${activeTab === "insurance" ? "border-b-2 border-[#FF6700] dark:border-[#FF7D33] text-[#3E5641] dark:text-white" : "text-[#6F7F69] dark:text-gray-400 hover:text-[#3E5641] dark:hover:text-white"}`}
             onClick={() => setActiveTab("insurance")}
           >
             Insurance Quote
           </button>
           <button
-            className={`py-3 font-medium filter blur-sm ${activeTab === "review" ? "border-b-2 border-[#FF6700] dark:border-[#FF7D33] text-[#3E5641] dark:text-white" : "text-[#6F7F69] dark:text-gray-400 hover:text-[#3E5641] dark:hover:text-white"}`}
+            className={`py-3 font-medium ${activeTab === "review" ? "border-b-2 border-[#FF6700] dark:border-[#FF7D33] text-[#3E5641] dark:text-white" : "text-[#6F7F69] dark:text-gray-400 hover:text-[#3E5641] dark:hover:text-white"}`}
             onClick={() => setActiveTab("review")}
           >
             Vehicle Review
           </button>
-      */}    
+      */}
         </div>
       </div>
 
@@ -1001,7 +997,8 @@ export default function VehicleDetails({
                   <p className="text-[#6F7F69] dark:text-gray-300 mb-6">
                     No specific description provided by the seller. General details: {vehicle.year} {vehicle.make}{" "}
                     {vehicle.model} {vehicle.variant}, {vehicle.mileage} km, {vehicle.transmission}, {vehicle.fuel}{" "}
-                    engine. Located in {vehicle.sellerSuburb || "N/A"}, {vehicle.sellerCity || "N/A"}, {vehicle.sellerProvince || "N/A"}.
+                    engine. Located in {vehicle.sellerSuburb || "N/A"}, {vehicle.sellerCity || "N/A"},{" "}
+                    {vehicle.sellerProvince || "N/A"}.
                   </p>
                 )}
 
@@ -1117,8 +1114,8 @@ export default function VehicleDetails({
                           <p className="detail-value">{vehicle.bodyType}</p>
                         </div>
                         <div>
-                        <p className="detail-label">Suburb</p>
-                        <p className="detail-value">{vehicle.sellerSuburb}</p>
+                          <p className="detail-label">Suburb</p>
+                          <p className="detail-value">{vehicle.sellerSuburb}</p>
                         </div>
                         <div>
                           <p className="detail-label">City</p>
@@ -1134,7 +1131,7 @@ export default function VehicleDetails({
                 </div>
               </>
             )}
-          
+
             {/* Commented out sections - keeping the comments but fixing syntax */}
             {/*
             {activeTab === "report" && (
@@ -1243,30 +1240,43 @@ export default function VehicleDetails({
                 </div>
                 <div className="border-b border-white/10 pb-4">
                   <p className="text-gray-300 text-sm mb-2">Contact Information</p>
-                  <div className="space-y-2">
-                    {vehicle.sellerPhone && (
-                      <div className="flex items-center space-x-3">
-                        <Phone className="w-4 h-4 text-[#FF6700]" />
-                        <a
-                          href={`tel:${vehicle.sellerPhone.replace(/\s+/g, "")}`}
-                          className="text-white hover:text-[#FF6700] transition-colors"
-                        >
-                          {vehicle.sellerPhone}
-                        </a>
+                  {vehicle.hideContactInfo && !user ? (
+                    <div className="space-y-3">
+                      <div className="flex items-center space-x-3 text-gray-400">
+                        <Phone className="w-4 h-4 text-[#FF6700]/50" />
+                        <span className="text-sm italic">Login to view phone number</span>
                       </div>
-                    )}
-                    {vehicle.sellerEmail && (
-                      <div className="flex items-center space-x-3">
-                        <Mail className="w-4 h-4 text-[#FF6700]" />
-                        <a
-                          href={`mailto:${vehicle.sellerEmail}`}
-                          className="text-white hover:text-[#FF6700] transition-colors break-all"
-                        >
-                          {vehicle.sellerEmail}
-                        </a>
+                      <div className="flex items-center space-x-3 text-gray-400">
+                        <Mail className="w-4 h-4 text-[#FF6700]/50" />
+                        <span className="text-sm italic">Login to view email address</span>
                       </div>
-                    )}
-                  </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {vehicle.sellerPhone && (
+                        <div className="flex items-center space-x-3">
+                          <Phone className="w-4 h-4 text-[#FF6700]" />
+                          <a
+                            href={`tel:${vehicle.sellerPhone.replace(/\s+/g, "")}`}
+                            className="text-white hover:text-[#FF6700] transition-colors"
+                          >
+                            {vehicle.sellerPhone}
+                          </a>
+                        </div>
+                      )}
+                      {vehicle.sellerEmail && (
+                        <div className="flex items-center space-x-3">
+                          <Mail className="w-4 h-4 text-[#FF6700]" />
+                          <a
+                            href={`mailto:${vehicle.sellerEmail}`}
+                            className="text-white hover:text-[#FF6700] transition-colors break-all"
+                          >
+                            {vehicle.sellerEmail}
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
                 <div>
                   <p className="text-gray-300 text-sm mb-2">Location</p>
@@ -1276,12 +1286,23 @@ export default function VehicleDetails({
                   </div>
                 </div>
                 {!isEditMode && user?.id !== vehicle.userId && (
-                  <button
-                    onClick={handleContactClick}
-                    className="w-full mt-4 bg-[#FF6700] hover:bg-[#FF7D33] text-white font-medium py-2 px-4 rounded-lg transition-colors"
-                  >
-                    Contact Seller
-                  </button>
+                  <>
+                    {vehicle.hideContactInfo && !user ? (
+                      <button
+                        onClick={() => router.push(`/login?redirect=/vehicle-details/${vehicle.id}`)}
+                        className="w-full mt-4 bg-[#FF6700] hover:bg-[#FF7D33] text-white font-medium py-2 px-4 rounded-lg transition-colors"
+                      >
+                        Login to Contact Seller
+                      </button>
+                    ) : (
+                      <button
+                        onClick={handleContactClick}
+                        className="w-full mt-4 bg-[#FF6700] hover:bg-[#FF7D33] text-white font-medium py-2 px-4 rounded-lg transition-colors"
+                      >
+                        Contact Seller
+                      </button>
+                    )}
+                  </>
                 )}
               </div>
             </div>

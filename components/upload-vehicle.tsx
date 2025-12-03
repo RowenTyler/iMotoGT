@@ -4,13 +4,29 @@ import type React from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
 import { useState, useRef, useEffect, type ElementType } from "react"
-import { ArrowLeft, Camera, Save, AlertCircle, XCircle, Edit, Check, Grip, Car, Truck, Bike } from "lucide-react"
+import {
+  Camera,
+  Save,
+  AlertCircle,
+  XCircle,
+  Edit,
+  Check,
+  Grip,
+  Car,
+  Truck,
+  Bike,
+  Maximize2,
+  X,
+  Eye,
+  EyeOff,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Header } from "@/components/ui/header"
+import { Switch } from "@/components/ui/switch"
 import type { UserProfile } from "@/types/user"
 import type { Vehicle } from "@/types/vehicle"
 import { useUser } from "@/components/UserContext"
@@ -85,7 +101,7 @@ export default function UploadVehicle({
   const { user: authUser, userProfile, isLoading: userLoading, refreshUserProfile } = useUser()
   const user = propUser || userProfile || authUser
   const profile = userProfile || propUser || authUser
-  
+
   const isProfileIncomplete =
     !profile?.firstName ||
     !profile?.lastName ||
@@ -116,6 +132,8 @@ export default function UploadVehicle({
   const [isDragging, setIsDragging] = useState<boolean>(false)
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
   const [dropTargetIndex, setDropTargetIndex] = useState<number | null>(null)
+  const [isGalleryExpanded, setIsGalleryExpanded] = useState(false)
+  const [hideContactInfo, setHideContactInfo] = useState(false)
 
   const [formData, setFormData] = useState({
     make: "",
@@ -199,11 +217,14 @@ export default function UploadVehicle({
       if (existingVehicle.images && existingVehicle.images.length > 0) {
         setVehicleImages(existingVehicle.images)
       }
+      if (existingVehicle.hideContactInfo !== undefined) {
+        setHideContactInfo(existingVehicle.hideContactInfo)
+      }
     }
   }, [editMode, existingVehicle])
 
   useEffect(() => {
-      if (userProfile) {
+    if (userProfile) {
       setSellerFormData({
         firstName: userProfile.firstName || "",
         lastName: userProfile.lastName || "",
@@ -212,20 +233,22 @@ export default function UploadVehicle({
         city: userProfile.city || "",
         province: userProfile.province || "",
         profilePic: userProfile.profilePic || "",
-      });
+      })
       setFormData((prev) => ({
         ...prev,
-        sellerName: `${userProfile.firstName || ""} ${userProfile.lastName || ""}`.trim() || userProfile.email?.split("@")[0] || "",
+        sellerName:
+          `${userProfile.firstName || ""} ${userProfile.lastName || ""}`.trim() ||
+          userProfile.email?.split("@")[0] ||
+          "",
         sellerEmail: userProfile.email || "",
         sellerPhone: userProfile.phone || "",
         sellerSuburb: userProfile.suburb || "",
         sellerCity: userProfile.city || "",
         sellerProvince: userProfile.province || "",
         sellerProfilePic: userProfile.profilePic || "",
-      }));
+      }))
     }
-  }, [userProfile]);
-
+  }, [userProfile])
 
   useEffect(() => {
     const selectedEngineOption = engineCapacityOptionsList.find((opt) => opt.value === formData.engineCapacity)
@@ -379,11 +402,10 @@ export default function UploadVehicle({
       setUserClickedEdit(false)
       setSubmitSuccess("Seller information updated successfully!")
       setSubmitError(null)
-      
+
       setTimeout(() => {
         setSubmitSuccess(null)
       }, 3000)
-      
     } catch (error) {
       console.error("Failed to save seller info:", error)
       setSubmitError("Failed to update seller information. Please try again.")
@@ -584,7 +606,7 @@ export default function UploadVehicle({
         setUploadProgress((prev) => Math.min(prev + 10, 90))
       }, 200)
 
-      const vehicleData = { ...formData, images: vehicleImages }
+      const vehicleData = { ...formData, images: vehicleImages, hideContactInfo }
 
       let result: Vehicle | null
 
@@ -662,7 +684,6 @@ export default function UploadVehicle({
         transparent={false}
       />
       <main className="flex-1 px-4 sm:px-6 pb-6 overflow-auto pt-20 md:pt-24">
-        
         <h1 className="text-3xl font-bold mb-6 text-[#3E5641] dark:text-white">
           {editMode ? "Edit Vehicle Listing" : "List Your Vehicle"}
         </h1>
@@ -715,7 +736,21 @@ export default function UploadVehicle({
           <div className="flex flex-col lg:flex-row gap-6">
             <div className="lg:w-1/3 flex flex-col">
               <Card className="rounded-3xl overflow-hidden p-6 flex flex-col w-full border-[#9FA791]/20 dark:border-[#4A4D45]/20 bg-white dark:bg-[#2A352A] mb-6">
-                <h2 className="text-xl font-bold mb-4 text-[#3E5641] dark:text-white">Vehicle Images</h2>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-bold text-[#3E5641] dark:text-white">Vehicle Images</h2>
+                  {vehicleImages.length > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-[#FF6700] dark:text-[#FF7D33] hover:bg-[#FF6700]/10"
+                      onClick={() => setIsGalleryExpanded(true)}
+                      aria-label="Expand gallery"
+                    >
+                      <Maximize2 className="h-4 w-4 mr-1" />
+                      Expand
+                    </Button>
+                  )}
+                </div>
                 <div
                   className="relative w-full aspect-video mb-4 bg-gray-200 dark:bg-gray-700 rounded-2xl flex items-center justify-center overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
                   onClick={triggerFileInput}
@@ -763,9 +798,10 @@ export default function UploadVehicle({
                       <h3 className="text-lg font-semibold text-[#3E5641] dark:text-white">
                         Gallery ({vehicleImages.length})
                       </h3>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">Drag to reorder • First image is main</p>
+                      {/* Removed expand button from here, added to header */}
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Drag to reorder</p>
                     </div>
-                    <div className="grid grid-cols-3 gap-3 max-h-60 overflow-y-auto p-1">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-3 max-h-60 overflow-y-auto p-1">
                       {vehicleImages.map((image, index) => (
                         <div
                           key={index}
@@ -808,7 +844,35 @@ export default function UploadVehicle({
                   </div>
                 )}
               </Card>
-              
+
+              <Card className="rounded-3xl overflow-hidden p-6 flex flex-col w-full border-[#9FA791]/20 dark:border-[#4A4D45]/20 bg-white dark:bg-[#2A352A] mb-6">
+                <h2 className="text-xl font-bold mb-4 text-[#3E5641] dark:text-white">Contact Privacy</h2>
+                <div className="flex items-center justify-between">
+                  <div className="flex-1 mr-4">
+                    <div className="flex items-center space-x-2 mb-1">
+                      {hideContactInfo ? (
+                        <EyeOff className="h-4 w-4 text-[#FF6700]" />
+                      ) : (
+                        <Eye className="h-4 w-4 text-green-600 dark:text-green-400" />
+                      )}
+                      <span className="text-sm font-medium text-[#3E5641] dark:text-white">
+                        {hideContactInfo ? "Restricted Access" : "Public Access"}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {hideContactInfo
+                        ? "Only logged in users can view your contact details"
+                        : "Anyone can view and contact you"}
+                    </p>
+                  </div>
+                  <Switch
+                    checked={hideContactInfo}
+                    onCheckedChange={setHideContactInfo}
+                    className="data-[state=checked]:bg-[#FF6700]"
+                  />
+                </div>
+              </Card>
+
               {!editMode && (
                 <Card className="rounded-3xl overflow-hidden p-6 flex flex-col w-full border-[#9FA791]/20 dark:border-[#4A4D45]/20 bg-white dark:bg-[#2A352A]">
                   {isEditingSeller && isProfileIncomplete && (
@@ -878,7 +942,10 @@ export default function UploadVehicle({
                       <>
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-1.5">
-                            <Label htmlFor="firstName" className="text-sm font-medium text-[#3E5641] dark:text-gray-300">
+                            <Label
+                              htmlFor="firstName"
+                              className="text-sm font-medium text-[#3E5641] dark:text-gray-300"
+                            >
                               First Name
                             </Label>
                             <Input
@@ -1273,6 +1340,7 @@ export default function UploadVehicle({
                       />
                     </div>
                   </div>
+
                   <div className="flex justify-end pt-4 mt-auto">
                     <Button
                       onClick={handleSubmitVehicle}
@@ -1295,6 +1363,83 @@ export default function UploadVehicle({
           </div>
         </div>
       </main>
+
+      {isGalleryExpanded && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-[#2A352A] rounded-3xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between p-6 border-b border-[#9FA791]/20 dark:border-[#4A4D45]/20">
+              <h2 className="text-xl font-bold text-[#3E5641] dark:text-white">
+                Vehicle Images ({vehicleImages.length})
+              </h2>
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-[#FF6700] dark:text-[#FF7D33] hover:bg-[#FF6700]/10"
+                  onClick={triggerFileInput}
+                >
+                  <Camera className="h-4 w-4 mr-1" />
+                  Add More
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                  onClick={() => setIsGalleryExpanded(false)}
+                  aria-label="Close gallery"
+                >
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
+            </div>
+            <div className="p-6 overflow-y-auto flex-1">
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                Drag images to reorder. First image will be the main display image.
+              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                {vehicleImages.map((image, index) => (
+                  <div
+                    key={index}
+                    className={`relative aspect-square overflow-hidden rounded-xl group cursor-move ${draggedIndex === index ? "opacity-50 scale-95" : ""} ${dropTargetIndex === index ? "ring-2 ring-[#FF6700] dark:ring-[#FF7D33]" : ""}`}
+                    draggable
+                    onDragStart={() => handleDragStart(index)}
+                    onDragEnter={() => handleDragEnter(index)}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDragEnd={handleDragEnd}
+                  >
+                    <div className="absolute inset-0 flex items-center justify-center z-10 opacity-0 group-hover:opacity-100 bg-black/30 transition-opacity">
+                      <Grip className="w-8 h-8 text-white" />
+                    </div>
+                    <Image
+                      src={image || "/placeholder.svg"}
+                      alt={`Vehicle image ${index + 1}`}
+                      layout="fill"
+                      objectFit="cover"
+                      unoptimized
+                      className="object-cover"
+                    />
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleRemoveImage(index)
+                      }}
+                      className="absolute top-2 right-2 bg-red-500/80 hover:bg-red-600/90 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity z-20"
+                      aria-label={`Remove image ${index + 1}`}
+                    >
+                      <XCircle className="w-5 h-5" />
+                    </button>
+                    {index === 0 && (
+                      <div className="absolute bottom-0 left-0 right-0 bg-[#FF6700] text-white text-sm py-1.5 text-center font-medium">
+                        Main Image
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
