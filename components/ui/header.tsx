@@ -299,7 +299,7 @@ export function Header({
         <div>
           <Image
             src="/imoto-icon.png"
-            alt="MOTO GT Logo"
+            alt="IMOTO GT Logo"
             width={100}
             height={30}
             className="object-contain"
