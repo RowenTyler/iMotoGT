@@ -662,7 +662,14 @@ export default function UploadVehicle({
         transparent={false}
       />
       <main className="flex-1 px-4 sm:px-6 pb-6 overflow-auto pt-20 md:pt-24">
-        
+        <Button
+          variant="ghost"
+          onClick={onBack || onCancel || (() => router.push("/dashboard"))}
+          className="mb-4 -ml-2 text-[#FF6700] dark:text-[#FF7D33]"
+        >
+          <ArrowLeft className="h-5 w-5 mr-2" />
+          {editMode ? "Cancel Edit" : "Back to Dashboard"}
+        </Button>
         <h1 className="text-3xl font-bold mb-6 text-[#3E5641] dark:text-white">
           {editMode ? "Edit Vehicle Listing" : "List Your Vehicle"}
         </h1>
