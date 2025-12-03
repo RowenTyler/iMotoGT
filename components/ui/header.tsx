@@ -187,7 +187,7 @@ export function Header({
             <div className="relative flex items-center justify-between w-full h-full px-6">
               <div className="flex-1 flex justify-center">
                 <Image
-                  src="\imoto-icon.png"
+                  src="\imoto-icon-new.png"
                   alt="MOTO GT Logo"
                   width={200}
                   height={60}
@@ -296,9 +296,9 @@ export function Header({
         }`}
         onClick={handleExpandHeader}
       >
-        <div className="bg-black/20 border border-white/50 backdrop-blur-sm rounded-full p-2 hover:bg-black/30 transition-colors">
+        <div>
           <Image
-            src="/imoto-icon-new.png"
+            src="/imoto-icon.png"
             alt="MOTO GT Logo"
             width={100}
             height={30}
