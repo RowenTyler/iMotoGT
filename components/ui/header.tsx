@@ -187,7 +187,7 @@ export function Header({
             <div className="relative flex items-center justify-between w-full h-full px-6">
               <div className="flex-1 flex justify-center">
                 <Image
-                  src="\imoto-icon-new.png"
+                  src="\imoto-icon.png"
                   alt="MOTO GT Logo"
                   width={200}
                   height={60}
