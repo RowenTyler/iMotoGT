@@ -14,6 +14,9 @@ interface VehicleDetailsPageProps {
   }
 }
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 export default function VehicleDetailsPage({ params }: VehicleDetailsPageProps) {
   const router = useRouter()
   const { user, savedVehicles, toggleSaveVehicle } = useUser()

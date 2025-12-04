@@ -41,17 +41,6 @@ export default function LoginPage({
   const searchParams = useSearchParams()
   const redirectUrl = searchParams.get('redirect')
 
-  // Create an empty user object that matches the expected structure
-  // This prevents undefined properties during static generation
-  const emptyUser = {
-    id: "",
-    email: "",
-    firstName: "",
-    lastName: "",
-    loginMethod: "email" as const,
-    isLoggedIn: false
-  }
-
   const handleSignUp = async () => {
     if (password.length < 6) {
       setError("Password must be at least 6 characters long.")
@@ -230,7 +219,7 @@ export default function LoginPage({
   if (showExistingUserMessage) {
     return (
       <>
-        <Header user={emptyUser} transparent={false} />
+        <Header user={null} transparent={false} />
         <main className="flex-1 flex items-center justify-center px-4 pt-20 md:pt-24">
           <div className="w-full max-w-md">
             <div className="text-center mb-8">
@@ -299,7 +288,7 @@ export default function LoginPage({
   if (showVerificationMessage) {
     return (
       <>
-        <Header user={emptyUser} transparent={false} />
+        <Header user={null} transparent={false} />
         <main className="flex-1 flex items-center justify-center px-4 pt-20 md:pt-24">
           <div className="w-full max-w-md">
             <div className="text-center mb-8">
@@ -407,7 +396,7 @@ export default function LoginPage({
 
   return (
     <>
-      <Header user={emptyUser} transparent={false} />
+      <Header user={null} transparent={false} />
       <main className="flex-1 flex items-center justify-center px-4 pt-20 md:pt-24">
         <div className="w-full max-w-md">
           <div className="text-center mb-8">

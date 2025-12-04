@@ -9,6 +9,9 @@ import { authService } from "@/lib/auth"
 import type { UserProfile } from "@/types/user"
 import type { VehicleFormData } from "@/types/vehicle"
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 export default function UploadVehiclePage() {
   const router = useRouter()
   const { user, authUser, isEmailVerified, isLoading, refreshUserProfile } = useUser()
