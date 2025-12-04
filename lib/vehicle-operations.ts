@@ -386,9 +386,12 @@ export async function filterVehicles(filters: VehicleFilters): Promise<Vehicle[]
 }
 
 /**
- * Create a new vehicle listing
+ * Create a new vehicle listing with enhanced error handling
  */
-export async function createVehicle(vehicleData: VehicleFormData, userId: string): Promise<Vehicle | null> {
+export async function createVehicle(
+  vehicleData: VehicleFormData, 
+  userId: string
+): Promise<Vehicle | null> {
   try {
     const dbData = {
       user_id: userId,
@@ -443,13 +446,38 @@ export async function createVehicle(vehicleData: VehicleFormData, userId: string
       .single()
 
     if (error) {
-      console.error("[v0] Error creating vehicle:", error)
+      console.error("[v0] Error creating vehicle:", {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint,
+        userId,
+        vehicleData: {
+          make: vehicleData.make,
+          model: vehicleData.model,
+          year: vehicleData.year
+        }
+      })
+      
+      // Check for common RLS error patterns
+      if (error.code === '42501') {
+        console.error("[v0] RLS Policy Violation: User may not have permission to create vehicle listings")
+      }
+      
+      if (error.code === '23505') {
+        console.error("[v0] Duplicate entry or unique constraint violation")
+      }
+      
       return null
     }
 
     return data ? mapDatabaseToVehicle(data) : null
   } catch (error) {
-    console.error("[v0] Exception creating vehicle:", error)
+    console.error("[v0] Exception creating vehicle:", {
+      error,
+      userId,
+      timestamp: new Date().toISOString()
+    })
     return null
   }
 }

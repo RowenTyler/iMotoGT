@@ -537,7 +537,39 @@ export default function UploadVehicle({
     setSubmitSuccess(null)
     setUploadProgress(0)
 
+    // START: Add submission tracking logging
+    console.group('🚗 Vehicle Submission Tracking')
+    console.log('📋 Submission Started:', new Date().toISOString())
+    console.log('👤 User:', user?.email || 'Unknown')
+    console.log('✏️ Edit Mode:', editMode)
+    console.log('📁 Existing Vehicle ID:', existingVehicle?.id || 'New Vehicle')
+    
+    // Log form data without large base64 images for readability
+    const formDataForLog = { ...formData }
+    console.log('📝 Form Data:', {
+      ...formDataForLog,
+      // Don't log the full image array (too large for console)
+      images: `[${vehicleImages.length} images - omitted from log]`,
+      description: formData.description ? `${formData.description.substring(0, 100)}...` : 'Empty'
+    })
+    
+    console.log('🖼️ Image Details:', {
+      imageCount: vehicleImages.length,
+      hasImages: vehicleImages.length > 0,
+      minRequired: 5,
+      maxAllowed: 21
+    })
+    
+    console.log('🔒 Privacy Settings:', {
+      contactPrivacyEnabled,
+      isEditingSeller,
+      isProfileIncomplete
+    })
+    console.groupEnd()
+    // END: Submission tracking logging
+
     if (!editMode && isEditingSeller) {
+      console.error('❌ Submission Failed: Seller information needs to be saved first')
       setSubmitError("Please save your updated seller information before listing a vehicle.")
       setIsSubmitting(false)
       return
@@ -552,6 +584,7 @@ export default function UploadVehicle({
         !profile?.city ||
         !profile?.province
       if (isProfileStillIncomplete) {
+        console.error('❌ Submission Failed: Incomplete seller profile')
         setSubmitError("Your seller profile is incomplete. Please edit and save your information to proceed.")
         setUserClickedEdit(true)
         setIsSubmitting(false)
@@ -570,22 +603,28 @@ export default function UploadVehicle({
       !formData.engineCapacity ||
       !formData.condition
     ) {
+      console.error('❌ Submission Failed: Missing required fields')
       setSubmitError("Please fill in all required fields.")
       setIsSubmitting(false)
       return
     }
     if (vehicleImages.length < 5) {
+      console.error('❌ Submission Failed: Insufficient images')
       setSubmitError(`Please upload at least 5 images. You have ${vehicleImages.length}.`)
       setIsSubmitting(false)
       return
     }
     if (vehicleImages.length > 21) {
+      console.error('❌ Submission Failed: Too many images')
       setSubmitError(`You can upload a maximum of 21 images. You have ${vehicleImages.length}.`)
       setIsSubmitting(false)
       return
     }
 
     try {
+      console.group('🔄 Vehicle Service Call')
+      console.log('🛠️ Preparing vehicle data for service...')
+      
       const progressInterval = setInterval(() => {
         setUploadProgress((prev) => Math.min(prev + 10, 90))
       }, 200)
@@ -598,38 +637,118 @@ export default function UploadVehicle({
 
       let result: Vehicle | null
 
+      console.log('📤 Attempting to call vehicle service...')
+      console.log('⚙️ Mode:', editMode ? 'UPDATE' : 'CREATE')
+      
       if (editMode && existingVehicle) {
-        result = await vehicleService.updateVehicle(existingVehicle.id, vehicleData)
-        if (result && onVehicleUpdate) {
-          onVehicleUpdate(result)
+        console.log(`📝 Updating vehicle ID: ${existingVehicle.id}`)
+        console.log('📦 Data being sent (first 500 chars):', JSON.stringify(vehicleData).substring(0, 500) + '...')
+        
+        try {
+          result = await vehicleService.updateVehicle(existingVehicle.id, vehicleData)
+          console.log('✅ Update successful! Response:', result)
+          
+          if (result && onVehicleUpdate) {
+            console.log('🔄 Calling onVehicleUpdate callback')
+            onVehicleUpdate(result)
+          }
+        } catch (updateError) {
+          console.error('❌ Vehicle update failed at vehicleService.updateVehicle')
+          console.error('📋 Error details:', updateError)
+          console.error('📦 Data sent:', {
+            id: existingVehicle.id,
+            data: vehicleData,
+            // Log image info separately
+            imageInfo: {
+              count: vehicleImages.length,
+              firstImagePreview: vehicleImages[0]?.substring(0, 100) + '...'
+            }
+          })
+          throw updateError
         }
       } else {
+        console.log('🆕 Creating new vehicle listing')
+        console.log('📦 Data being sent (first 500 chars):', JSON.stringify(vehicleData).substring(0, 500) + '...')
+        
         if (onVehicleSubmit) {
-          await onVehicleSubmit(vehicleData)
+          console.log('🔄 Using parent-provided onVehicleSubmit callback')
+          try {
+            await onVehicleSubmit(vehicleData)
+            console.log('✅ Parent submission callback successful')
+          } catch (parentError) {
+            console.error('❌ Parent submission callback failed')
+            console.error('📋 Error details:', parentError)
+            throw parentError
+          }
         } else {
-          result = await vehicleService.createVehicle(vehicleData)
+          console.log('🔄 Using vehicleService.createVehicle')
+          try {
+            result = await vehicleService.createVehicle(vehicleData)
+            console.log('✅ Creation successful! Response:', result)
+          } catch (createError) {
+            console.error('❌ Vehicle creation failed at vehicleService.createVehicle')
+            console.error('📋 Error details:', createError)
+            console.error('📦 Data sent:', {
+              data: vehicleData,
+              // Log image info separately
+              imageInfo: {
+                count: vehicleImages.length,
+                firstImagePreview: vehicleImages[0]?.substring(0, 100) + '...'
+              }
+            })
+            throw createError
+          }
         }
       }
 
+      console.groupEnd()
       clearInterval(progressInterval)
       setUploadProgress(100)
 
-      setSubmitSuccess(
-        editMode
-          ? "Vehicle updated successfully! Redirecting..."
-          : "Vehicle listed successfully! Redirecting to your dashboard...",
-      )
+      const successMessage = editMode
+        ? "Vehicle updated successfully! Redirecting..."
+        : "Vehicle listed successfully! Redirecting to your dashboard..."
+      
+      console.log('🎉 Submission completed successfully:', successMessage)
+      setSubmitSuccess(successMessage)
+      
       setTimeout(() => {
+        console.log('🔀 Starting redirect...')
         if (editMode && onCancel) {
+          console.log('↩️ Canceling edit mode')
           onCancel()
         } else {
+          console.log('📊 Redirecting to dashboard')
           router.push("/dashboard")
         }
       }, 1500)
+      
     } catch (error) {
-      console.error("Failed to submit vehicle:", error)
+      console.group('❌ VEHICLE SUBMISSION FAILURE')
+      console.error('🕒 Timestamp:', new Date().toISOString())
+      console.error('👤 User:', user?.email || 'Unknown')
+      console.error('⚙️ Operation:', editMode ? 'UPDATE' : 'CREATE')
+      console.error('📋 Error:', error)
+      console.error('🔍 Error type:', typeof error)
+      console.error('📝 Error message:', error instanceof Error ? error.message : String(error))
+      console.error('🔗 Error stack:', error instanceof Error ? error.stack : 'No stack trace')
+      
+      // Additional context about what failed
+      console.error('🎯 Failure point: Vehicle service call')
+      console.error('📊 Form state at failure:', {
+        make: formData.make,
+        model: formData.model,
+        year: formData.year,
+        price: formData.price,
+        imageCount: vehicleImages.length,
+        hasRequiredFields: !!(formData.make && formData.model && formData.year && formData.price)
+      })
+      
+      console.groupEnd()
+      
       setSubmitError(error instanceof Error ? error.message : String(error) || "Failed to list vehicle.")
     } finally {
+      console.log('🏁 Submission process ended, cleaning up...')
       setIsSubmitting(false)
       setUploadProgress(0)
     }
