@@ -1,21 +1,21 @@
 "use client"
 import { useState, useEffect, useMemo, useRef } from "react"
 import type React from "react"
-import Image from "next/image" // Add this import
-
+import Image from "next/image"
+import { useRouter } from "next/navigation"
 import { Car, Shield, Phone, Mail, X, Star, UploadCloud, Search, MapPin } from "lucide-react"
 import type { Vehicle } from "@/types/vehicle"
-import type { UserProfile } from "@/types/user" // Added import
+import type { UserProfile } from "@/types/user"
 import { Heart, ChevronLeft, ChevronRight } from "lucide-react"
 
 interface VehicleDetailsProps {
-  vehicle: Vehicle // Assumes Vehicle type now has vehicle.images?: string[]
+  vehicle: Vehicle
   onBack: () => void
-  user?: UserProfile // Changed 'any' to 'UserProfile'
-  onSaveCar?: (vehicle: Vehicle) => void // Add callback for saving cars
-  savedCars?: Vehicle[] // Add array of saved cars to check if this car is saved
-  isEditMode?: boolean // To enable editing UI
-  onUpdateVehicle?: (updatedVehicle: Vehicle) => void // Callback to save changes
+  user?: UserProfile
+  onSaveCar?: (vehicle: Vehicle) => void
+  savedCars?: Vehicle[]
+  isEditMode?: boolean
+  onUpdateVehicle?: (updatedVehicle: Vehicle) => void
 }
 
 export default function VehicleDetails({
@@ -27,9 +27,24 @@ export default function VehicleDetails({
   isEditMode = false,
   onUpdateVehicle,
 }: VehicleDetailsProps) {
-  // DEBUG: Print the full vehicle object to check seller fields
+  const router = useRouter()
+  
+  // Add helper functions for masking
+  const maskEmail = (email: string) => {
+    if (!email) return ""
+    const [name, domain] = email.split('@')
+    if (name && domain) {
+      return `${name[0]}***@${domain}`
+    }
+    return email
+  }
+
+  const maskPhone = (phone: string) => {
+    if (!phone) return ""
+    return phone.replace(/\d(?=\d{4})/g, '*')
+  }
+
   console.log("VehicleDetails vehicle:", vehicle)
-  // Debug log
   console.log("Vehicle details:", {
     sellerName: vehicle.sellerName,
     sellerEmail: vehicle.sellerEmail,
@@ -38,7 +53,6 @@ export default function VehicleDetails({
     sellerCity: vehicle.sellerCity,
     sellerProvince: vehicle.sellerProvince,
   })
-  // Debug log to see what data we're receiving
   console.log("Vehicle Details:", {
     sellerName: vehicle.sellerName,
     sellerEmail: vehicle.sellerEmail,
@@ -48,6 +62,7 @@ export default function VehicleDetails({
     sellerProvince: vehicle.sellerProvince,
     userId: vehicle.userId,
   })
+  
   const [showContactForm, setShowContactForm] = useState(false)
   const [email, setEmail] = useState("")
   const [message, setMessage] = useState("")
@@ -81,29 +96,27 @@ export default function VehicleDetails({
     setIsImageModalOpen(true)
     document.body.style.overflow = "hidden"
   }
+  
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null)
   const [isImageModalOpen, setIsImageModalOpen] = useState(false)
   const [isZoomed, setIsZoomed] = useState(false)
   const [imageError, setImageError] = useState(false)
 
-  // States for editable fields
   const [editableData, setEditableData] = useState<Partial<Vehicle>>({ ...vehicle })
   const [editableImages, setEditableImages] = useState<string[]>(
     vehicle.images && vehicle.images.length > 0 ? [...vehicle.images] : vehicle.image ? [vehicle.image] : [],
   )
   const imageUploadRef = useRef<HTMLInputElement>(null)
 
-  // Add ref for gallery container and state for active gallery
   const galleryContainerRef = useRef<HTMLDivElement>(null)
   const [activeGallery, setActiveGallery] = useState(0)
 
-  // Helper function to format raw price string to "R X XXX.XX" for display
   const formatPriceForDisplay = (rawValue: string | number | undefined | null): string => {
     if (rawValue === undefined || rawValue === null || String(rawValue).trim() === "") {
-      return "R 0.00" // Default display for invalid/empty price
+      return "R 0.00"
     }
 
-    let numericString = String(rawValue).replace(/[^\d.]/g, "") // Keep only digits and one dot
+    let numericString = String(rawValue).replace(/[^\d.]/g, "")
 
     if (numericString.startsWith(".")) {
       numericString = "0" + numericString
@@ -130,22 +143,16 @@ export default function VehicleDetails({
   }
 
   useEffect(() => {
-    // When vehicle or editMode changes, reset editable states
     let initialPrice = vehicle.price
-    // If in edit mode, ensure the price is a raw numeric string for the input field
     if (initialPrice !== undefined && initialPrice !== null) {
-      // Convert to string, remove currency symbols, spaces, etc., keep only digits and one dot
       let rawPrice = String(initialPrice).replace(/[^\d.]/g, "")
       const parts = rawPrice.split(".")
       if (parts.length > 1) {
-        // If there's a decimal part
-        // Keep the first dot, limit decimal places to 2
         rawPrice = parts[0] + "." + parts.slice(1).join("").substring(0, 2)
       }
-      // Handle cases like "." -> "0." or ".5" -> "0.5"
       if (rawPrice === ".") rawPrice = "0."
       else if (rawPrice.startsWith(".")) rawPrice = "0" + rawPrice
-      initialPrice = rawPrice // This is now a clean numeric string or potentially empty
+      initialPrice = rawPrice
     }
 
     setEditableData({ ...vehicle, price: initialPrice })
@@ -154,9 +161,7 @@ export default function VehicleDetails({
     )
   }, [vehicle, isEditMode])
 
-  // Check if this vehicle is in the saved cars list
   useEffect(() => {
-    // Correctly set isSaved based on whether the vehicle is in the savedCars prop
     setIsSaved(savedCars.some((car) => car.id === vehicle.id))
   }, [savedCars, vehicle.id])
 
@@ -179,7 +184,6 @@ export default function VehicleDetails({
     const deltaX = Math.abs(currentX - touchStartX)
     const deltaY = Math.abs(currentY - touchStartY)
 
-    // Prevent vertical scrolling when swiping horizontally
     if (deltaX > deltaY && deltaX > 10) {
       e.preventDefault()
     }
@@ -195,13 +199,10 @@ export default function VehicleDetails({
 
     setIsDragging(false)
 
-    // Only trigger swipe if horizontal movement is greater than vertical
     if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
       if (selectedImageIndex !== null) {
-        // For modal navigation
         navigateImage(deltaX > 0 ? "prev" : "next")
       } else {
-        // For main gallery navigation
         navigateMainGallery(deltaX > 0 ? "prev" : "next")
       }
     }
@@ -230,16 +231,19 @@ export default function VehicleDetails({
   }, [])
 
   const handleContactClick = () => {
-    if (isMobile) {
-      window.location.href = `tel:${vehicle.sellerPhone.replace(/\s+/g, "")}`
+    if (vehicle.contactPrivacyEnabled && !user) {
+      router.push(`/login?redirect=/vehicle-details/${vehicle.id}`)
     } else {
-      setShowContactForm(true)
+      if (isMobile) {
+        window.location.href = `tel:${vehicle.sellerPhone.replace(/\s+/g, "")}`
+      } else {
+        setShowContactForm(true)
+      }
     }
   }
 
   const sellerAddressDisplay = useMemo(() => {
     const parts = []
-    // Always try to use seller-specific location first
     if (vehicle.sellerSuburb) {
       parts.push(vehicle.sellerSuburb.trim())
     }
@@ -250,13 +254,11 @@ export default function VehicleDetails({
       parts.push(vehicle.sellerProvince.trim())
     }
 
-    // Only fall back to vehicle location if no seller location is available
     if (parts.length === 0) {
       if (vehicle.city) parts.push(vehicle.city.trim())
       if (vehicle.province) parts.push(vehicle.province.trim())
     }
 
-    // Filter out any empty strings and join with commas
     return parts.filter((part) => part && part.length > 0).join(", ") || "Location not available"
   }, [vehicle.sellerSuburb, vehicle.sellerCity, vehicle.sellerProvince, vehicle.city, vehicle.province])
 
@@ -288,15 +290,11 @@ export default function VehicleDetails({
       processedValue = value === "" ? undefined : Number.parseInt(value.replace(/\D/g, ""), 10)
       if (isNaN(processedValue as number)) processedValue = undefined
     } else if (name === "price") {
-      // Sanitize price input to store a raw numeric string (e.g., "12345.67")
-      let rawPrice = String(value).replace(/[^\d.]/g, "") // Remove non-digits except dot
+      let rawPrice = String(value).replace(/[^\d.]/g, "")
       const parts = rawPrice.split(".")
       if (parts.length > 1) {
-        // If there's a decimal part
-        // Allow only one decimal point, and limit to two decimal places
         rawPrice = parts[0] + "." + parts.slice(1).join("").substring(0, 2)
       }
-      // Ensure it's not just "." or starts with "." like ".50" -> "0.50"
       if (rawPrice === ".") {
         rawPrice = "0."
       } else if (rawPrice.startsWith(".")) {
@@ -304,7 +302,6 @@ export default function VehicleDetails({
       }
       processedValue = rawPrice
     }
-    // For other fields, it's a direct string update
 
     setEditableData((prev) => ({ ...prev, [name]: processedValue }))
   }
@@ -312,10 +309,10 @@ export default function VehicleDetails({
   const handleSaveChanges = () => {
     if (onUpdateVehicle) {
       const finalVehicleData: Vehicle = {
-        ...vehicle, // Start with original non-editable/non-present fields
-        ...editableData, // Override with edited fields
+        ...vehicle,
+        ...editableData,
         images: editableImages,
-        image: editableImages.length > 0 ? editableImages[0] : vehicle.image, // Update main image
+        image: editableImages.length > 0 ? editableImages[0] : vehicle.image,
       }
       onUpdateVehicle(finalVehicleData)
     }
@@ -334,7 +331,6 @@ export default function VehicleDetails({
   const handleImageDelete = (indexToDelete: number) => {
     if (!isEditMode) return
     setEditableImages((prev) => prev.filter((_, index) => index !== indexToDelete))
-    // If deleting the image currently in modal, close modal or navigate
     if (selectedImageIndex === indexToDelete) {
       closeImageModal()
     } else if (selectedImageIndex !== null && indexToDelete < selectedImageIndex) {
@@ -342,17 +338,14 @@ export default function VehicleDetails({
     }
   }
 
-  // Get images for Gallery 1 (5 images)
   const getGalleryOneImages = () => {
     return allDisplayableImages.slice(0, 5)
   }
 
-  // Get images for Gallery 2 (8 images)
   const getGalleryTwoImages = () => {
     return allDisplayableImages.slice(5, 13)
   }
 
-  // Get images for Gallery 3 (8 images)
   const getGalleryThreeImages = () => {
     return allDisplayableImages.slice(13, 21)
   }
@@ -360,14 +353,12 @@ export default function VehicleDetails({
   const openImageModal = (index: number) => {
     setSelectedImageIndex(index)
     setIsImageModalOpen(true)
-    // Prevent body scrolling when modal is open
     document.body.style.overflow = "hidden"
   }
 
   const closeImageModal = () => {
     setIsImageModalOpen(false)
     setSelectedImageIndex(null)
-    // Restore body scrolling
     document.body.style.overflow = "auto"
   }
 
@@ -382,7 +373,6 @@ export default function VehicleDetails({
     }
   }
 
-  // Handle keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!isImageModalOpen || selectedImageIndex === null) return
@@ -400,7 +390,7 @@ export default function VehicleDetails({
     return () => {
       window.removeEventListener("keydown", handleKeyDown)
     }
-  }, [isImageModalOpen, selectedImageIndex, allDisplayableImages.length]) // Added allDisplayableImages.length
+  }, [isImageModalOpen, selectedImageIndex, allDisplayableImages.length])
 
   const handleTriggerImageUpload = () => {
     if (imageUploadRef.current) {
@@ -432,11 +422,10 @@ export default function VehicleDetails({
         setEditableImages((prev) => [...prev, ...newUrls])
       })
 
-      if (imageUploadRef.current) imageUploadRef.current.value = "" // Reset file input
+      if (imageUploadRef.current) imageUploadRef.current.value = ""
     }
   }
 
-  // Handle gallery navigation with dots
   const navigateToGallery = (galleryIndex: number) => {
     if (galleryContainerRef.current) {
       const container = galleryContainerRef.current
@@ -449,7 +438,6 @@ export default function VehicleDetails({
     }
   }
 
-  // Handle scroll events to update active gallery dot
   const handleGalleryScroll = () => {
     if (galleryContainerRef.current) {
       const container = galleryContainerRef.current
@@ -464,7 +452,6 @@ export default function VehicleDetails({
   const galleryTwoDisplayImages = getGalleryTwoImages()
   const galleryThreeDisplayImages = getGalleryThreeImages()
 
-  // Determine which galleries should be visible
   const hasGalleryOne = galleryOneDisplayImages.length > 0
   const hasGalleryTwo = galleryTwoDisplayImages.length > 0
   const hasGalleryThree = galleryThreeDisplayImages.length > 0
@@ -472,10 +459,8 @@ export default function VehicleDetails({
 
   return (
     <div className="min-h-screen">
-      {/* Header Section with Back Button and Price */}
       <section className="px-6 pt-6 md:pt-10">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
-
           {isEditMode ? (
             <div className="flex items-center gap-2 pl-6">
               <span className="text-[#FF6700] dark:text-[#FF7D33] text-2xl md:text-3xl font-bold">$</span>
@@ -501,7 +486,6 @@ export default function VehicleDetails({
         )}
       </section>
 
-      {/* Image Gallery */}
       {allDisplayableImages.length === 0 ? (
         <div className="px-6 max-w-7xl mx-auto mt-4 h-[400px] flex items-center justify-center bg-gray-100 dark:bg-gray-800 rounded-lg">
           <p className="text-gray-500">No images available for this vehicle.</p>
@@ -551,7 +535,6 @@ export default function VehicleDetails({
         </div>
       ) : (
         <div className="px-6 max-w-7xl mx-auto mt-4 relative">
-          {/* Mobile: Single carousel */}
           <div className="block md:hidden">
             <div className="relative h-[33vh] w-full overflow-hidden rounded-lg">
               <div
@@ -576,12 +559,10 @@ export default function VehicleDetails({
                 ))}
               </div>
 
-              {/* Image counter */}
               <div className="absolute top-4 right-4 bg-black/50 text-white text-sm px-3 py-1 rounded-full">
                 {currentImageIndex + 1} / {allDisplayableImages.length}
               </div>
 
-              {/* Dots indicator */}
               <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
                 {allDisplayableImages.map((_, index) => (
                   <button
@@ -594,14 +575,12 @@ export default function VehicleDetails({
                 ))}
               </div>
 
-              {/* Scroll hint */}
               <div className="absolute bottom-16 left-1/2 transform -translate-x-1/2 text-white text-xs bg-black/50 px-2 py-1 rounded-full animate-pulse">
                 Swipe to browse
               </div>
             </div>
           </div>
 
-          {/* Desktop: Three-section horizontal scrolling gallery */}
           <div className="hidden md:block">
             <div className="gallery-container relative flex items-center">
               <div 
@@ -610,7 +589,6 @@ export default function VehicleDetails({
                 style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                 onScroll={handleGalleryScroll}
               >
-                {/* Hide scrollbar for Webkit browsers */}
                 <style jsx>{`
                   .gallery-scroll::-webkit-scrollbar {
                     display: none;
@@ -620,7 +598,6 @@ export default function VehicleDetails({
                   }
                 `}</style>
                 
-                {/* Gallery 1 */}
                 {hasGalleryOne && (
                   <section className="gallery-section flex-shrink-0 w-full snap-center grid grid-cols-1 md:grid-cols-3 gap-4 h-[400px]">
                     <div 
@@ -665,7 +642,6 @@ export default function VehicleDetails({
                   </section>
                 )}
 
-                {/* Gallery 2 */}
                 {hasGalleryTwo && (
                   <section className="gallery-section flex-shrink-0 w-full snap-center grid grid-cols-2 sm:grid-cols-4 gap-4 h-[400px]">
                     {galleryTwoDisplayImages.map((imgSrc, index) => (
@@ -690,7 +666,6 @@ export default function VehicleDetails({
                   </section>
                 )}
 
-                {/* Gallery 3 */}
                 {hasGalleryThree && (
                   <section className="gallery-section flex-shrink-0 w-full snap-center grid grid-cols-2 sm:grid-cols-4 gap-4 h-[400px]">
                     {galleryThreeDisplayImages.map((imgSrc, index) => (
@@ -717,7 +692,6 @@ export default function VehicleDetails({
               </div>
             </div>
 
-            {/* Custom dot navigation */}
             {totalGalleries > 1 && (
               <div className="flex justify-center mt-4 space-x-3">
                 {hasGalleryOne && (
@@ -759,7 +733,6 @@ export default function VehicleDetails({
         </div>
       )}
 
-      {/* Enhanced Image Modal */}
       {isImageModalOpen && selectedImageIndex !== null && (
         <div
           className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center"
@@ -770,7 +743,6 @@ export default function VehicleDetails({
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
         >
-          {/* Close Button */}
           <button
             onClick={closeImageModal}
             className="absolute top-4 right-4 text-white bg-black/50 hover:bg-black/70 p-2 rounded-full transition-colors z-50"
@@ -779,7 +751,6 @@ export default function VehicleDetails({
             <X className="w-6 h-6" />
           </button>
 
-          {/* Navigation Arrows */}
           <div className="absolute inset-0 flex items-center justify-between px-4">
             <button
               onClick={() => navigateImage("prev")}
@@ -798,7 +769,6 @@ export default function VehicleDetails({
             </button>
           </div>
 
-          {/* Image Container */}
           <div className="relative max-h-[90vh] max-w-[90vw] w-full h-full flex items-center justify-center">
             {imageError ? (
               <div className="text-white text-center p-4">
@@ -825,7 +795,6 @@ export default function VehicleDetails({
               </div>
             )}
 
-            {/* Image Position Indicator */}
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/50 text-white px-3 py-1 rounded-full text-sm">
               {selectedImageIndex + 1} / {allDisplayableImages.length}
             </div>
@@ -833,7 +802,6 @@ export default function VehicleDetails({
         </div>
       )}
 
-      {/* Vehicle Title and Details */}
       <div className="px-6 max-w-7xl mx-auto mt-4">
         <div className="flex justify-between items-center mb-2">
           {isEditMode ? (
@@ -885,7 +853,7 @@ export default function VehicleDetails({
                 Save Changes
               </button>
             )}
-            {!isEditMode && ( // Only show sponsored and save if not in edit mode
+            {!isEditMode && (
               <>
                 <div className="bg-[#9FA791]/20 dark:bg-[#4A4D45]/40 px-3 py-1.5 rounded-full text-sm text-[#3E5641] dark:text-white">
                   Sponsored
@@ -947,7 +915,6 @@ export default function VehicleDetails({
         )}
       </div>
 
-      {/* Tabs Section */}
       <div className="border-b border-[#9FA791]/20 dark:border-[#4A4D45]/20 mt-4">
         <div className="px-6 max-w-7xl mx-auto flex space-x-8">
           <button
@@ -956,31 +923,9 @@ export default function VehicleDetails({
           >
             Details
           </button>
-      {/*
-          <button
-            className={`py-3 font-medium filter blur-sm ${activeTab === "report" ? "border-b-2 border-[#FF6700] dark:border-[#FF7D33] text-[#3E5641] dark:text-white" : "text-[#6F7F69] dark:text-gray-400 hover:text-[#3E5641] dark:hover:text-white"}`}
-            onClick={() => setActiveTab("report")}
-          >
-          
-            Vehicle Report
-          </button>
-          <button
-            className={`py-3 font-medium filter blur-sm ${activeTab === "insurance" ? "border-b-2 border-[#FF6700] dark:border-[#FF7D33] text-[#3E5641] dark:text-white" : "text-[#6F7F69] dark:text-gray-400 hover:text-[#3E5641] dark:hover:text-white"}`}
-            onClick={() => setActiveTab("insurance")}
-          >
-            Insurance Quote
-          </button>
-          <button
-            className={`py-3 font-medium filter blur-sm ${activeTab === "review" ? "border-b-2 border-[#FF6700] dark:border-[#FF7D33] text-[#3E5641] dark:text-white" : "text-[#6F7F69] dark:text-gray-400 hover:text-[#3E5641] dark:hover:text-white"}`}
-            onClick={() => setActiveTab("review")}
-          >
-            Vehicle Review
-          </button>
-      */}    
         </div>
       </div>
 
-      {/* Main Content Section */}
       <div className="px-6 py-6 max-w-7xl mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2">
@@ -1134,84 +1079,8 @@ export default function VehicleDetails({
                 </div>
               </>
             )}
-          
-            {/* Commented out sections - keeping the comments but fixing syntax */}
-            {/*
-            {activeTab === "report" && (
-              <div className="relative">
-                <h2 className="text-2xl font-bold mb-4 text-[#3E5641] dark:text-white filter blur-sm">
-                  Vehicle Report
-                </h2>
-                <div className="relative h-[400px] w-full rounded-lg">
-                  <div className="h-full w-full bg-[#f5f5f5] dark:bg-[#2A352A] rounded-lg flex items-center justify-center filter blur-sm">
-                    <div className="text-center">
-                      <Car className="w-16 h-16 mx-auto mb-4 text-[#9FA791] dark:text-[#4A4D45]" />
-                      <p className="text-lg font-medium text-[#6F7F69] dark:text-gray-400">
-                        Comprehensive vehicle history report
-                      </p>
-                      <p className="text-sm text-[#9FA791] dark:text-[#4A4D45] mt-2">
-                        Including accident history, service records, and ownership details
-                      </p>
-                    </div>
-                  </div>
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-lg">
-                    <p className="text-white text-2xl font-semibold">Coming Soon</p>
-                  </div>
-                </div>
-              </div>
-            )}
-            */}
-
-            {/*
-            {activeTab === "insurance" && (
-              <div className="relative">
-                <h2 className="text-2xl font-bold mb-4 text-[#3E5641] dark:text-white filter blur-sm">
-                  Insurance Quote
-                </h2>
-                <div className="relative h-[400px] w-full rounded-lg">
-                  <div className="h-full w-full bg-[#f5f5f5] dark:bg-[#2A352A] rounded-lg flex items-center justify-center filter blur-sm">
-                    <div className="text-center">
-                      <Shield className="w-16 h-16 mx-auto mb-4 text-[#9FA791] dark:text-[#4A4D45]" />
-                      <p className="text-lg font-medium text-[#6F7F69] dark:text-gray-400">
-                        Get instant insurance quotes
-                      </p>
-                      <p className="text-sm text-[#9FA791] dark:text-[#4A4D45] mt-2">
-                        Compare rates from multiple providers
-                      </p>
-                    </div>
-                  </div>
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-lg">
-                    <p className="text-white text-2xl font-semibold">Coming Soon</p>
-                  </div>
-                </div>
-              </div>
-            )}
-            */}
-
-            {/*
-            {activeTab === "review" && (
-              <div className="relative">
-                <h2 className="text-2xl font-bold mb-4 text-[#3E5641] dark:text-white filter blur-sm">
-                  Vehicle Review
-                </h2>
-                <div className="relative h-[400px] w-full rounded-lg">
-                  <div className="h-full w-full bg-[#f5f5f5] dark:bg-[#2A352A] rounded-lg flex items-center justify-center filter blur-sm">
-                    <div className="text-center">
-                      <Star className="w-16 h-16 mx-auto mb-4 text-[#9FA791] dark:text-[#4A4D45]" />
-                      <p className="text-lg font-medium text-[#6F7F69] dark:text-gray-400">Expert vehicle reviews</p>
-                      <p className="text-sm text-[#9FA791] dark:text-[#4A4D45] mt-2">Detailed analysis and ratings</p>
-                    </div>
-                  </div>
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/30 rounded-lg">
-                    <p className="text-white text-2xl font-semibold">Coming Soon</p>
-                  </div>
-                </div>
-              </div>
-            )}
-            */}
           </div>
 
-          {/* Contact Seller Section */}
           <div className="lg:col-span-1">
             <div className="bg-[#3E5641]/80 dark:bg-[#1F2B20]/80 backdrop-blur-lg rounded-xl shadow-lg p-8 border border-white/10">
               <div className="flex items-center justify-between mb-6">
@@ -1235,7 +1104,6 @@ export default function VehicleDetails({
                   <p className="text-gray-300 text-sm mb-2">Seller</p>
                   <div className="flex items-center space-x-2">
                     <p className="text-white text-lg font-medium">{vehicle.sellerName}</p>
-                    {/* Show 'You' badge only if logged in user is the seller, but always show seller name */}
                     {user && user.id === vehicle.userId && (
                       <span className="bg-[#FF6700]/20 text-[#FF6700] text-xs px-2 py-1 rounded-full">You</span>
                     )}
@@ -1247,23 +1115,31 @@ export default function VehicleDetails({
                     {vehicle.sellerPhone && (
                       <div className="flex items-center space-x-3">
                         <Phone className="w-4 h-4 text-[#FF6700]" />
-                        <a
-                          href={`tel:${vehicle.sellerPhone.replace(/\s+/g, "")}`}
-                          className="text-white hover:text-[#FF6700] transition-colors"
-                        >
-                          {vehicle.sellerPhone}
-                        </a>
+                        {vehicle.contactPrivacyEnabled && !user ? (
+                          <span className="text-white">{maskPhone(vehicle.sellerPhone)}</span>
+                        ) : (
+                          <a
+                            href={`tel:${vehicle.sellerPhone.replace(/\s+/g, "")}`}
+                            className="text-white hover:text-[#FF6700] transition-colors"
+                          >
+                            {vehicle.sellerPhone}
+                          </a>
+                        )}
                       </div>
                     )}
                     {vehicle.sellerEmail && (
                       <div className="flex items-center space-x-3">
                         <Mail className="w-4 h-4 text-[#FF6700]" />
-                        <a
-                          href={`mailto:${vehicle.sellerEmail}`}
-                          className="text-white hover:text-[#FF6700] transition-colors break-all"
-                        >
-                          {vehicle.sellerEmail}
-                        </a>
+                        {vehicle.contactPrivacyEnabled && !user ? (
+                          <span className="text-white">{maskEmail(vehicle.sellerEmail)}</span>
+                        ) : (
+                          <a
+                            href={`mailto:${vehicle.sellerEmail}`}
+                            className="text-white hover:text-[#FF6700] transition-colors break-all"
+                          >
+                            {vehicle.sellerEmail}
+                          </a>
+                        )}
                       </div>
                     )}
                   </div>
@@ -1286,7 +1162,6 @@ export default function VehicleDetails({
               </div>
             </div>
 
-            {/* Location Map */}
             <div className="mt-6 rounded-xl overflow-hidden h-[150px] w-full shadow-lg">
               <iframe
                 title="Seller Location"
@@ -1306,7 +1181,6 @@ export default function VehicleDetails({
   )
 }
 
-// Helper component for editable fields to reduce repetition
 const EditableField = ({
   label,
   name,

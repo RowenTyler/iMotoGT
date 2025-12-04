@@ -26,6 +26,7 @@ function mapDatabaseToVehicle(data: any): Vehicle {
     description: data.description || "",
     images: data.images || [],
     status: data.status || "active",
+    contactPrivacyEnabled: data.contact_privacy_enabled || false,
     // Get seller information from joined users table
     sellerName:
       user.first_name && user.last_name
@@ -69,6 +70,7 @@ export async function getVehicles(status = "active"): Promise<Vehicle[]> {
         description,
         images,
         status,
+        contact_privacy_enabled,
         created_at,
         updated_at,
         users(id, email, first_name, last_name, phone, profile_pic, suburb, city, province)
@@ -115,6 +117,7 @@ export async function getVehicleById(id: string): Promise<Vehicle | null> {
         description,
         images,
         status,
+        contact_privacy_enabled,
         created_at,
         updated_at,
         users(id, email, first_name, last_name, phone, profile_pic, suburb, city, province)
@@ -161,6 +164,7 @@ export async function getUserVehicles(userId: string): Promise<Vehicle[]> {
         description,
         images,
         status,
+        contact_privacy_enabled,
         created_at,
         updated_at,
         users(id, email, first_name, last_name, phone, profile_pic, suburb, city, province)
@@ -214,6 +218,7 @@ export async function searchVehicles(query: string): Promise<Vehicle[]> {
         description,
         images,
         status,
+        contact_privacy_enabled,
         created_at,
         updated_at,
         users(id, email, first_name, last_name, phone, profile_pic, suburb, city, province)
@@ -283,6 +288,7 @@ export async function filterVehicles(filters: VehicleFilters): Promise<Vehicle[]
         description,
         images,
         status,
+        contact_privacy_enabled,
         created_at,
         updated_at,
         users(id, email, first_name, last_name, phone, profile_pic, suburb, city, province)
@@ -399,6 +405,7 @@ export async function createVehicle(vehicleData: VehicleFormData, userId: string
       city: vehicleData.city,
       description: vehicleData.description || "",
       images: vehicleData.images || [],
+      contact_privacy_enabled: vehicleData.contactPrivacyEnabled || false,
       status: "active",
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
@@ -426,6 +433,7 @@ export async function createVehicle(vehicleData: VehicleFormData, userId: string
         description,
         images,
         status,
+        contact_privacy_enabled,
         created_at,
         updated_at,
         users(id, email, first_name, last_name, phone, profile_pic, suburb, city, province)
@@ -468,6 +476,7 @@ export async function updateVehicle(id: string, vehicleData: Partial<VehicleForm
     if (vehicleData.city) dbData.city = vehicleData.city
     if (vehicleData.description !== undefined) dbData.description = vehicleData.description
     if (vehicleData.images) dbData.images = vehicleData.images
+    if (vehicleData.contactPrivacyEnabled !== undefined) dbData.contact_privacy_enabled = vehicleData.contactPrivacyEnabled
 
     const { data, error } = await supabase
       .from("vehicles")
@@ -492,6 +501,7 @@ export async function updateVehicle(id: string, vehicleData: Partial<VehicleForm
         description,
         images,
         status,
+        contact_privacy_enabled,
         created_at,
         updated_at,
         users(id, email, first_name, last_name, phone, profile_pic, suburb, city, province)
@@ -606,6 +616,7 @@ export async function getSavedVehicles(userId: string): Promise<Vehicle[]> {
           description,
           images,
           status,
+          contact_privacy_enabled,
           created_at,
           updated_at,
           users(id, email, first_name, last_name, phone, profile_pic, suburb, city, province)

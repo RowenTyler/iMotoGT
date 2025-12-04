@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Eye, EyeOff, LogIn, UserPlus, Mail, CheckCircle, RefreshCw, AlertCircle, ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -38,6 +38,8 @@ export default function LoginPage({
   const [isResending, setIsResending] = useState(false)
   const [resendSuccess, setResendSuccess] = useState(false)
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const redirectUrl = searchParams.get('redirect')
 
   const handleSignUp = async () => {
     if (password.length < 6) {
@@ -128,7 +130,11 @@ export default function LoginPage({
         if (onLoginSuccess) {
           onLoginSuccess(profile)
         } else {
-          router.push("/dashboard")
+          if (redirectUrl) {
+            router.push(redirectUrl)
+          } else {
+            router.push("/dashboard")
+          }
         }
       } else {
         console.warn("⚠️ No profile found, creating fallback profile")
@@ -144,7 +150,11 @@ export default function LoginPage({
         if (onLoginSuccess) {
           onLoginSuccess(fallbackProfile)
         } else {
-          router.push("/dashboard")
+          if (redirectUrl) {
+            router.push(redirectUrl)
+          } else {
+            router.push("/dashboard")
+          }
         }
       }
     } catch (e) {
