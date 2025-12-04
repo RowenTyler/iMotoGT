@@ -288,11 +288,12 @@ export function Header({
 
   return (
     <>
+      {/* Updated: Changed from left-4 to right-4 and updated animation */}
       <div
-        className={`fixed top-4 left-4 z-50 cursor-pointer transition-all duration-500 ease-in-out ${
+        className={`fixed top-4 right-4 z-50 cursor-pointer transition-all duration-500 ease-in-out ${
           isHeaderCollapsed
             ? "opacity-100 scale-100 translate-x-0"
-            : "opacity-0 scale-75 -translate-x-full pointer-events-none"
+            : "opacity-0 scale-75 translate-x-full pointer-events-none"
         }`}
         onClick={handleExpandHeader}
       >
@@ -308,9 +309,10 @@ export function Header({
         </div>
       </div>
 
+      {/* Updated: Changed animation from -translate-x-full to translate-x-full */}
       <header
         className={`fixed top-0 left-0 right-0 z-50 p-4 transition-all duration-500 ease-in-out ${
-          isHeaderCollapsed ? "opacity-0 -translate-x-full pointer-events-none" : "opacity-100 translate-x-0"
+          isHeaderCollapsed ? "opacity-0 translate-x-full pointer-events-none" : "opacity-100 translate-x-0"
         }`}
       >
         <nav className="mx-auto max-w-4xl w-[95%] flex items-center justify-between">

@@ -197,7 +197,7 @@ export default function UploadVehicle({
         sellerCity: existingVehicle.seller_city || "",
         sellerProvince: existingVehicle.seller_province || "",
         sellerProfilePic: existingVehicle.seller_profile_pic || "",
-        contactPrivacy: existingVehicle.contact_privacy || false,
+        contactPrivacyEnabled: existingVehicle.contact_privacy || false,
       })
       
       setContactPrivacyEnabled(existingVehicle.contact_privacy || false)
