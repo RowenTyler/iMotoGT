@@ -142,7 +142,7 @@ export default function UploadVehicle({
     sellerCity: profile?.city || "",
     sellerProvince: profile?.province || "",
     sellerProfilePic: profile?.profilePic || "",
-    contactPrivacy: false,
+    contactPrivacyEnabled: false,
   })
 
   const [userClickedEdit, setUserClickedEdit] = useState(false)
@@ -632,7 +632,7 @@ export default function UploadVehicle({
       const vehicleData = { 
         ...formData, 
         images: vehicleImages,
-        contactPrivacy: contactPrivacyEnabled
+        contactPrivacyEnabled: contactPrivacyEnabled
       }
 
       let result: Vehicle | null
@@ -1055,7 +1055,7 @@ export default function UploadVehicle({
                     onClick={() => {
                       const newValue = !contactPrivacyEnabled
                       setContactPrivacyEnabled(newValue)
-                      setFormData(prev => ({ ...prev, contactPrivacy: newValue }))
+                      setFormData(prev => ({ ...prev, contactPrivacyEnabled: newValue }))
                     }}
                     className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${contactPrivacyEnabled ? 'bg-[#FF6700] dark:bg-[#FF7D33]' : 'bg-gray-300 dark:bg-gray-600'}`}
                     aria-label={`Toggle contact privacy. Currently ${contactPrivacyEnabled ? 'enabled' : 'disabled'}`}
