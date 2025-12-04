@@ -9,7 +9,7 @@ import { authService } from "@/lib/auth"
 import type { UserProfile } from "@/types/user"
 
 export const dynamic = 'force-dynamic'
-export const revalidate = 0
+
 
 export default function SettingsPage() {
   const router = useRouter()

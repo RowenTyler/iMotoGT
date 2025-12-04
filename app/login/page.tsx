@@ -5,7 +5,7 @@ import LoginPage from "@/components/login-page"
 import type { UserProfile } from "@/types/user"
 
 export const dynamic = 'force-dynamic'
-export const revalidate = 0
+
 
 
 export default function LoginPageRoute() {

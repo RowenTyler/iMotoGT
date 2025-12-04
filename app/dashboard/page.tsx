@@ -7,7 +7,7 @@ import Dashboard from "@/components/dashboard"
 import type { Vehicle } from "@/types/vehicle"
 
 export const dynamic = 'force-dynamic'
-export const revalidate = 0
+
 
 export default function DashboardPage() {
   const router = useRouter()
