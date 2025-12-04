@@ -44,6 +44,10 @@ export default function VehicleDetails({
     return phone.replace(/\d(?=\d{4})/g, '*')
   }
 
+  // SAFE access with fallback
+  const isContactPrivate = vehicle.contactPrivacyEnabled ?? false
+  const shouldMaskContact = isContactPrivate && !user
+
   console.log("VehicleDetails vehicle:", vehicle)
   console.log("Vehicle details:", {
     sellerName: vehicle.sellerName,
@@ -52,6 +56,9 @@ export default function VehicleDetails({
     sellerSuburb: vehicle.sellerSuburb,
     sellerCity: vehicle.sellerCity,
     sellerProvince: vehicle.sellerProvince,
+    contactPrivacyEnabled: vehicle.contactPrivacyEnabled,
+    isContactPrivate,
+    shouldMaskContact,
   })
   console.log("Vehicle Details:", {
     sellerName: vehicle.sellerName,
@@ -231,7 +238,7 @@ export default function VehicleDetails({
   }, [])
 
   const handleContactClick = () => {
-    if (vehicle.contactPrivacyEnabled && !user) {
+    if (shouldMaskContact) {
       router.push(`/login?redirect=/vehicle-details/${vehicle.id}`)
     } else {
       if (isMobile) {
@@ -1115,7 +1122,7 @@ export default function VehicleDetails({
                     {vehicle.sellerPhone && (
                       <div className="flex items-center space-x-3">
                         <Phone className="w-4 h-4 text-[#FF6700]" />
-                        {vehicle.contactPrivacyEnabled && !user ? (
+                        {shouldMaskContact ? (
                           <span className="text-white">{maskPhone(vehicle.sellerPhone)}</span>
                         ) : (
                           <a
@@ -1130,7 +1137,7 @@ export default function VehicleDetails({
                     {vehicle.sellerEmail && (
                       <div className="flex items-center space-x-3">
                         <Mail className="w-4 h-4 text-[#FF6700]" />
-                        {vehicle.contactPrivacyEnabled && !user ? (
+                        {shouldMaskContact ? (
                           <span className="text-white">{maskEmail(vehicle.sellerEmail)}</span>
                         ) : (
                           <a
@@ -1226,6 +1233,7 @@ const EditableField = ({
         placeholder={placeholder || label}
         className={`form-input-edit w-full ${textWhite ? "bg-[#576B55] dark:bg-[#2A352A] text-white placeholder-gray-400" : ""}`}
       />
-    )}
+    )
+  }
   </div>
 )

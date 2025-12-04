@@ -26,7 +26,8 @@ function mapDatabaseToVehicle(data: any): Vehicle {
     description: data.description || "",
     images: data.images || [],
     status: data.status || "active",
-    contactPrivacyEnabled: data.contact_privacy_enabled || false,
+    // ENSURE backward compatibility - default to false if missing
+    contactPrivacyEnabled: data.contact_privacy_enabled ?? false,
     // Get seller information from joined users table
     sellerName:
       user.first_name && user.last_name

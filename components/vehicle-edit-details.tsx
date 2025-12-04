@@ -26,6 +26,9 @@ export default function VehicleEditDetails({ vehicle, onBack }: VehicleEditDetai
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null)
   const [isImageModalOpen, setIsImageModalOpen] = useState(false)
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
+  const [contactPrivacyEnabled, setContactPrivacyEnabled] = useState(
+    vehicle.contactPrivacyEnabled || false
+  )
   const imageUploadRef = useRef<HTMLInputElement>(null)
 
   const nextImage = () => {
@@ -204,6 +207,7 @@ export default function VehicleEditDetails({ vehicle, onBack }: VehicleEditDetai
         province: editableData.province,
         description: editableData.description,
         images: editableImages,
+        contactPrivacyEnabled: contactPrivacyEnabled, // ADD THIS
       }
 
       await vehicleService.updateVehicle(vehicle.id, updateData, vehicle.userId)
@@ -291,6 +295,35 @@ export default function VehicleEditDetails({ vehicle, onBack }: VehicleEditDetai
           onChange={handleImageFilesUpload}
           className="hidden"
         />
+      </div>
+
+      {/* Contact Privacy Settings */}
+      <div className="px-6 max-w-7xl mx-auto mt-6">
+        <div className="rounded-3xl p-6 border border-[#9FA791]/20 dark:border-[#4A4D45]/20">
+          <h3 className="text-xl font-semibold mb-4 text-[#3E5641] dark:text-white">Contact Privacy Settings</h3>
+          {/* Privacy toggle component - same as upload page */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="font-medium text-gray-900 dark:text-white">Enable Contact Privacy</h4>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                When enabled, your contact details will be hidden from the public listing.
+              </p>
+            </div>
+            <button
+              type="button"
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-[#FF6700] focus:ring-offset-2 ${
+                contactPrivacyEnabled ? 'bg-[#FF6700]' : 'bg-gray-200 dark:bg-gray-700'
+              }`}
+              onClick={() => setContactPrivacyEnabled(!contactPrivacyEnabled)}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  contactPrivacyEnabled ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Vehicle Title and Details Form */}
