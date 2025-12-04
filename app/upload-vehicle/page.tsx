@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation"
 import { useUser } from "@/components/UserContext"
 import UploadVehicleComponent from "@/components/upload-vehicle"
-import { useEffect, useState } from "react"
+import { useEffect } from "react"
 import { vehicleService } from "@/lib/vehicle-service"
 import { authService } from "@/lib/auth"
 import type { UserProfile } from "@/types/user"
@@ -15,8 +15,6 @@ export const dynamic = 'force-dynamic'
 export default function UploadVehiclePage() {
   const router = useRouter()
   const { user, authUser, isEmailVerified, isLoading, refreshUserProfile } = useUser()
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [submitError, setSubmitError] = useState<string | null>(null)
 
   useEffect(() => {
     console.log("🔍 Upload Vehicle Page - Current State:", {
@@ -90,9 +88,6 @@ export default function UploadVehiclePage() {
 
   const handleVehicleSubmit = async (vehicleData: VehicleFormData) => {
     console.log("🚀 handleVehicleSubmit - START")
-    setIsSubmitting(true)
-    setSubmitError(null)
-    
     console.log("🔍 User Context Before Submission:", {
       userExists: !!user,
       userId: user?.id,
@@ -109,16 +104,12 @@ export default function UploadVehiclePage() {
         isEmailVerified,
         localStorageUser: typeof window !== 'undefined' ? localStorage.getItem('user') : 'SSR'
       })
-      setIsSubmitting(false)
-      setSubmitError("User is not authenticated. Please refresh the page and try again.")
       throw new Error("User is not authenticated.")
     }
 
     if (!user.id) {
       console.error("❌ User ID is missing in handleVehicleSubmit")
       console.log("📋 User object structure:", JSON.stringify(user, null, 2))
-      setIsSubmitting(false)
-      setSubmitError("User ID is missing. Please refresh the page and try again.")
       throw new Error("User ID is missing from user profile.")
     }
 
@@ -149,115 +140,31 @@ export default function UploadVehiclePage() {
         callSignature: `vehicleService.createVehicle(vehicleData, "${user.id}")`
       })
       
-      // Create an abort controller to handle request timeout
-      const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 second timeout
+      const result = await vehicleService.createVehicle(vehicleData, user.id)
       
-      // Try the request with retry logic
-      let retryCount = 0
-      const maxRetries = 2
-      let lastError = null
+      console.log("✅ Vehicle created successfully", {
+        result,
+        userIdUsed: user.id,
+        redirectTo: "/dashboard"
+      })
       
-      while (retryCount <= maxRetries) {
-        try {
-          console.log(`🔄 Attempt ${retryCount + 1} of ${maxRetries + 1}`)
-          
-          const result = await vehicleService.createVehicle(vehicleData, user.id)
-          clearTimeout(timeoutId)
-          
-          console.log("✅ Vehicle created successfully", {
-            result,
-            userIdUsed: user.id,
-            redirectTo: "/dashboard"
-          })
-          
-          setIsSubmitting(false)
-          router.push("/dashboard")
-          return
-        } catch (err) {
-          lastError = err
-          console.error(`❌ Attempt ${retryCount + 1} failed:`, {
-            error: err,
-            errorType: err?.constructor?.name,
-            errorMessage: err?.message,
-            isAbortError: err?.name === 'AbortError' || err?.message?.includes('AbortError'),
-            userIdAtError: user?.id,
-            time: new Date().toISOString()
-          })
-          
-          // Check if it's an abort error
-          const isAbortError = err?.name === 'AbortError' || err?.message?.includes('AbortError')
-          
-          if (isAbortError) {
-            console.warn("⚠️ AbortError detected. This is usually a network or timeout issue.")
-            
-            // For abort errors, provide specific guidance
-            if (retryCount < maxRetries) {
-              console.log(`⏱️ Waiting 2 seconds before retry ${retryCount + 2}...`)
-              await new Promise(resolve => setTimeout(resolve, 2000))
-              retryCount++
-              continue
-            } else {
-              setSubmitError("Request timed out. The server is taking too long to respond. Please check your network connection and try again.")
-              throw new Error("Request timed out after multiple attempts. Please try again later.")
-            }
-          }
-          
-          // For other errors, don't retry
-          break
-        }
-      }
-      
-      // If we've exhausted retries or got a non-abort error
-      if (lastError) {
-        const errorMessage = lastError?.message || 'Unknown error occurred'
-        
-        // Provide user-friendly error messages
-        if (lastError?.message?.includes('AbortError')) {
-          setSubmitError("Network request was cancelled. Please check your internet connection and try again.")
-        } else if (lastError?.message?.includes('timeout')) {
-          setSubmitError("Request timed out. Please try again or contact support if the issue persists.")
-        } else if (lastError?.message?.includes('network')) {
-          setSubmitError("Network error. Please check your internet connection and try again.")
-        } else {
-          setSubmitError(`Failed to create vehicle: ${errorMessage}`)
-        }
-        
-        throw lastError
-      }
-      
+      router.push("/dashboard")
     } catch (err) {
       console.error("❌ Failed to submit vehicle:", {
         error: err,
         userIdAtError: user?.id,
         vehicleData: vehicleData,
         errorStack: err instanceof Error ? err.stack : 'No stack trace',
-        time: new Date().toISOString(),
-        isSubmitting,
-        userAuthenticated: !!authUser
+        time: new Date().toISOString()
       })
-      
-      setIsSubmitting(false)
-      
-      // Don't throw if we've already set a user-friendly error
-      if (!submitError) {
-        throw err
-      }
+      throw err
     } finally {
-      setIsSubmitting(false)
       console.log("🏁 handleVehicleSubmit - END")
     }
   }
 
   const handleBack = () => {
-    if (isSubmitting) {
-      console.warn("⚠️ Attempted to navigate away while submission is in progress")
-      if (confirm("Vehicle submission is in progress. Are you sure you want to leave?")) {
-        router.push("/dashboard")
-      }
-    } else {
-      router.push("/dashboard")
-    }
+    router.push("/dashboard")
   }
 
   const handleSaveProfile = async (updatedProfile: Partial<UserProfile>) => {
@@ -317,29 +224,11 @@ export default function UploadVehiclePage() {
   }
 
   return (
-    <>
-      {submitError && (
-        <div className="fixed top-4 right-4 left-4 md:left-auto md:w-96 z-50">
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
-            <strong className="font-bold">Error: </strong>
-            <span className="block sm:inline">{submitError}</span>
-            <button
-              className="absolute top-0 bottom-0 right-0 px-4 py-3"
-              onClick={() => setSubmitError(null)}
-            >
-              <span className="sr-only">Dismiss</span>
-              &times;
-            </button>
-          </div>
-        </div>
-      )}
-      <UploadVehicleComponent
-        user={user as UserProfile}
-        onVehicleSubmit={handleVehicleSubmit}
-        onBack={handleBack}
-        onSaveProfile={handleSaveProfile}
-        isSubmitting={isSubmitting}
-      />
-    </>
+    <UploadVehicleComponent
+      user={user as UserProfile}
+      onVehicleSubmit={handleVehicleSubmit}
+      onBack={handleBack}
+      onSaveProfile={handleSaveProfile}
+    />
   )
 }
