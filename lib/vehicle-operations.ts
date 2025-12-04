@@ -409,7 +409,7 @@ export async function createVehicle(
       city: vehicleData.city,
       description: vehicleData.description || "",
       images: vehicleData.images || [],
-      contact_privacy_enabled: vehicleData.contactPrivacyEnabled || false,
+      contact_privacy_enabled: vehicleData.contactPrivacyEnabled ?? vehicleData.contactPrivacy ?? false,
       status: "active",
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
