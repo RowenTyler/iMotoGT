@@ -7,6 +7,8 @@ import { ThemeProvider } from "@/components/theme-provider"
 
 const inter = Inter({ subsets: ["latin"] })
 
+export const dynamic = 'force-dynamic'
+
 export const metadata: Metadata = {
   title: "iMoto GT - Find Your Perfect Car",
   description: "Browse and discover amazing cars in South Africa",
