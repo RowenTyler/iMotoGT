@@ -256,6 +256,13 @@ export default function UploadVehicle({
     return () => document.removeEventListener("mousedown", handleClickOutside)
   }, [])
 
+  useEffect(() => {
+    setFormData(prev => ({ 
+      ...prev, 
+      contactPrivacyEnabled: contactPrivacyEnabled 
+    }));
+  }, [contactPrivacyEnabled]);
+
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = event.target
     setFormData((prev) => ({ ...prev, [name]: value }))
@@ -632,7 +639,8 @@ export default function UploadVehicle({
       const vehicleData = { 
         ...formData, 
         images: vehicleImages,
-        contactPrivacyEnabled: contactPrivacyEnabled
+        contactPrivacyEnabled: contactPrivacyEnabled,
+        contact_privacy_enabled: contactPrivacyEnabled
       }
 
       let result: Vehicle | null
@@ -1054,9 +1062,10 @@ export default function UploadVehicle({
                   <button
                     onClick={() => {
                       const newValue = !contactPrivacyEnabled
-                      setContactPrivacyEnabled(newValue)
-                      setFormData(prev => ({ ...prev, contactPrivacyEnabled: newValue }))
+                        setContactPrivacyEnabled(newValue)
+                        setFormData(prev => ({ ...prev, contactPrivacyEnabled: newValue}))
                     }}
+                    
                     className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${contactPrivacyEnabled ? 'bg-[#FF6700] dark:bg-[#FF7D33]' : 'bg-gray-300 dark:bg-gray-600'}`}
                     aria-label={`Toggle contact privacy. Currently ${contactPrivacyEnabled ? 'enabled' : 'disabled'}`}
                   >
