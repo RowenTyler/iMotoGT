@@ -1,3 +1,7 @@
+import { Card } from "@/components/ui/card"
+import { cn } from "@/lib/utils"
+import { Info, Lock, LockOpen } from "lucide-react"
+
 interface PrivacyToggleCardProps {
   enabled: boolean
   onToggle: (enabled: boolean) => void
@@ -38,6 +42,7 @@ export function PrivacyToggleCard({ enabled, onToggle, className }: PrivacyToggl
         
         {/* Toggle Switch */}
         <button
+          type="button"
           onClick={() => onToggle(!enabled)}
           className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
             enabled ? "bg-[#FF6700] dark:bg-[#FF7D33]" : "bg-gray-300 dark:bg-gray-600"
