@@ -3,7 +3,7 @@
 import type React from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
-import { useState, useRef, useEffect, type ElementType } from "react"
+import { useState, useRef, useEffect, type ElementType, useMemo } from "react"
 import { ArrowLeft, Camera, Save, AlertCircle, XCircle, Edit, Check, Grip, Car, Truck, Bike, Maximize2, Minimize2, Info } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -36,6 +36,28 @@ interface UploadVehicleProps {
   existingVehicle?: Vehicle
   onVehicleUpdate?: (vehicle: Vehicle) => void
   onCancel?: () => void
+}
+
+interface VehicleData {
+  [make: string]: {
+    displayName: string
+    models: Array<{
+      name: string
+      vehicleType: string[]
+      fuelTypes: string[]
+    }>
+  }
+}
+
+interface VehicleMake {
+  key: string
+  displayName: string
+}
+
+interface VehicleModel {
+  name: string
+  vehicleType: string[]
+  fuelTypes: string[]
 }
 
 const generateEngineCapacityOptions = () => {
@@ -112,6 +134,14 @@ export default function UploadVehicle({
       router.push("/login")
     })
 
+  // State for vehicle data
+  const [vehicleData, setVehicleData] = useState<VehicleData | null>(null)
+  const [makesList, setMakesList] = useState<VehicleMake[]>([])
+  const [filteredMakes, setFilteredMakes] = useState<VehicleMake[]>([])
+  const [selectedMakeKey, setSelectedMakeKey] = useState<string>("")
+  const [modelsList, setModelsList] = useState<VehicleModel[]>([])
+  const [filteredModels, setFilteredModels] = useState<VehicleModel[]>([])
+  
   const [vehicleImages, setVehicleImages] = useState<string[]>([])
   const [isDragging, setIsDragging] = useState<boolean>(false)
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
@@ -168,12 +198,109 @@ export default function UploadVehicle({
   const fileInputRef = useRef<HTMLInputElement>(null)
   const engineCapacityRef = useRef<HTMLDivElement>(null)
   const bodyTypeRef = useRef<HTMLDivElement>(null)
+  const makeRef = useRef<HTMLDivElement>(null)
+  const modelRef = useRef<HTMLDivElement>(null)
+  
   const [engineCapacitySearch, setEngineCapacitySearch] = useState("")
   const [engineCapacityFiltered, setEngineCapacityFiltered] = useState(engineCapacityOptionsList)
   const [showEngineCapacityDropdown, setShowEngineCapacityDropdown] = useState(false)
   const [bodyTypeSearch, setBodyTypeSearch] = useState("")
   const [bodyTypeFiltered, setBodyTypeFiltered] = useState(bodyTypeOptionsList)
   const [showBodyTypeDropdown, setShowBodyTypeDropdown] = useState(false)
+  const [showMakeDropdown, setShowMakeDropdown] = useState(false)
+  const [showModelDropdown, setShowModelDropdown] = useState(false)
+
+  // Normalize make name for comparison (lowercase, remove special chars, trim)
+  const normalizeMakeName = (make: string): string => {
+    return make.toLowerCase().replace(/[^a-z0-9]/g, '').trim()
+  }
+
+  // Normalize model name for comparison
+  const normalizeModelName = (model: string): string => {
+    return model.toLowerCase().replace(/[^a-z0-9]/g, '').trim()
+  }
+
+  // Find canonical make from user input
+  const findCanonicalMake = (input: string): VehicleMake | null => {
+    if (!input.trim() || !vehicleData) return null
+    
+    const normalizedInput = normalizeMakeName(input)
+    
+    // First try exact key match
+    if (vehicleData[normalizedInput]) {
+      return { key: normalizedInput, displayName: vehicleData[normalizedInput].displayName }
+    }
+    
+    // Try case-insensitive match in display names
+    for (const [key, data] of Object.entries(vehicleData)) {
+      if (normalizeMakeName(data.displayName) === normalizedInput) {
+        return { key, displayName: data.displayName }
+      }
+    }
+    
+    // Try fuzzy matching (simple contains check)
+    for (const [key, data] of Object.entries(vehicleData)) {
+      if (data.displayName.toLowerCase().includes(input.toLowerCase()) ||
+          key.toLowerCase().includes(input.toLowerCase())) {
+        return { key, displayName: data.displayName }
+      }
+    }
+    
+    return null
+  }
+
+  // Find canonical model from user input
+  const findCanonicalModel = (input: string, makeKey: string): VehicleModel | null => {
+    if (!input.trim() || !vehicleData || !vehicleData[makeKey]) return null
+    
+    const normalizedInput = normalizeModelName(input)
+    const models = vehicleData[makeKey].models
+    
+    // First try exact match
+    const exactMatch = models.find(model => normalizeModelName(model.name) === normalizedInput)
+    if (exactMatch) return exactMatch
+    
+    // Try case-insensitive match
+    const caseInsensitiveMatch = models.find(model => 
+      model.name.toLowerCase() === input.toLowerCase()
+    )
+    if (caseInsensitiveMatch) return caseInsensitiveMatch
+    
+    // Try fuzzy matching (contains)
+    const fuzzyMatch = models.find(model => 
+      model.name.toLowerCase().includes(input.toLowerCase())
+    )
+    
+    return fuzzyMatch || null
+  }
+
+  // Load vehicle data on component mount
+  useEffect(() => {
+    const loadVehicleData = async () => {
+      try {
+        const response = await fetch('/vehicle-data.json')
+        if (!response.ok) throw new Error('Failed to load vehicle data')
+        const data = await response.json()
+        setVehicleData(data)
+        
+        // Create makes list from vehicle data
+        const makes = Object.entries(data).map(([key, value]) => ({
+          key,
+          displayName: (value as any).displayName || key.charAt(0).toUpperCase() + key.slice(1)
+        }))
+        setMakesList(makes)
+        setFilteredMakes(makes)
+      } catch (error) {
+        console.error('Error loading vehicle data:', error)
+        // Fallback to empty data
+        setVehicleData({})
+        setMakesList([])
+        setFilteredMakes([])
+      }
+    }
+    
+    loadVehicleData()
+  }, [])
 
   useEffect(() => {
     if (editMode && existingVehicle) {
@@ -207,6 +334,26 @@ export default function UploadVehicle({
       }
     }
   }, [editMode, existingVehicle])
+
+  // When vehicle data loads and we have existing vehicle in edit mode, find the make
+  useEffect(() => {
+    if (editMode && existingVehicle && vehicleData && formData.make) {
+      const canonicalMake = findCanonicalMake(formData.make)
+      if (canonicalMake) {
+        setSelectedMakeKey(canonicalMake.key)
+        setModelsList(vehicleData[canonicalMake.key]?.models || [])
+        setFilteredModels(vehicleData[canonicalMake.key]?.models || [])
+        
+        // Try to find the model
+        if (formData.model && vehicleData[canonicalMake.key]) {
+          const canonicalModel = findCanonicalModel(formData.model, canonicalMake.key)
+          if (canonicalModel) {
+            setFormData(prev => ({ ...prev, model: canonicalModel.name }))
+          }
+        }
+      }
+    }
+  }, [editMode, existingVehicle, vehicleData, formData.make, formData.model])
 
   useEffect(() => {
       if (userProfile) {
@@ -251,6 +398,12 @@ export default function UploadVehicle({
       if (bodyTypeRef.current && !bodyTypeRef.current.contains(event.target as Node)) {
         setShowBodyTypeDropdown(false)
       }
+      if (makeRef.current && !makeRef.current.contains(event.target as Node)) {
+        setShowMakeDropdown(false)
+      }
+      if (modelRef.current && !modelRef.current.contains(event.target as Node)) {
+        setShowModelDropdown(false)
+      }
     }
     document.addEventListener("mousedown", handleClickOutside)
     return () => document.removeEventListener("mousedown", handleClickOutside)
@@ -263,10 +416,93 @@ export default function UploadVehicle({
     }));
   }, [contactPrivacyEnabled]);
 
+  // Handle make input change with autocomplete
+  const handleMakeInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const inputValue = event.target.value
+    setFormData(prev => ({ ...prev, make: inputValue }))
+    setSubmitError(null)
+    
+    // Reset model if make changes
+    if (selectedMakeKey) {
+      setFormData(prev => ({ ...prev, model: "" }))
+      setSelectedMakeKey("")
+      setModelsList([])
+      setFilteredModels([])
+    }
+    
+    // Filter makes based on input
+    if (inputValue.trim() === "") {
+      setFilteredMakes(makesList)
+    } else {
+      const filtered = makesList.filter(make =>
+        make.displayName.toLowerCase().includes(inputValue.toLowerCase()) ||
+        make.key.toLowerCase().includes(inputValue.toLowerCase())
+      )
+      setFilteredMakes(filtered)
+    }
+    
+    setShowMakeDropdown(true)
+  }
+
+  // Handle make selection
+  const handleMakeSelect = (make: VehicleMake) => {
+    setFormData(prev => ({ ...prev, make: make.displayName }))
+    setSelectedMakeKey(make.key)
+    setShowMakeDropdown(false)
+    
+    // Update models list for selected make
+    if (vehicleData && vehicleData[make.key]) {
+      const models = vehicleData[make.key].models || []
+      setModelsList(models)
+      setFilteredModels(models)
+    } else {
+      setModelsList([])
+      setFilteredModels([])
+    }
+    
+    // Clear model field
+    setFormData(prev => ({ ...prev, model: "" }))
+    setSubmitError(null)
+  }
+
+  // Handle model input change with autocomplete
+  const handleModelInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const inputValue = event.target.value
+    setFormData(prev => ({ ...prev, model: inputValue }))
+    setSubmitError(null)
+    
+    // Filter models based on input
+    if (inputValue.trim() === "" || !modelsList.length) {
+      setFilteredModels(modelsList)
+    } else {
+      const filtered = modelsList.filter(model =>
+        model.name.toLowerCase().includes(inputValue.toLowerCase())
+      )
+      setFilteredModels(filtered)
+    }
+    
+    setShowModelDropdown(true)
+  }
+
+  // Handle model selection
+  const handleModelSelect = (model: VehicleModel) => {
+    setFormData(prev => ({ ...prev, model: model.name }))
+    setShowModelDropdown(false)
+    setSubmitError(null)
+  }
+
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = event.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
-    setSubmitError(null)
+    
+    // Handle make and model separately
+    if (name === "make") {
+      handleMakeInputChange(event as React.ChangeEvent<HTMLInputElement>)
+    } else if (name === "model") {
+      handleModelInputChange(event as React.ChangeEvent<HTMLInputElement>)
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }))
+      setSubmitError(null)
+    }
   }
 
   const formatPriceForDisplay = (rawValue: string | undefined): string => {
@@ -365,7 +601,34 @@ export default function UploadVehicle({
     setSubmitError(null)
   }
 
-  // SIMPLIFIED: Just use the onSaveProfile function that already works in settings
+  // Auto-correct make on blur
+  const handleMakeBlur = () => {
+    if (formData.make.trim() && vehicleData) {
+      const canonicalMake = findCanonicalMake(formData.make)
+      if (canonicalMake && canonicalMake.displayName !== formData.make) {
+        setFormData(prev => ({ ...prev, make: canonicalMake.displayName }))
+        setSelectedMakeKey(canonicalMake.key)
+        
+        // Update models list for selected make
+        if (vehicleData[canonicalMake.key]) {
+          const models = vehicleData[canonicalMake.key].models || []
+          setModelsList(models)
+          setFilteredModels(models)
+        }
+      }
+    }
+  }
+
+  // Auto-correct model on blur
+  const handleModelBlur = () => {
+    if (formData.model.trim() && selectedMakeKey && vehicleData && vehicleData[selectedMakeKey]) {
+      const canonicalModel = findCanonicalModel(formData.model, selectedMakeKey)
+      if (canonicalModel && canonicalModel.name !== formData.model) {
+        setFormData(prev => ({ ...prev, model: canonicalModel.name }))
+      }
+    }
+  }
+
   const handleSaveSellerInfo = async () => {
     try {
       if (!sellerFormData.firstName?.trim() || !sellerFormData.lastName?.trim() || !sellerFormData.phone?.trim()) {
@@ -383,10 +646,9 @@ export default function UploadVehicle({
         profilePic: sellerFormData.profilePic,
       }
 
-      // Simply call onSaveProfile - let the parent component handle the database update
       if (onSaveProfile) {
         await onSaveProfile(updatedProfile)
-        await refreshUserProfile() // Refresh the user profile in the context
+        await refreshUserProfile()
       }
 
       setUserClickedEdit(false)
@@ -544,18 +806,30 @@ export default function UploadVehicle({
     setSubmitSuccess(null)
     setUploadProgress(0)
 
-    // START: Add submission tracking logging
     console.group('🚗 Vehicle Submission Tracking')
     console.log('📋 Submission Started:', new Date().toISOString())
     console.log('👤 User:', user?.email || 'Unknown')
     console.log('✏️ Edit Mode:', editMode)
     console.log('📁 Existing Vehicle ID:', existingVehicle?.id || 'New Vehicle')
     
-    // Log form data without large base64 images for readability
+    // Auto-correct make and model before submission
+    if (formData.make.trim() && vehicleData) {
+      const canonicalMake = findCanonicalMake(formData.make)
+      if (canonicalMake && canonicalMake.displayName !== formData.make) {
+        setFormData(prev => ({ ...prev, make: canonicalMake.displayName }))
+      }
+    }
+    
+    if (formData.model.trim() && selectedMakeKey && vehicleData && vehicleData[selectedMakeKey]) {
+      const canonicalModel = findCanonicalModel(formData.model, selectedMakeKey)
+      if (canonicalModel && canonicalModel.name !== formData.model) {
+        setFormData(prev => ({ ...prev, model: canonicalModel.name }))
+      }
+    }
+    
     const formDataForLog = { ...formData }
     console.log('📝 Form Data:', {
       ...formDataForLog,
-      // Don't log the full image array (too large for console)
       images: `[${vehicleImages.length} images - omitted from log]`,
       description: formData.description ? `${formData.description.substring(0, 100)}...` : 'Empty'
     })
@@ -573,7 +847,6 @@ export default function UploadVehicle({
       isProfileIncomplete
     })
     console.groupEnd()
-    // END: Submission tracking logging
 
     if (!editMode && isEditingSeller) {
       console.error('❌ Submission Failed: Seller information needs to be saved first')
@@ -636,7 +909,7 @@ export default function UploadVehicle({
         setUploadProgress((prev) => Math.min(prev + 10, 90))
       }, 200)
 
-      const vehicleData = { 
+      const vehicleDataForSubmit = { 
         ...formData, 
         images: vehicleImages,
         contactPrivacyEnabled: contactPrivacyEnabled,
@@ -650,10 +923,10 @@ export default function UploadVehicle({
       
       if (editMode && existingVehicle) {
         console.log(`📝 Updating vehicle ID: ${existingVehicle.id}`)
-        console.log('📦 Data being sent (first 500 chars):', JSON.stringify(vehicleData).substring(0, 500) + '...')
+        console.log('📦 Data being sent (first 500 chars):', JSON.stringify(vehicleDataForSubmit).substring(0, 500) + '...')
         
         try {
-          result = await vehicleService.updateVehicle(existingVehicle.id, vehicleData)
+          result = await vehicleService.updateVehicle(existingVehicle.id, vehicleDataForSubmit)
           console.log('✅ Update successful! Response:', result)
           
           if (result && onVehicleUpdate) {
@@ -665,8 +938,7 @@ export default function UploadVehicle({
           console.error('📋 Error details:', updateError)
           console.error('📦 Data sent:', {
             id: existingVehicle.id,
-            data: vehicleData,
-            // Log image info separately
+            data: vehicleDataForSubmit,
             imageInfo: {
               count: vehicleImages.length,
               firstImagePreview: vehicleImages[0]?.substring(0, 100) + '...'
@@ -676,12 +948,12 @@ export default function UploadVehicle({
         }
       } else {
         console.log('🆕 Creating new vehicle listing')
-        console.log('📦 Data being sent (first 500 chars):', JSON.stringify(vehicleData).substring(0, 500) + '...')
+        console.log('📦 Data being sent (first 500 chars):', JSON.stringify(vehicleDataForSubmit).substring(0, 500) + '...')
         
         if (onVehicleSubmit) {
           console.log('🔄 Using parent-provided onVehicleSubmit callback')
           try {
-            await onVehicleSubmit(vehicleData)
+            await onVehicleSubmit(vehicleDataForSubmit)
             console.log('✅ Parent submission callback successful')
           } catch (parentError) {
             console.error('❌ Parent submission callback failed')
@@ -691,14 +963,13 @@ export default function UploadVehicle({
         } else {
           console.log('🔄 Using vehicleService.createVehicle')
           try {
-            result = await vehicleService.createVehicle(vehicleData)
+            result = await vehicleService.createVehicle(vehicleDataForSubmit)
             console.log('✅ Creation successful! Response:', result)
           } catch (createError) {
             console.error('❌ Vehicle creation failed at vehicleService.createVehicle')
             console.error('📋 Error details:', createError)
             console.error('📦 Data sent:', {
-              data: vehicleData,
-              // Log image info separately
+              data: vehicleDataForSubmit,
               imageInfo: {
                 count: vehicleImages.length,
                 firstImagePreview: vehicleImages[0]?.substring(0, 100) + '...'
@@ -741,7 +1012,6 @@ export default function UploadVehicle({
       console.error('📝 Error message:', error instanceof Error ? error.message : String(error))
       console.error('🔗 Error stack:', error instanceof Error ? error.stack : 'No stack trace')
       
-      // Additional context about what failed
       console.error('🎯 Failure point: Vehicle service call')
       console.error('📊 Form state at failure:', {
         make: formData.make,
@@ -1273,32 +1543,86 @@ export default function UploadVehicle({
                     <h3 className="text-lg font-semibold mb-3 text-[#3E5641] dark:text-white">Basic Information</h3>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div className="space-y-1.5">
-                        <Label htmlFor="make" className="text-sm font-medium text-[#3E5641] dark:text-gray-300">
-                          Make
-                        </Label>
-                        <Input
-                          id="make"
-                          name="make"
-                          value={formData.make}
-                          onChange={handleInputChange}
-                          placeholder="e.g., Toyota"
-                          className="border-[#9FA791] dark:border-[#4A4D45] focus:border-[#FF6700] dark:focus:border-[#FF7D33] focus:ring-[#FF6700] dark:focus:ring-[#FF7D33] dark:bg-[#1F2B20] dark:text-white"
-                          disabled={isSubmitting}
-                        />
+                        <div className="relative" ref={makeRef}>
+                          <Label htmlFor="make" className="text-sm font-medium text-[#3E5641] dark:text-gray-300">
+                            Make
+                          </Label>
+                          <Input
+                            id="make"
+                            name="make"
+                            value={formData.make}
+                            onChange={handleMakeInputChange}
+                            onBlur={handleMakeBlur}
+                            onFocus={() => {
+                              setShowMakeDropdown(true)
+                              if (!formData.make.trim()) {
+                                setFilteredMakes(makesList)
+                              }
+                            }}
+                            placeholder="e.g., Toyota"
+                            className="border-[#9FA791] dark:border-[#4A4D45] focus:border-[#FF6700] dark:focus:border-[#FF7D33] focus:ring-[#FF6700] dark:focus:ring-[#FF7D33] dark:bg-[#1F2B20] dark:text-white"
+                            disabled={isSubmitting}
+                            autoComplete="off"
+                          />
+                          {showMakeDropdown && filteredMakes.length > 0 && (
+                            <div className="absolute z-10 w-full mt-1 bg-white dark:bg-[#1F2B20] border border-[#9FA791] dark:border-[#4A4D45] rounded-md shadow-lg max-h-60 overflow-y-auto">
+                              {filteredMakes.map((make) => (
+                                <div
+                                  key={make.key}
+                                  className="px-4 py-2 hover:bg-[#FFF8E0] dark:hover:bg-[#2A352A] cursor-pointer text-[#3E5641] dark:text-white"
+                                  onMouseDown={(e) => {
+                                    e.preventDefault()
+                                    handleMakeSelect(make)
+                                  }}
+                                >
+                                  {make.displayName}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       </div>
                       <div className="space-y-1.5">
-                        <Label htmlFor="model" className="text-sm font-medium text-[#3E5641] dark:text-gray-300">
-                          Model
-                        </Label>
-                        <Input
-                          id="model"
-                          name="model"
-                          value={formData.model}
-                          onChange={handleInputChange}
-                          placeholder="e.g., Corolla"
-                          className="border-[#9FA791] dark:border-[#4A4D45] focus:border-[#FF6700] dark:focus:border-[#FF7D33] focus:ring-[#FF6700] dark:focus:ring-[#FF7D33] dark:bg-[#1F2B20] dark:text-white"
-                          disabled={isSubmitting}
-                        />
+                        <div className="relative" ref={modelRef}>
+                          <Label htmlFor="model" className="text-sm font-medium text-[#3E5641] dark:text-gray-300">
+                            Model
+                          </Label>
+                          <Input
+                            id="model"
+                            name="model"
+                            value={formData.model}
+                            onChange={handleModelInputChange}
+                            onBlur={handleModelBlur}
+                            onFocus={() => {
+                              if (selectedMakeKey) {
+                                setShowModelDropdown(true)
+                                if (!formData.model.trim()) {
+                                  setFilteredModels(modelsList)
+                                }
+                              }
+                            }}
+                            placeholder="e.g., Corolla"
+                            className="border-[#9FA791] dark:border-[#4A4D45] focus:border-[#FF6700] dark:focus:border-[#FF7D33] focus:ring-[#FF6700] dark:focus:ring-[#FF7D33] dark:bg-[#1F2B20] dark:text-white"
+                            disabled={isSubmitting || !selectedMakeKey}
+                            autoComplete="off"
+                          />
+                          {showModelDropdown && filteredModels.length > 0 && (
+                            <div className="absolute z-10 w-full mt-1 bg-white dark:bg-[#1F2B20] border border-[#9FA791] dark:border-[#4A4D45] rounded-md shadow-lg max-h-60 overflow-y-auto">
+                              {filteredModels.map((model) => (
+                                <div
+                                  key={model.name}
+                                  className="px-4 py-2 hover:bg-[#FFF8E0] dark:hover:bg-[#2A352A] cursor-pointer text-[#3E5641] dark:text-white"
+                                  onMouseDown={(e) => {
+                                    e.preventDefault()
+                                    handleModelSelect(model)
+                                  }}
+                                >
+                                  {model.name}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       </div>
                       <div className="space-y-1.5">
                         <Label htmlFor="variant" className="text-sm font-medium text-[#3E5641] dark:text-gray-300">
