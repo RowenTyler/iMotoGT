@@ -1219,7 +1219,7 @@ export default function UploadVehicle({
                 <div className="p-4 sm:p-6 overflow-y-auto max-h-[calc(90vh-80px)]">
                   <div
                     ref={expandedGridRef}
-                    className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 px-4 py-3 sm:p-5 md:p-5"
+                    className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-5 md:gap-5 px-4 py-3 sm:p-5 md:p-5"
                   >
                     {vehicleImages.map((image, index) => (
                       <div
@@ -1340,10 +1340,7 @@ export default function UploadVehicle({
                       </h3>
                       <p className="text-xs text-gray-500 dark:text-gray-400">Drag to reorder • First image is main</p>
                     </div>
-                    <div
-                      ref={imageGridRef}
-                      className="grid grid-cols-2 gap-4 sm:grid-cols-3 max-h-60 overflow-y-auto px-3 sm:px-4 py-3"
-                    >
+                    <div ref={imageGridRef} className="grid grid-cols-3 gap-7 sm:gap-4 max-h-60 overflow-y-auto px-3 sm:px-4 py-3">
                       {vehicleImages.map((image, index) => (
                         <div
                           key={index}
