@@ -1219,7 +1219,7 @@ export default function UploadVehicle({
                 <div className="p-6 overflow-y-auto max-h-[calc(90vh-80px)]">
                   <div
                     ref={expandedGridRef}
-                    className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4"
+                    className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 p-1"
                   >
                     {vehicleImages.map((image, index) => (
                       <div
@@ -1271,7 +1271,7 @@ export default function UploadVehicle({
 
           <div className="flex flex-col lg:flex-row gap-6">
             <div className="lg:w-1/3 flex flex-col">
-              <Card className="rounded-3xl overflow-hidden p-6 flex flex-col w-full border-[#9FA791]/20 dark:border-[#4A4D45]/20 bg-white dark:bg-[#2A352A] mb-6">
+              <Card className="rounded-3xl overflow-hidden p-4 sm:p-6 flex flex-col w-full border-[#9FA791]/20 dark:border-[#4A4D45]/20 bg-white dark:bg-[#2A352A] mb-6">
                 <div className="flex justify-between items-center mb-4">
                   <h2 className="text-xl font-bold text-[#3E5641] dark:text-white">Vehicle Images</h2>
                   {vehicleImages.length > 0 && (
@@ -1340,7 +1340,7 @@ export default function UploadVehicle({
                       </h3>
                       <p className="text-xs text-gray-500 dark:text-gray-400">Drag to reorder • First image is main</p>
                     </div>
-                    <div ref={imageGridRef} className="grid grid-cols-3 gap-3 md:gap-4 max-h-60 overflow-y-auto p-1">
+                    <div ref={imageGridRef} className="grid grid-cols-3 gap-4 max-h-60 overflow-y-auto p-2 md:p-1">
                       {vehicleImages.map((image, index) => (
                         <div
                           key={index}
