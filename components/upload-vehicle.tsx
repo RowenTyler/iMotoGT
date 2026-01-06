@@ -3,8 +3,22 @@
 import type React from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
-import { useState, useRef, useEffect, type ElementType, useMemo } from "react"
-import { ArrowLeft, Camera, Save, AlertCircle, XCircle, Edit, Check, Grip, Car, Truck, Bike, Maximize2, Minimize2, Info } from "lucide-react"
+import { useState, useRef, useEffect, type ElementType, useCallback } from "react"
+import {
+  Camera,
+  Save,
+  AlertCircle,
+  XCircle,
+  Edit,
+  Check,
+  Grip,
+  Car,
+  Truck,
+  Bike,
+  Maximize2,
+  Minimize2,
+  Info,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -107,7 +121,7 @@ export default function UploadVehicle({
   const { user: authUser, userProfile, isLoading: userLoading, refreshUserProfile } = useUser()
   const user = propUser || userProfile || authUser
   const profile = userProfile || propUser || authUser
-  
+
   const isProfileIncomplete =
     !profile?.firstName ||
     !profile?.lastName ||
@@ -141,13 +155,17 @@ export default function UploadVehicle({
   const [selectedMakeKey, setSelectedMakeKey] = useState<string>("")
   const [modelsList, setModelsList] = useState<VehicleModel[]>([])
   const [filteredModels, setFilteredModels] = useState<VehicleModel[]>([])
-  
+
   const [vehicleImages, setVehicleImages] = useState<string[]>([])
   const [isDragging, setIsDragging] = useState<boolean>(false)
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
   const [dropTargetIndex, setDropTargetIndex] = useState<number | null>(null)
   const [isImageCardExpanded, setIsImageCardExpanded] = useState(false)
   const [contactPrivacyEnabled, setContactPrivacyEnabled] = useState(false)
+
+  const imageGridRef = useRef<HTMLDivElement>(null)
+  const expandedGridRef = useRef<HTMLDivElement>(null)
+  const dragItemRef = useRef<HTMLDivElement | null>(null)
 
   const [formData, setFormData] = useState({
     make: "",
@@ -200,7 +218,7 @@ export default function UploadVehicle({
   const bodyTypeRef = useRef<HTMLDivElement>(null)
   const makeRef = useRef<HTMLDivElement>(null)
   const modelRef = useRef<HTMLDivElement>(null)
-  
+
   const [engineCapacitySearch, setEngineCapacitySearch] = useState("")
   const [engineCapacityFiltered, setEngineCapacityFiltered] = useState(engineCapacityOptionsList)
   const [showEngineCapacityDropdown, setShowEngineCapacityDropdown] = useState(false)
@@ -212,65 +230,69 @@ export default function UploadVehicle({
 
   // Normalize make name for comparison (lowercase, remove special chars, trim)
   const normalizeMakeName = (make: string): string => {
-    return make.toLowerCase().replace(/[^a-z0-9]/g, '').trim()
+    return make
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, "")
+      .trim()
   }
 
   // Normalize model name for comparison
   const normalizeModelName = (model: string): string => {
-    return model.toLowerCase().replace(/[^a-z0-9]/g, '').trim()
+    return model
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, "")
+      .trim()
   }
 
   // Find canonical make from user input
   const findCanonicalMake = (input: string): VehicleMake | null => {
     if (!input.trim() || !vehicleData) return null
-    
+
     const normalizedInput = normalizeMakeName(input)
-    
+
     // First try exact key match
     if (vehicleData[normalizedInput]) {
       return { key: normalizedInput, displayName: vehicleData[normalizedInput].displayName }
     }
-    
+
     // Try case-insensitive match in display names
     for (const [key, data] of Object.entries(vehicleData)) {
       if (normalizeMakeName(data.displayName) === normalizedInput) {
         return { key, displayName: data.displayName }
       }
     }
-    
+
     // Try fuzzy matching (simple contains check)
     for (const [key, data] of Object.entries(vehicleData)) {
-      if (data.displayName.toLowerCase().includes(input.toLowerCase()) ||
-          key.toLowerCase().includes(input.toLowerCase())) {
+      if (
+        data.displayName.toLowerCase().includes(input.toLowerCase()) ||
+        key.toLowerCase().includes(input.toLowerCase())
+      ) {
         return { key, displayName: data.displayName }
       }
     }
-    
+
     return null
   }
 
   // Find canonical model from user input
   const findCanonicalModel = (input: string, makeKey: string): VehicleModel | null => {
     if (!input.trim() || !vehicleData || !vehicleData[makeKey]) return null
-    
+
     const normalizedInput = normalizeModelName(input)
     const models = vehicleData[makeKey].models
-    
+
     // First try exact match
-    const exactMatch = models.find(model => normalizeModelName(model.name) === normalizedInput)
+    const exactMatch = models.find((model) => normalizeModelName(model.name) === normalizedInput)
     if (exactMatch) return exactMatch
-    
+
     // Try case-insensitive match
-    const caseInsensitiveMatch = models.find(model => 
-      model.name.toLowerCase() === input.toLowerCase()
-    )
+    const caseInsensitiveMatch = models.find((model) => model.name.toLowerCase() === input.toLowerCase())
     if (caseInsensitiveMatch) return caseInsensitiveMatch
-    
+
     // Try fuzzy matching (contains)
-    const fuzzyMatch = models.find(model => 
-      model.name.toLowerCase().includes(input.toLowerCase())
-    )
-    
+    const fuzzyMatch = models.find((model) => model.name.toLowerCase().includes(input.toLowerCase()))
+
     return fuzzyMatch || null
   }
 
@@ -278,27 +300,27 @@ export default function UploadVehicle({
   useEffect(() => {
     const loadVehicleData = async () => {
       try {
-        const response = await fetch('/vehicle-data.json')
-        if (!response.ok) throw new Error('Failed to load vehicle data')
+        const response = await fetch("/vehicle-data.json")
+        if (!response.ok) throw new Error("Failed to load vehicle data")
         const data = await response.json()
         setVehicleData(data)
-        
+
         // Create makes list from vehicle data
         const makes = Object.entries(data).map(([key, value]) => ({
           key,
-          displayName: (value as any).displayName || key.charAt(0).toUpperCase() + key.slice(1)
+          displayName: (value as any).displayName || key.charAt(0).toUpperCase() + key.slice(1),
         }))
         setMakesList(makes)
         setFilteredMakes(makes)
       } catch (error) {
-        console.error('Error loading vehicle data:', error)
+        console.error("Error loading vehicle data:", error)
         // Fallback to empty data
         setVehicleData({})
         setMakesList([])
         setFilteredMakes([])
       }
     }
-    
+
     loadVehicleData()
   }, [])
 
@@ -326,7 +348,7 @@ export default function UploadVehicle({
         sellerProfilePic: existingVehicle.seller_profile_pic || "",
         contactPrivacyEnabled: existingVehicle.contact_privacy || false,
       })
-      
+
       setContactPrivacyEnabled(existingVehicle.contact_privacy || false)
 
       if (existingVehicle.images && existingVehicle.images.length > 0) {
@@ -343,12 +365,12 @@ export default function UploadVehicle({
         setSelectedMakeKey(canonicalMake.key)
         setModelsList(vehicleData[canonicalMake.key]?.models || [])
         setFilteredModels(vehicleData[canonicalMake.key]?.models || [])
-        
+
         // Try to find the model
         if (formData.model && vehicleData[canonicalMake.key]) {
           const canonicalModel = findCanonicalModel(formData.model, canonicalMake.key)
           if (canonicalModel) {
-            setFormData(prev => ({ ...prev, model: canonicalModel.name }))
+            setFormData((prev) => ({ ...prev, model: canonicalModel.name }))
           }
         }
       }
@@ -356,7 +378,7 @@ export default function UploadVehicle({
   }, [editMode, existingVehicle, vehicleData, formData.make, formData.model])
 
   useEffect(() => {
-      if (userProfile) {
+    if (userProfile) {
       setSellerFormData({
         firstName: userProfile.firstName || "",
         lastName: userProfile.lastName || "",
@@ -365,20 +387,22 @@ export default function UploadVehicle({
         city: userProfile.city || "",
         province: userProfile.province || "",
         profilePic: userProfile.profilePic || "",
-      });
+      })
       setFormData((prev) => ({
         ...prev,
-        sellerName: `${userProfile.firstName || ""} ${userProfile.lastName || ""}`.trim() || userProfile.email?.split("@")[0] || "",
+        sellerName:
+          `${userProfile.firstName || ""} ${userProfile.lastName || ""}`.trim() ||
+          userProfile.email?.split("@")[0] ||
+          "",
         sellerEmail: userProfile.email || "",
         sellerPhone: userProfile.phone || "",
         sellerSuburb: userProfile.suburb || "",
         sellerCity: userProfile.city || "",
         sellerProvince: userProfile.province || "",
         sellerProfilePic: userProfile.profilePic || "",
-      }));
+      }))
     }
-  }, [userProfile]);
-
+  }, [userProfile])
 
   useEffect(() => {
     const selectedEngineOption = engineCapacityOptionsList.find((opt) => opt.value === formData.engineCapacity)
@@ -410,46 +434,47 @@ export default function UploadVehicle({
   }, [])
 
   useEffect(() => {
-    setFormData(prev => ({ 
-      ...prev, 
-      contactPrivacyEnabled: contactPrivacyEnabled 
-    }));
-  }, [contactPrivacyEnabled]);
+    setFormData((prev) => ({
+      ...prev,
+      contactPrivacyEnabled: contactPrivacyEnabled,
+    }))
+  }, [contactPrivacyEnabled])
 
   // Handle make input change with autocomplete
   const handleMakeInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = event.target.value
-    setFormData(prev => ({ ...prev, make: inputValue }))
+    setFormData((prev) => ({ ...prev, make: inputValue }))
     setSubmitError(null)
-    
+
     // Reset model if make changes
     if (selectedMakeKey) {
-      setFormData(prev => ({ ...prev, model: "" }))
+      setFormData((prev) => ({ ...prev, model: "" }))
       setSelectedMakeKey("")
       setModelsList([])
       setFilteredModels([])
     }
-    
+
     // Filter makes based on input
     if (inputValue.trim() === "") {
       setFilteredMakes(makesList)
     } else {
-      const filtered = makesList.filter(make =>
-        make.displayName.toLowerCase().includes(inputValue.toLowerCase()) ||
-        make.key.toLowerCase().includes(inputValue.toLowerCase())
+      const filtered = makesList.filter(
+        (make) =>
+          make.displayName.toLowerCase().includes(inputValue.toLowerCase()) ||
+          make.key.toLowerCase().includes(inputValue.toLowerCase()),
       )
       setFilteredMakes(filtered)
     }
-    
+
     setShowMakeDropdown(true)
   }
 
   // Handle make selection
   const handleMakeSelect = (make: VehicleMake) => {
-    setFormData(prev => ({ ...prev, make: make.displayName }))
+    setFormData((prev) => ({ ...prev, make: make.displayName }))
     setSelectedMakeKey(make.key)
     setShowMakeDropdown(false)
-    
+
     // Update models list for selected make
     if (vehicleData && vehicleData[make.key]) {
       const models = vehicleData[make.key].models || []
@@ -459,41 +484,39 @@ export default function UploadVehicle({
       setModelsList([])
       setFilteredModels([])
     }
-    
+
     // Clear model field
-    setFormData(prev => ({ ...prev, model: "" }))
+    setFormData((prev) => ({ ...prev, model: "" }))
     setSubmitError(null)
   }
 
   // Handle model input change with autocomplete
   const handleModelInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = event.target.value
-    setFormData(prev => ({ ...prev, model: inputValue }))
+    setFormData((prev) => ({ ...prev, model: inputValue }))
     setSubmitError(null)
-    
+
     // Filter models based on input
     if (inputValue.trim() === "" || !modelsList.length) {
       setFilteredModels(modelsList)
     } else {
-      const filtered = modelsList.filter(model =>
-        model.name.toLowerCase().includes(inputValue.toLowerCase())
-      )
+      const filtered = modelsList.filter((model) => model.name.toLowerCase().includes(inputValue.toLowerCase()))
       setFilteredModels(filtered)
     }
-    
+
     setShowModelDropdown(true)
   }
 
   // Handle model selection
   const handleModelSelect = (model: VehicleModel) => {
-    setFormData(prev => ({ ...prev, model: model.name }))
+    setFormData((prev) => ({ ...prev, model: model.name }))
     setShowModelDropdown(false)
     setSubmitError(null)
   }
 
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = event.target
-    
+
     // Handle make and model separately
     if (name === "make") {
       handleMakeInputChange(event as React.ChangeEvent<HTMLInputElement>)
@@ -606,9 +629,9 @@ export default function UploadVehicle({
     if (formData.make.trim() && vehicleData) {
       const canonicalMake = findCanonicalMake(formData.make)
       if (canonicalMake && canonicalMake.displayName !== formData.make) {
-        setFormData(prev => ({ ...prev, make: canonicalMake.displayName }))
+        setFormData((prev) => ({ ...prev, make: canonicalMake.displayName }))
         setSelectedMakeKey(canonicalMake.key)
-        
+
         // Update models list for selected make
         if (vehicleData[canonicalMake.key]) {
           const models = vehicleData[canonicalMake.key].models || []
@@ -624,7 +647,7 @@ export default function UploadVehicle({
     if (formData.model.trim() && selectedMakeKey && vehicleData && vehicleData[selectedMakeKey]) {
       const canonicalModel = findCanonicalModel(formData.model, selectedMakeKey)
       if (canonicalModel && canonicalModel.name !== formData.model) {
-        setFormData(prev => ({ ...prev, model: canonicalModel.name }))
+        setFormData((prev) => ({ ...prev, model: canonicalModel.name }))
       }
     }
   }
@@ -654,11 +677,10 @@ export default function UploadVehicle({
       setUserClickedEdit(false)
       setSubmitSuccess("Seller information updated successfully!")
       setSubmitError(null)
-      
+
       setTimeout(() => {
         setSubmitSuccess(null)
       }, 3000)
-      
     } catch (error) {
       console.error("Failed to save seller info:", error)
       setSubmitError("Failed to update seller information. Please try again.")
@@ -781,24 +803,74 @@ export default function UploadVehicle({
     setSubmitError(null)
   }
 
-  const handleDragStart = (index: number) => {
+  const handlePointerDown = useCallback((index: number, e: React.PointerEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    // Capture pointer to track movement outside element
+    ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
     setIsDragging(true)
     setDraggedIndex(index)
-  }
-  const handleDragEnter = (index: number) => {
-    if (draggedIndex !== null && draggedIndex !== index) setDropTargetIndex(index)
-  }
-  const handleDragEnd = () => {
-    if (draggedIndex !== null && dropTargetIndex !== null) {
-      const newImages = [...vehicleImages]
-      const [draggedImage] = newImages.splice(draggedIndex, 1)
-      newImages.splice(dropTargetIndex, 0, draggedImage)
-      setVehicleImages(newImages)
-    }
+    setDropTargetIndex(null)
+    dragItemRef.current = e.currentTarget
+  }, [])
+
+  const handlePointerMove = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>, gridRef: React.RefObject<HTMLDivElement | null>) => {
+      if (draggedIndex === null || !gridRef.current) return
+
+      // Get all draggable items in the grid
+      const items = gridRef.current.querySelectorAll("[data-drag-index]")
+      const pointerX = e.clientX
+      const pointerY = e.clientY
+
+      let newDropTarget: number | null = null
+
+      items.forEach((item) => {
+        const rect = item.getBoundingClientRect()
+        const index = Number.parseInt(item.getAttribute("data-drag-index") || "-1", 10)
+
+        if (
+          pointerX >= rect.left &&
+          pointerX <= rect.right &&
+          pointerY >= rect.top &&
+          pointerY <= rect.bottom &&
+          index !== draggedIndex
+        ) {
+          newDropTarget = index
+        }
+      })
+
+      setDropTargetIndex(newDropTarget)
+    },
+    [draggedIndex],
+  )
+
+  const handlePointerUp = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      // Release pointer capture
+      ;(e.target as HTMLElement).releasePointerCapture(e.pointerId)
+
+      if (draggedIndex !== null && dropTargetIndex !== null && draggedIndex !== dropTargetIndex) {
+        const newImages = [...vehicleImages]
+        const [draggedImage] = newImages.splice(draggedIndex, 1)
+        newImages.splice(dropTargetIndex, 0, draggedImage)
+        setVehicleImages(newImages)
+      }
+
+      setIsDragging(false)
+      setDraggedIndex(null)
+      setDropTargetIndex(null)
+      dragItemRef.current = null
+    },
+    [draggedIndex, dropTargetIndex, vehicleImages],
+  )
+
+  const handlePointerCancel = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    ;(e.target as HTMLElement).releasePointerCapture(e.pointerId)
     setIsDragging(false)
     setDraggedIndex(null)
     setDropTargetIndex(null)
-  }
+    dragItemRef.current = null
+  }, [])
 
   const handleSubmitVehicle = async () => {
     setIsSubmitting(true)
@@ -806,50 +878,50 @@ export default function UploadVehicle({
     setSubmitSuccess(null)
     setUploadProgress(0)
 
-    console.group('🚗 Vehicle Submission Tracking')
-    console.log('📋 Submission Started:', new Date().toISOString())
-    console.log('👤 User:', user?.email || 'Unknown')
-    console.log('✏️ Edit Mode:', editMode)
-    console.log('📁 Existing Vehicle ID:', existingVehicle?.id || 'New Vehicle')
-    
+    console.group("🚗 Vehicle Submission Tracking")
+    console.log("📋 Submission Started:", new Date().toISOString())
+    console.log("👤 User:", user?.email || "Unknown")
+    console.log("✏️ Edit Mode:", editMode)
+    console.log("📁 Existing Vehicle ID:", existingVehicle?.id || "New Vehicle")
+
     // Auto-correct make and model before submission
     if (formData.make.trim() && vehicleData) {
       const canonicalMake = findCanonicalMake(formData.make)
       if (canonicalMake && canonicalMake.displayName !== formData.make) {
-        setFormData(prev => ({ ...prev, make: canonicalMake.displayName }))
+        setFormData((prev) => ({ ...prev, make: canonicalMake.displayName }))
       }
     }
-    
+
     if (formData.model.trim() && selectedMakeKey && vehicleData && vehicleData[selectedMakeKey]) {
       const canonicalModel = findCanonicalModel(formData.model, selectedMakeKey)
       if (canonicalModel && canonicalModel.name !== formData.model) {
-        setFormData(prev => ({ ...prev, model: canonicalModel.name }))
+        setFormData((prev) => ({ ...prev, model: canonicalModel.name }))
       }
     }
-    
+
     const formDataForLog = { ...formData }
-    console.log('📝 Form Data:', {
+    console.log("📝 Form Data:", {
       ...formDataForLog,
       images: `[${vehicleImages.length} images - omitted from log]`,
-      description: formData.description ? `${formData.description.substring(0, 100)}...` : 'Empty'
+      description: formData.description ? `${formData.description.substring(0, 100)}...` : "Empty",
     })
-    
-    console.log('🖼️ Image Details:', {
+
+    console.log("🖼️ Image Details:", {
       imageCount: vehicleImages.length,
       hasImages: vehicleImages.length > 0,
       minRequired: 5,
-      maxAllowed: 21
+      maxAllowed: 21,
     })
-    
-    console.log('🔒 Privacy Settings:', {
+
+    console.log("🔒 Privacy Settings:", {
       contactPrivacyEnabled,
       isEditingSeller,
-      isProfileIncomplete
+      isProfileIncomplete,
     })
     console.groupEnd()
 
     if (!editMode && isEditingSeller) {
-      console.error('❌ Submission Failed: Seller information needs to be saved first')
+      console.error("❌ Submission Failed: Seller information needs to be saved first")
       setSubmitError("Please save your updated seller information before listing a vehicle.")
       setIsSubmitting(false)
       return
@@ -864,7 +936,7 @@ export default function UploadVehicle({
         !profile?.city ||
         !profile?.province
       if (isProfileStillIncomplete) {
-        console.error('❌ Submission Failed: Incomplete seller profile')
+        console.error("❌ Submission Failed: Incomplete seller profile")
         setSubmitError("Your seller profile is incomplete. Please edit and save your information to proceed.")
         setUserClickedEdit(true)
         setIsSubmitting(false)
@@ -883,97 +955,103 @@ export default function UploadVehicle({
       !formData.engineCapacity ||
       !formData.condition
     ) {
-      console.error('❌ Submission Failed: Missing required fields')
+      console.error("❌ Submission Failed: Missing required fields")
       setSubmitError("Please fill in all required fields.")
       setIsSubmitting(false)
       return
     }
     if (vehicleImages.length < 5) {
-      console.error('❌ Submission Failed: Insufficient images')
+      console.error("❌ Submission Failed: Insufficient images")
       setSubmitError(`Please upload at least 5 images. You have ${vehicleImages.length}.`)
       setIsSubmitting(false)
       return
     }
     if (vehicleImages.length > 21) {
-      console.error('❌ Submission Failed: Too many images')
+      console.error("❌ Submission Failed: Too many images")
       setSubmitError(`You can upload a maximum of 21 images. You have ${vehicleImages.length}.`)
       setIsSubmitting(false)
       return
     }
 
     try {
-      console.group('🔄 Vehicle Service Call')
-      console.log('🛠️ Preparing vehicle data for service...')
-      
+      console.group("🔄 Vehicle Service Call")
+      console.log("🛠️ Preparing vehicle data for service...")
+
       const progressInterval = setInterval(() => {
         setUploadProgress((prev) => Math.min(prev + 10, 90))
       }, 200)
 
-      const vehicleDataForSubmit = { 
-        ...formData, 
+      const vehicleDataForSubmit = {
+        ...formData,
         images: vehicleImages,
         contactPrivacyEnabled: contactPrivacyEnabled,
-        contact_privacy_enabled: contactPrivacyEnabled
+        contact_privacy_enabled: contactPrivacyEnabled,
       }
 
       let result: Vehicle | null
 
-      console.log('📤 Attempting to call vehicle service...')
-      console.log('⚙️ Mode:', editMode ? 'UPDATE' : 'CREATE')
-      
+      console.log("📤 Attempting to call vehicle service...")
+      console.log("⚙️ Mode:", editMode ? "UPDATE" : "CREATE")
+
       if (editMode && existingVehicle) {
         console.log(`📝 Updating vehicle ID: ${existingVehicle.id}`)
-        console.log('📦 Data being sent (first 500 chars):', JSON.stringify(vehicleDataForSubmit).substring(0, 500) + '...')
-        
+        console.log(
+          "📦 Data being sent (first 500 chars):",
+          JSON.stringify(vehicleDataForSubmit).substring(0, 500) + "...",
+        )
+
         try {
           result = await vehicleService.updateVehicle(existingVehicle.id, vehicleDataForSubmit)
-          console.log('✅ Update successful! Response:', result)
-          
+          console.log("✅ Update successful! Response:", result)
+
           if (result && onVehicleUpdate) {
-            console.log('🔄 Calling onVehicleUpdate callback')
+            console.log("🔄 Calling onVehicleUpdate callback")
             onVehicleUpdate(result)
           }
         } catch (updateError) {
-          console.error('❌ Vehicle update failed at vehicleService.updateVehicle')
-          console.error('📋 Error details:', updateError)
-          console.error('📦 Data sent:', {
+          console.error("❌ Vehicle update failed at vehicleService.updateVehicle")
+          console.error("📋 Error details:", updateError)
+          console.error("📦 Data sent:", {
             id: existingVehicle.id,
             data: vehicleDataForSubmit,
             imageInfo: {
               count: vehicleImages.length,
-              firstImagePreview: vehicleImages[0]?.substring(0, 100) + '...'
-            }
+              firstImagePreview: vehicleImages[0]?.substring(0, 100) + "...",
+            },
           })
           throw updateError
         }
       } else {
-        console.log('🆕 Creating new vehicle listing')
-        console.log('📦 Data being sent (first 500 chars):', JSON.stringify(vehicleDataForSubmit).substring(0, 500) + '...')
-        
+        console.log("🆕 Creating new vehicle listing")
+        console.log(
+          "📦 Data being sent (first 500 chars):",
+          JSON.stringify(vehicleDataForSubmit).substring(0, 500) + "...",
+        )
+
         if (onVehicleSubmit) {
-          console.log('🔄 Using parent-provided onVehicleSubmit callback')
+          console.log("🔄 Using parent-provided onVehicleSubmit callback")
           try {
             await onVehicleSubmit(vehicleDataForSubmit)
-            console.log('✅ Parent submission callback successful')
+            console.log("✅ Parent submission callback successful")
           } catch (parentError) {
-            console.error('❌ Parent submission callback failed')
-            console.error('📋 Error details:', parentError)
+            console.error("❌ Parent submission callback failed")
+            console.error("📋 Error details:", parentError)
             throw parentError
           }
         } else {
-          console.log('🔄 Using vehicleService.createVehicle')
+          console.log("🔄 Using vehicleService.createVehicle")
           try {
             result = await vehicleService.createVehicle(vehicleDataForSubmit)
-            console.log('✅ Creation successful! Response:', result)
+            console.log("✅ Creation successful! Response:", result)
           } catch (createError) {
-            console.error('❌ Vehicle creation failed at vehicleService.createVehicle')
-            console.error('📋 Error details:', createError)
-            console.error('📦 Data sent:', {
+            console.error("❌ Vehicle creation failed at vehicleService.createVehicle")
+            console.error("📋 Error details:", createError)
+            console.error("📦 Data sent:", {
               data: vehicleDataForSubmit,
               imageInfo: {
                 count: vehicleImages.length,
-                firstImagePreview: vehicleImages[0]?.substring(0, 100) + '...'
-              }
+                firstImagePreview: vehicleImages[0]?.substring(0, 100) + "...",
+              },
             })
             throw createError
           }
@@ -987,46 +1065,45 @@ export default function UploadVehicle({
       const successMessage = editMode
         ? "Vehicle updated successfully! Redirecting..."
         : "Vehicle listed successfully! Redirecting to your dashboard..."
-      
-      console.log('🎉 Submission completed successfully:', successMessage)
+
+      console.log("🎉 Submission completed successfully:", successMessage)
       setSubmitSuccess(successMessage)
-      
+
       setTimeout(() => {
-        console.log('🔀 Starting redirect...')
+        console.log("🔀 Starting redirect...")
         if (editMode && onCancel) {
-          console.log('↩️ Canceling edit mode')
+          console.log("↩️ Canceling edit mode")
           onCancel()
         } else {
-          console.log('📊 Redirecting to dashboard')
+          console.log("📊 Redirecting to dashboard")
           router.push("/dashboard")
         }
       }, 1500)
-      
     } catch (error) {
-      console.group('❌ VEHICLE SUBMISSION FAILURE')
-      console.error('🕒 Timestamp:', new Date().toISOString())
-      console.error('👤 User:', user?.email || 'Unknown')
-      console.error('⚙️ Operation:', editMode ? 'UPDATE' : 'CREATE')
-      console.error('📋 Error:', error)
-      console.error('🔍 Error type:', typeof error)
-      console.error('📝 Error message:', error instanceof Error ? error.message : String(error))
-      console.error('🔗 Error stack:', error instanceof Error ? error.stack : 'No stack trace')
-      
-      console.error('🎯 Failure point: Vehicle service call')
-      console.error('📊 Form state at failure:', {
+      console.group("❌ VEHICLE SUBMISSION FAILURE")
+      console.error("🕒 Timestamp:", new Date().toISOString())
+      console.error("👤 User:", user?.email || "Unknown")
+      console.error("⚙️ Operation:", editMode ? "UPDATE" : "CREATE")
+      console.error("📋 Error:", error)
+      console.error("🔍 Error type:", typeof error)
+      console.error("📝 Error message:", error instanceof Error ? error.message : String(error))
+      console.error("🔗 Error stack:", error instanceof Error ? error.stack : "No stack trace")
+
+      console.error("🎯 Failure point: Vehicle service call")
+      console.error("📊 Form state at failure:", {
         make: formData.make,
         model: formData.model,
         year: formData.year,
         price: formData.price,
         imageCount: vehicleImages.length,
-        hasRequiredFields: !!(formData.make && formData.model && formData.year && formData.price)
+        hasRequiredFields: !!(formData.make && formData.model && formData.year && formData.price),
       })
-      
+
       console.groupEnd()
-      
+
       setSubmitError(error instanceof Error ? error.message : String(error) || "Failed to list vehicle.")
     } finally {
-      console.log('🏁 Submission process ended, cleaning up...')
+      console.log("🏁 Submission process ended, cleaning up...")
       setIsSubmitting(false)
       setUploadProgress(0)
     }
@@ -1069,7 +1146,6 @@ export default function UploadVehicle({
         transparent={false}
       />
       <main className="flex-1 px-4 sm:px-6 pb-6 overflow-auto pt-20 md:pt-24">
-        
         <h1 className="text-3xl font-bold mb-6 text-[#3E5641] dark:text-white">
           {editMode ? "Edit Vehicle Listing" : "List Your Vehicle"}
         </h1>
@@ -1139,20 +1215,24 @@ export default function UploadVehicle({
                     </Button>
                   </div>
                 </div>
-                
+
                 <div className="p-6 overflow-y-auto max-h-[calc(90vh-80px)]">
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
+                  <div
+                    ref={expandedGridRef}
+                    className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4"
+                  >
                     {vehicleImages.map((image, index) => (
                       <div
                         key={index}
-                        className={`relative aspect-square overflow-hidden rounded-lg group cursor-move ${draggedIndex === index ? "opacity-50 scale-95" : ""} ${dropTargetIndex === index ? "ring-2 ring-[#FF6700] dark:ring-[#FF7D33]" : ""}`}
-                        draggable
-                        onDragStart={() => handleDragStart(index)}
-                        onDragEnter={() => handleDragEnter(index)}
-                        onDragOver={(e) => e.preventDefault()}
-                        onDragEnd={handleDragEnd}
+                        data-drag-index={index}
+                        className={`relative aspect-square overflow-hidden rounded-lg group cursor-move select-none ${draggedIndex === index ? "opacity-50 scale-95" : ""} ${dropTargetIndex === index ? "ring-2 ring-[#FF6700] dark:ring-[#FF7D33]" : ""}`}
+                        style={{ touchAction: "none" }}
+                        onPointerDown={(e) => handlePointerDown(index, e)}
+                        onPointerMove={(e) => handlePointerMove(e, expandedGridRef)}
+                        onPointerUp={handlePointerUp}
+                        onPointerCancel={handlePointerCancel}
                       >
-                        <div className="absolute inset-0 flex items-center justify-center z-10 opacity-0 group-hover:opacity-100 bg-black/20 transition-opacity">
+                        <div className="absolute inset-0 flex items-center justify-center z-10 opacity-0 group-hover:opacity-100 bg-black/20 transition-opacity pointer-events-none">
                           <Grip className="w-5 h-5 text-white" />
                         </div>
                         <Image
@@ -1161,7 +1241,7 @@ export default function UploadVehicle({
                           layout="fill"
                           objectFit="cover"
                           unoptimized
-                          className="object-cover"
+                          className="object-cover pointer-events-none"
                         />
                         <button
                           onClick={(e) => {
@@ -1174,7 +1254,7 @@ export default function UploadVehicle({
                           <XCircle className="w-4 h-4" />
                         </button>
                         {index === 0 && (
-                          <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs py-1 text-center">
+                          <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs py-1 text-center pointer-events-none">
                             Main Image
                           </div>
                         )}
@@ -1260,18 +1340,19 @@ export default function UploadVehicle({
                       </h3>
                       <p className="text-xs text-gray-500 dark:text-gray-400">Drag to reorder • First image is main</p>
                     </div>
-                    <div className="grid grid-cols-3 gap-3 md:gap-4 max-h-60 overflow-y-auto p-1">
+                    <div ref={imageGridRef} className="grid grid-cols-3 gap-3 md:gap-4 max-h-60 overflow-y-auto p-1">
                       {vehicleImages.map((image, index) => (
                         <div
                           key={index}
-                          className={`relative aspect-square overflow-hidden rounded-lg group cursor-move ${draggedIndex === index ? "opacity-50 scale-95" : ""} ${dropTargetIndex === index ? "ring-2 ring-[#FF6700] dark:ring-[#FF7D33]" : ""}`}
-                          draggable
-                          onDragStart={() => handleDragStart(index)}
-                          onDragEnter={() => handleDragEnter(index)}
-                          onDragOver={(e) => e.preventDefault()}
-                          onDragEnd={handleDragEnd}
+                          data-drag-index={index}
+                          className={`relative aspect-square overflow-hidden rounded-lg group cursor-move select-none ${draggedIndex === index ? "opacity-50 scale-95" : ""} ${dropTargetIndex === index ? "ring-2 ring-[#FF6700] dark:ring-[#FF7D33]" : ""}`}
+                          style={{ touchAction: "none" }}
+                          onPointerDown={(e) => handlePointerDown(index, e)}
+                          onPointerMove={(e) => handlePointerMove(e, imageGridRef)}
+                          onPointerUp={handlePointerUp}
+                          onPointerCancel={handlePointerCancel}
                         >
-                          <div className="absolute inset-0 flex items-center justify-center z-10 opacity-0 group-hover:opacity-100 bg-black/20 transition-opacity">
+                          <div className="absolute inset-0 flex items-center justify-center z-10 opacity-0 group-hover:opacity-100 bg-black/20 transition-opacity pointer-events-none">
                             <Grip className="w-5 h-5 text-white" />
                           </div>
                           <Image
@@ -1280,7 +1361,7 @@ export default function UploadVehicle({
                             layout="fill"
                             objectFit="cover"
                             unoptimized
-                            className="object-cover"
+                            className="object-cover pointer-events-none"
                           />
                           <button
                             onClick={(e) => {
@@ -1293,7 +1374,7 @@ export default function UploadVehicle({
                             <XCircle className="w-4 h-4" />
                           </button>
                           {index === 0 && (
-                            <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs py-1 text-center">
+                            <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs py-1 text-center pointer-events-none">
                               Main Image
                             </div>
                           )}
@@ -1303,7 +1384,7 @@ export default function UploadVehicle({
                   </div>
                 )}
               </Card>
-              
+
               {/* Contact Privacy Settings Card */}
               <Card className="rounded-3xl overflow-hidden p-6 flex flex-col w-full border-[#9FA791]/20 dark:border-[#4A4D45]/20 bg-white dark:bg-[#2A352A] mb-6">
                 <h2 className="text-xl font-bold mb-4 text-[#3E5641] dark:text-white flex items-center">
@@ -1311,12 +1392,12 @@ export default function UploadVehicle({
                   <div className="relative group ml-2">
                     <Info className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                     <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 hidden group-hover:block w-64 p-3 bg-gray-800 text-white text-xs rounded-lg z-10">
-                      When enabled, only logged-in users will be able to view your contact information.
-                      Guest users will need to sign in to access seller details.
+                      When enabled, only logged-in users will be able to view your contact information. Guest users will
+                      need to sign in to access seller details.
                     </div>
                   </div>
                 </h2>
-                
+
                 <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-[#1F2B20] rounded-lg">
                   <div className="flex-1">
                     <p className="font-medium text-[#3E5641] dark:text-white">
@@ -1328,30 +1409,29 @@ export default function UploadVehicle({
                         : "All users can view contact information"}
                     </p>
                   </div>
-                  
+
                   <button
                     onClick={() => {
                       const newValue = !contactPrivacyEnabled
-                        setContactPrivacyEnabled(newValue)
-                        setFormData(prev => ({ ...prev, contactPrivacyEnabled: newValue}))
+                      setContactPrivacyEnabled(newValue)
+                      setFormData((prev) => ({ ...prev, contactPrivacyEnabled: newValue }))
                     }}
-                    
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${contactPrivacyEnabled ? 'bg-[#FF6700] dark:bg-[#FF7D33]' : 'bg-gray-300 dark:bg-gray-600'}`}
-                    aria-label={`Toggle contact privacy. Currently ${contactPrivacyEnabled ? 'enabled' : 'disabled'}`}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${contactPrivacyEnabled ? "bg-[#FF6700] dark:bg-[#FF7D33]" : "bg-gray-300 dark:bg-gray-600"}`}
+                    aria-label={`Toggle contact privacy. Currently ${contactPrivacyEnabled ? "enabled" : "disabled"}`}
                   >
                     <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${contactPrivacyEnabled ? 'translate-x-6' : 'translate-x-1'}`}
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${contactPrivacyEnabled ? "translate-x-6" : "translate-x-1"}`}
                     />
                   </button>
                 </div>
-                
+
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-4">
                   {contactPrivacyEnabled
                     ? "Your contact details will only be visible to registered users who are logged in."
                     : "Your contact details will be visible to all users, including guests browsing the site."}
                 </p>
               </Card>
-              
+
               {!editMode && (
                 <Card className="rounded-3xl overflow-hidden p-6 flex flex-col w-full border-[#9FA791]/20 dark:border-[#4A4D45]/20 bg-white dark:bg-[#2A352A]">
                   {isEditingSeller && isProfileIncomplete && (
@@ -1421,7 +1501,10 @@ export default function UploadVehicle({
                       <>
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-1.5">
-                            <Label htmlFor="firstName" className="text-sm font-medium text-[#3E5641] dark:text-gray-300">
+                            <Label
+                              htmlFor="firstName"
+                              className="text-sm font-medium text-[#3E5641] dark:text-gray-300"
+                            >
                               First Name
                             </Label>
                             <Input
