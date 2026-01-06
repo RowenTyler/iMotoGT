@@ -1219,7 +1219,7 @@ export default function UploadVehicle({
                 <div className="p-4 sm:p-6 overflow-y-auto max-h-[calc(90vh-80px)]">
                   <div
                     ref={expandedGridRef}
-                    className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-5 md:gap-5 px-4 py-3 sm:p-5 md:p-5 auto-rows-min"
+                    className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-5 md:gap-6 px-4 py-3 sm:p-5 md:p-5 auto-rows-min"
                   >
                     {vehicleImages.map((image, index) => (
                       <div
@@ -1346,11 +1346,7 @@ export default function UploadVehicle({
                     </div>
                     <div 
                       ref={imageGridRef} 
-                      className={`grid grid-cols-3 gap-3 sm:gap-4 px-3 sm:px-4 py-3 ${
-                        vehicleImages.length > 6 
-                          ? "max-h-[400px] sm:max-h-[500px] overflow-y-auto" 
-                          : ""
-                      }`}
+                      className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-3 gap-3 sm:gap-4 px-3 sm:px-4 py-3"
                     >
                       {vehicleImages.map((image, index) => (
                         <div
@@ -1396,6 +1392,13 @@ export default function UploadVehicle({
                         </div>
                       ))}
                     </div>
+                    {vehicleImages.length > 6 && (
+                      <div className="text-center mt-4">
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          Showing {vehicleImages.length} images • Scroll horizontally to view more
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
               </Card>
