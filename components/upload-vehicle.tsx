@@ -3,7 +3,7 @@
 import type React from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
-import { useState, useRef, useEffect, type ElementType, useMemo } from "react"
+import { useState, useRef, useEffect, type ElementType, useMemo, useCallback } from "react"
 import { ArrowLeft, Camera, Save, AlertCircle, XCircle, Edit, Check, Grip, Car, Truck, Bike, Maximize2, Minimize2, Info } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -58,6 +58,19 @@ interface VehicleModel {
   name: string
   vehicleType: string[]
   fuelTypes: string[]
+}
+
+// Touch-friendly drag & drop types
+interface TouchDragState {
+  isDragging: boolean
+  startX: number
+  startY: number
+  currentX: number
+  currentY: number
+  draggedIndex: number | null
+  draggedElement: HTMLElement | null
+  dragOverIndex: number | null
+  dragOverElement: HTMLElement | null
 }
 
 const generateEngineCapacityOptions = () => {
@@ -143,9 +156,25 @@ export default function UploadVehicle({
   const [filteredModels, setFilteredModels] = useState<VehicleModel[]>([])
   
   const [vehicleImages, setVehicleImages] = useState<string[]>([])
+  
+  // Touch-friendly drag & drop state
+  const [touchDragState, setTouchDragState] = useState<TouchDragState>({
+    isDragging: false,
+    startX: 0,
+    startY: 0,
+    currentX: 0,
+    currentY: 0,
+    draggedIndex: null,
+    draggedElement: null,
+    dragOverIndex: null,
+    dragOverElement: null,
+  })
+  
+  // Legacy drag & drop state (for desktop compatibility)
   const [isDragging, setIsDragging] = useState<boolean>(false)
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
   const [dropTargetIndex, setDropTargetIndex] = useState<number | null>(null)
+  
   const [isImageCardExpanded, setIsImageCardExpanded] = useState(false)
   const [contactPrivacyEnabled, setContactPrivacyEnabled] = useState(false)
 
@@ -200,6 +229,8 @@ export default function UploadVehicle({
   const bodyTypeRef = useRef<HTMLDivElement>(null)
   const makeRef = useRef<HTMLDivElement>(null)
   const modelRef = useRef<HTMLDivElement>(null)
+  const dragGhostRef = useRef<HTMLDivElement | null>(null)
+  const imageContainerRef = useRef<HTMLDivElement>(null)
   
   const [engineCapacitySearch, setEngineCapacitySearch] = useState("")
   const [engineCapacityFiltered, setEngineCapacityFiltered] = useState(engineCapacityOptionsList)
@@ -415,6 +446,148 @@ export default function UploadVehicle({
       contactPrivacyEnabled: contactPrivacyEnabled 
     }));
   }, [contactPrivacyEnabled]);
+
+  // Touch-friendly drag & drop handlers
+  const handleTouchStart = useCallback((e: React.TouchEvent, index: number) => {
+    const touch = e.touches[0];
+    const target = e.currentTarget as HTMLElement;
+    
+    // Create a ghost element for visual feedback
+    const ghost = target.cloneNode(true) as HTMLElement;
+    ghost.style.position = 'fixed';
+    ghost.style.width = `${target.offsetWidth}px`;
+    ghost.style.height = `${target.offsetHeight}px`;
+    ghost.style.left = `${touch.clientX - target.offsetWidth / 2}px`;
+    ghost.style.top = `${touch.clientY - target.offsetHeight / 2}px`;
+    ghost.style.zIndex = '1000';
+    ghost.style.opacity = '0.8';
+    ghost.style.pointerEvents = 'none';
+    ghost.style.transform = 'scale(1.1) rotate(5deg)';
+    ghost.style.boxShadow = '0 10px 30px rgba(0,0,0,0.3)';
+    ghost.style.transition = 'transform 0.2s ease';
+    
+    document.body.appendChild(ghost);
+    dragGhostRef.current = ghost;
+    
+    setTouchDragState({
+      isDragging: true,
+      startX: touch.clientX,
+      startY: touch.clientY,
+      currentX: touch.clientX,
+      currentY: touch.clientY,
+      draggedIndex: index,
+      draggedElement: target,
+      dragOverIndex: null,
+      dragOverElement: null,
+    });
+    
+    // Also set legacy state for compatibility
+    setIsDragging(true);
+    setDraggedIndex(index);
+    
+    // Prevent scrolling while dragging
+    e.preventDefault();
+  }, []);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (!touchDragState.isDragging || touchDragState.draggedIndex === null) return;
+    
+    const touch = e.touches[0];
+    
+    // Update ghost position
+    if (dragGhostRef.current) {
+      dragGhostRef.current.style.left = `${touch.clientX - dragGhostRef.current.offsetWidth / 2}px`;
+      dragGhostRef.current.style.top = `${touch.clientY - dragGhostRef.current.offsetHeight / 2}px`;
+    }
+    
+    // Find element under touch
+    const elements = document.elementsFromPoint(touch.clientX, touch.clientY);
+    let dragOverElement = null;
+    let dragOverIndex = null;
+    
+    for (const element of elements) {
+      if (element.hasAttribute('data-image-index')) {
+        dragOverElement = element as HTMLElement;
+        dragOverIndex = parseInt(element.getAttribute('data-image-index') || '-1', 10);
+        break;
+      }
+    }
+    
+    setTouchDragState(prev => ({
+      ...prev,
+      currentX: touch.clientX,
+      currentY: touch.clientY,
+      dragOverIndex,
+      dragOverElement,
+    }));
+    
+    // Update legacy state
+    if (dragOverIndex !== null && dragOverIndex !== prev.dragOverIndex) {
+      setDropTargetIndex(dragOverIndex);
+    }
+    
+    e.preventDefault();
+  }, [touchDragState.isDragging, touchDragState.draggedIndex]);
+
+  const handleTouchEnd = useCallback(() => {
+    const { draggedIndex, dragOverIndex } = touchDragState;
+    
+    // Remove ghost element
+    if (dragGhostRef.current) {
+      dragGhostRef.current.remove();
+      dragGhostRef.current = null;
+    }
+    
+    // Reorder images if needed
+    if (draggedIndex !== null && dragOverIndex !== null && draggedIndex !== dragOverIndex) {
+      const newImages = [...vehicleImages];
+      const [draggedImage] = newImages.splice(draggedIndex, 1);
+      newImages.splice(dragOverIndex, 0, draggedImage);
+      setVehicleImages(newImages);
+    }
+    
+    // Reset touch drag state
+    setTouchDragState({
+      isDragging: false,
+      startX: 0,
+      startY: 0,
+      currentX: 0,
+      currentY: 0,
+      draggedIndex: null,
+      draggedElement: null,
+      dragOverIndex: null,
+      dragOverElement: null,
+    });
+    
+    // Reset legacy state
+    setIsDragging(false);
+    setDraggedIndex(null);
+    setDropTargetIndex(null);
+  }, [touchDragState, vehicleImages]);
+
+  // Legacy drag handlers (for desktop)
+  const handleDragStart = (index: number) => {
+    setIsDragging(true);
+    setDraggedIndex(index);
+  };
+
+  const handleDragEnter = (index: number) => {
+    if (draggedIndex !== null && draggedIndex !== index) {
+      setDropTargetIndex(index);
+    }
+  };
+
+  const handleDragEnd = () => {
+    if (draggedIndex !== null && dropTargetIndex !== null) {
+      const newImages = [...vehicleImages];
+      const [draggedImage] = newImages.splice(draggedIndex, 1);
+      newImages.splice(dropTargetIndex, 0, draggedImage);
+      setVehicleImages(newImages);
+    }
+    setIsDragging(false);
+    setDraggedIndex(null);
+    setDropTargetIndex(null);
+  };
 
   // Handle make input change with autocomplete
   const handleMakeInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -781,25 +954,6 @@ export default function UploadVehicle({
     setSubmitError(null)
   }
 
-  const handleDragStart = (index: number) => {
-    setIsDragging(true)
-    setDraggedIndex(index)
-  }
-  const handleDragEnter = (index: number) => {
-    if (draggedIndex !== null && draggedIndex !== index) setDropTargetIndex(index)
-  }
-  const handleDragEnd = () => {
-    if (draggedIndex !== null && dropTargetIndex !== null) {
-      const newImages = [...vehicleImages]
-      const [draggedImage] = newImages.splice(draggedIndex, 1)
-      newImages.splice(dropTargetIndex, 0, draggedImage)
-      setVehicleImages(newImages)
-    }
-    setIsDragging(false)
-    setDraggedIndex(null)
-    setDropTargetIndex(null)
-  }
-
   const handleSubmitVehicle = async () => {
     setIsSubmitting(true)
     setSubmitError(null)
@@ -1032,6 +1186,15 @@ export default function UploadVehicle({
     }
   }
 
+  // Clean up ghost element on unmount
+  useEffect(() => {
+    return () => {
+      if (dragGhostRef.current) {
+        dragGhostRef.current.remove();
+      }
+    };
+  }, []);
+
   if (userLoading) {
     return (
       <div className="min-h-screen bg-[var(--light-bg)] dark:bg-[var(--dark-bg)] flex items-center justify-center">
@@ -1055,6 +1218,63 @@ export default function UploadVehicle({
       </div>
     )
   }
+
+  // Component for rendering image items with both desktop and mobile drag support
+  const ImageItem = ({ image, index, isExpanded = false }: { image: string, index: number, isExpanded?: boolean }) => (
+    <div
+      key={index}
+      data-image-index={index}
+      className={`relative aspect-square overflow-hidden rounded-lg group cursor-move touch-none select-none
+        ${(touchDragState.draggedIndex === index || draggedIndex === index) 
+          ? "opacity-50 scale-95 z-10" 
+          : ""}
+        ${(touchDragState.dragOverIndex === index || dropTargetIndex === index) 
+          ? "ring-2 ring-[#FF6700] dark:ring-[#FF7D33] scale-105 transition-transform duration-200" 
+          : ""}`}
+      draggable
+      onDragStart={() => handleDragStart(index)}
+      onDragEnter={() => handleDragEnter(index)}
+      onDragOver={(e) => e.preventDefault()}
+      onDragEnd={handleDragEnd}
+      onTouchStart={(e) => handleTouchStart(e, index)}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={handleTouchEnd}
+      style={{
+        touchAction: 'none',
+        userSelect: 'none',
+        WebkitUserSelect: 'none',
+      }}
+    >
+      <div className="absolute inset-0 flex items-center justify-center z-10 opacity-0 group-hover:opacity-100 bg-black/20 transition-opacity">
+        <Grip className="w-5 h-5 text-white" />
+      </div>
+      <Image
+        src={image || "/placeholder.svg"}
+        alt={`Vehicle image ${index + 1}`}
+        layout="fill"
+        objectFit="cover"
+        unoptimized
+        className="object-cover"
+        draggable={false}
+      />
+      <button
+        onClick={(e) => {
+          e.stopPropagation()
+          handleRemoveImage(index)
+        }}
+        className="absolute top-1 right-1 bg-red-500/80 hover:bg-red-600/90 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity z-20"
+        aria-label={`Remove image ${index + 1}`}
+      >
+        <XCircle className="w-4 h-4" />
+      </button>
+      {index === 0 && (
+        <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs py-1 text-center">
+          Main Image
+        </div>
+      )}
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-[var(--light-bg)] dark:bg-[var(--dark-bg)] flex flex-col">
@@ -1143,46 +1363,14 @@ export default function UploadVehicle({
                 <div className="p-6 overflow-y-auto max-h-[calc(90vh-80px)]">
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
                     {vehicleImages.map((image, index) => (
-                      <div
-                        key={index}
-                        className={`relative aspect-square overflow-hidden rounded-lg group cursor-move ${draggedIndex === index ? "opacity-50 scale-95" : ""} ${dropTargetIndex === index ? "ring-2 ring-[#FF6700] dark:ring-[#FF7D33]" : ""}`}
-                        draggable
-                        onDragStart={() => handleDragStart(index)}
-                        onDragEnter={() => handleDragEnter(index)}
-                        onDragOver={(e) => e.preventDefault()}
-                        onDragEnd={handleDragEnd}
-                      >
-                        <div className="absolute inset-0 flex items-center justify-center z-10 opacity-0 group-hover:opacity-100 bg-black/20 transition-opacity">
-                          <Grip className="w-5 h-5 text-white" />
-                        </div>
-                        <Image
-                          src={image || "/placeholder.svg"}
-                          alt={`Vehicle image ${index + 1}`}
-                          layout="fill"
-                          objectFit="cover"
-                          unoptimized
-                          className="object-cover"
-                        />
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleRemoveImage(index)
-                          }}
-                          className="absolute top-1 right-1 bg-red-500/80 hover:bg-red-600/90 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity z-20"
-                          aria-label={`Remove image ${index + 1}`}
-                        >
-                          <XCircle className="w-4 h-4" />
-                        </button>
-                        {index === 0 && (
-                          <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs py-1 text-center">
-                            Main Image
-                          </div>
-                        )}
-                      </div>
+                      <ImageItem key={index} image={image} index={index} isExpanded={true} />
                     ))}
                   </div>
                   <p className="text-sm text-gray-500 dark:text-gray-400 mt-4 text-center">
-                    Drag to reorder • First image is main • {vehicleImages.length} of 21 images
+                    {typeof window !== 'undefined' && window.innerWidth < 768 
+                      ? "Touch and drag to reorder • First image is main •" 
+                      : "Drag to reorder • First image is main •"} 
+                    {vehicleImages.length} of 21 images
                   </p>
                 </div>
               </div>
@@ -1258,46 +1446,19 @@ export default function UploadVehicle({
                       <h3 className="text-lg font-semibold text-[#3E5641] dark:text-white">
                         Gallery ({vehicleImages.length})
                       </h3>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">Drag to reorder • First image is main</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        {typeof window !== 'undefined' && window.innerWidth < 768 
+                          ? "Touch & drag to reorder • First image is main" 
+                          : "Drag to reorder • First image is main"}
+                      </p>
                     </div>
-                    <div className="grid grid-cols-3 gap-3 md:gap-4 max-h-60 overflow-y-auto p-1">
+                    <div 
+                      ref={imageContainerRef}
+                      className="grid grid-cols-3 gap-3 md:gap-4 max-h-60 overflow-y-auto p-1"
+                      style={{ touchAction: 'none' }}
+                    >
                       {vehicleImages.map((image, index) => (
-                        <div
-                          key={index}
-                          className={`relative aspect-square overflow-hidden rounded-lg group cursor-move ${draggedIndex === index ? "opacity-50 scale-95" : ""} ${dropTargetIndex === index ? "ring-2 ring-[#FF6700] dark:ring-[#FF7D33]" : ""}`}
-                          draggable
-                          onDragStart={() => handleDragStart(index)}
-                          onDragEnter={() => handleDragEnter(index)}
-                          onDragOver={(e) => e.preventDefault()}
-                          onDragEnd={handleDragEnd}
-                        >
-                          <div className="absolute inset-0 flex items-center justify-center z-10 opacity-0 group-hover:opacity-100 bg-black/20 transition-opacity">
-                            <Grip className="w-5 h-5 text-white" />
-                          </div>
-                          <Image
-                            src={image || "/placeholder.svg"}
-                            alt={`Vehicle image ${index + 1}`}
-                            layout="fill"
-                            objectFit="cover"
-                            unoptimized
-                            className="object-cover"
-                          />
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              handleRemoveImage(index)
-                            }}
-                            className="absolute top-1 right-1 bg-red-500/80 hover:bg-red-600/90 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity z-20"
-                            aria-label={`Remove image ${index + 1}`}
-                          >
-                            <XCircle className="w-4 h-4" />
-                          </button>
-                          {index === 0 && (
-                            <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs py-1 text-center">
-                              Main Image
-                            </div>
-                          )}
-                        </div>
+                        <ImageItem key={index} image={image} index={index} />
                       ))}
                     </div>
                   </div>
