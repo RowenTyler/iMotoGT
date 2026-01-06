@@ -1219,13 +1219,17 @@ export default function UploadVehicle({
                 <div className="p-4 sm:p-6 overflow-y-auto max-h-[calc(90vh-80px)]">
                   <div
                     ref={expandedGridRef}
-                    className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-5 md:gap-5 px-4 py-3 sm:p-5 md:p-5"
+                    className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-5 md:gap-5 px-4 py-3 sm:p-5 md:p-5 auto-rows-min"
                   >
                     {vehicleImages.map((image, index) => (
                       <div
                         key={index}
                         data-drag-index={index}
-                        className={`relative aspect-square overflow-hidden rounded-lg group cursor-move select-none ${draggedIndex === index ? "opacity-50 scale-95" : ""} ${dropTargetIndex === index ? "ring-2 ring-[#FF6700] dark:ring-[#FF7D33]" : ""}`}
+                        className={`relative w-full aspect-square overflow-hidden rounded-lg group cursor-move select-none min-h-0 ${
+                          draggedIndex === index ? "opacity-50 scale-95" : ""
+                        } ${
+                          dropTargetIndex === index ? "ring-2 ring-[#FF6700] dark:ring-[#FF7D33]" : ""
+                        }`}
                         style={{ touchAction: "none" }}
                         onPointerDown={(e) => handlePointerDown(index, e)}
                         onPointerMove={(e) => handlePointerMove(e, expandedGridRef)}
@@ -1340,12 +1344,23 @@ export default function UploadVehicle({
                       </h3>
                       <p className="text-xs text-gray-500 dark:text-gray-400">Drag to reorder • First image is main</p>
                     </div>
-                    <div ref={imageGridRef} className="grid grid-cols-3 gap-3 sm:gap-4 max-h-[280px] overflow-y-auto px-3 sm:px-4 py-3">
+                    <div 
+                      ref={imageGridRef} 
+                      className={`grid grid-cols-3 gap-3 sm:gap-4 px-3 sm:px-4 py-3 ${
+                        vehicleImages.length > 6 
+                          ? "max-h-[400px] sm:max-h-[500px] overflow-y-auto" 
+                          : ""
+                      }`}
+                    >
                       {vehicleImages.map((image, index) => (
                         <div
                           key={index}
                           data-drag-index={index}
-                          className={`relative aspect-square overflow-hidden rounded-lg group cursor-move select-none ${draggedIndex === index ? "opacity-50 scale-95" : ""} ${dropTargetIndex === index ? "ring-2 ring-[#FF6700] dark:ring-[#FF7D33]" : ""}`}
+                          className={`relative aspect-square overflow-hidden rounded-lg group cursor-move select-none min-h-0 ${
+                            draggedIndex === index ? "opacity-50 scale-95" : ""
+                          } ${
+                            dropTargetIndex === index ? "ring-2 ring-[#FF6700] dark:ring-[#FF7D33]" : ""
+                          }`}
                           style={{ touchAction: "none" }}
                           onPointerDown={(e) => handlePointerDown(index, e)}
                           onPointerMove={(e) => handlePointerMove(e, imageGridRef)}
