@@ -1,4 +1,6 @@
 import type { Vehicle, VehicleFormData } from "@/types/vehicle" // Assuming Vehicle and VehicleFormData are declared in a types file
+
+// Import cache-aware functions from optimized module
 import {
   getVehicles,
   getVehicleById,
@@ -6,13 +8,18 @@ import {
   createVehicle,
   updateVehicle,
   deleteVehicle,
+  invalidateCaches
+} from "./vehicle-operations-optimized"
+
+// Import non-cached functions from original module
+import {
   searchVehicles,
   filterVehicles,
-  saveVehicle,        // ADDED: Import new saved vehicles functions
-  unsaveVehicle,      // ADDED: Import new saved vehicles functions
-  getSavedVehicles,   // ADDED: Import new saved vehicles functions
-  isVehicleSaved      // ADDED: Import new saved vehicles functions
-} from "./vehicle-operations" // Assuming these functions are declared in a vehicle-operations file
+  saveVehicle,
+  unsaveVehicle,
+  getSavedVehicles,
+  isVehicleSaved
+} from "./vehicle-operations"
 
 /**
  * Custom error class for vehicle service operations
@@ -104,10 +111,11 @@ export const vehicleService = {
   deleteVehicle,
   searchVehicles,
   filterVehicles,
-  saveVehicle,        // ADDED: Export new saved vehicles function
-  unsaveVehicle,      // ADDED: Export new saved vehicles function
-  getSavedVehicles,   // ADDED: Export new saved vehicles function
-  isVehicleSaved      // ADDED: Export new saved vehicles function
+  saveVehicle,
+  unsaveVehicle,
+  getSavedVehicles,
+  isVehicleSaved,
+  invalidateCaches
 }
 
 // Also export individual functions
@@ -120,8 +128,9 @@ export {
   deleteVehicle,
   searchVehicles,
   filterVehicles,
-  saveVehicle,        // ADDED: Export new saved vehicles function individually
-  unsaveVehicle,      // ADDED: Export new saved vehicles function individually
-  getSavedVehicles,   // ADDED: Export new saved vehicles function individually
-  isVehicleSaved      // ADDED: Export new saved vehicles function individually
+  saveVehicle,
+  unsaveVehicle,
+  getSavedVehicles,
+  isVehicleSaved,
+  invalidateCaches
 }

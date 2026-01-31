@@ -8,6 +8,7 @@ import { Search, X, ChevronDown, ChevronRight, Truck, CarIcon, Bike, Facebook, I
 import VehicleDetails from "./vehicle-details"
 import LocationPage from "./location-page"
 import { vehicleService } from "@/lib/vehicle-service"
+import { CacheManager, CACHE_CONFIG } from "@/lib/cache-manager"
 import type { Vehicle } from "@/types/vehicle"
 import { useUser } from "@/components/UserContext"
 import { Header } from "./ui/header"
@@ -88,36 +89,39 @@ export default function CarMarketplace() {
   const [showEngineCapacitySlider, setShowEngineCapacitySlider] = useState(false)
   const [currentSliderEngineValues, setCurrentSliderEngineValues] = useState<[number, number]>([1.0, 8.0])
 
-  // Cache functions
+  // Cache functions using centralized CacheManager
   const getCachedData = <T,>(key: string): T | null => {
-    if (typeof window === 'undefined') return null
-    
-    try {
-      const cached = localStorage.getItem(key)
-      if (!cached) return null
-      
-      return JSON.parse(cached)
-    } catch (error) {
-      console.warn('Error reading cache:', error)
-      return null
+    // Map local keys to CacheManager keys
+    if (key === CACHE_KEYS.VEHICLES) {
+      return CacheManager.get<T>(`${CACHE_CONFIG.VEHICLES_KEY}_active`)
     }
+    if (key === CACHE_KEYS.VEHICLE_HIERARCHY) {
+      return CacheManager.get<T>(CACHE_KEYS.VEHICLE_HIERARCHY)
+    }
+    return CacheManager.get<T>(key)
   }
 
   const setCachedData = (key: string, data: any) => {
-    if (typeof window === 'undefined') return
-    
-    try {
-      localStorage.setItem(key, JSON.stringify(data))
-    } catch (error) {
-      console.warn('Error setting cache:', error)
+    // Map local keys to CacheManager keys
+    if (key === CACHE_KEYS.VEHICLES) {
+      CacheManager.set(`${CACHE_CONFIG.VEHICLES_KEY}_active`, data, CACHE_CONFIG.TTL)
+      return
     }
+    if (key === CACHE_KEYS.VEHICLE_HIERARCHY) {
+      CacheManager.set(CACHE_KEYS.VEHICLE_HIERARCHY, data, CACHE_CONFIG.TTL)
+      return
+    }
+    if (key === CACHE_KEYS.VEHICLES_TIMESTAMP) {
+      // Timestamp is handled internally by CacheManager, skip
+      return
+    }
+    CacheManager.set(key, data, CACHE_CONFIG.TTL)
   }
 
   const isCacheValid = (timestampKey: string): boolean => {
-    const timestamp = getCachedData<number>(timestampKey)
-    if (!timestamp) return false
-    
-    return Date.now() - timestamp < CACHE_DURATION
+    // CacheManager handles TTL internally, check if data exists
+    const cached = CacheManager.get(`${CACHE_CONFIG.VEHICLES_KEY}_active`)
+    return cached !== null
   }
 
   // Build vehicle hierarchy from vehicles (makes → models only)
