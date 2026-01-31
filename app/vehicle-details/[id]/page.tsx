@@ -4,6 +4,7 @@ import { notFound, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import VehicleDetails from "@/components/vehicle-details"
 import { vehicleService } from "@/lib/vehicle-service"
+import { CacheManager, CACHE_CONFIG } from "@/lib/cache-manager"
 import { Header } from "@/components/ui/header"
 import { useUser } from "@/components/UserContext"
 import type { Vehicle } from "@/types/vehicle"
@@ -40,11 +41,23 @@ export default function VehicleDetailsPage({ params }: VehicleDetailsPageProps) 
     }
 
     loadSavedVehiclesData()
-  }, [user?.id, savedVehicles]) // Reload when savedVehicles Set changes
+  }, [user?.id]) // Only reload when user changes, not on every save toggle
 
   useEffect(() => {
     async function fetchVehicle() {
       try {
+        // Check if vehicle exists in the vehicles list cache first
+        const cachedVehicles = CacheManager.get<Vehicle[]>(`${CACHE_CONFIG.VEHICLES_KEY}_active`)
+        if (cachedVehicles) {
+          const cachedVehicle = cachedVehicles.find(v => v.id === params.id)
+          if (cachedVehicle) {
+            setVehicle(cachedVehicle)
+            setLoading(false)
+            return
+          }
+        }
+        
+        // Fallback to fetching from service (which also checks cache)
         const data = await vehicleService.getVehicleById(params.id)
         if (!data) {
           notFound()

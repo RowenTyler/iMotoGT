@@ -8,6 +8,7 @@ import VehicleCard from "@/components/vehicle-card"
 import VehicleDetails from "@/components/vehicle-details"
 import { useUser } from "@/components/UserContext"
 import type { Vehicle } from "@/types/vehicle"
+import { CacheManager, CACHE_CONFIG } from "@/lib/cache-manager"
 import { Search, SlidersHorizontal } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
@@ -58,6 +59,14 @@ export default function ResultsPage() {
         if (hasActiveFilters) {
           data = await vehicleService.filterVehicles(filters)
         } else {
+          // Check cache first for unfiltered results
+          const cachedVehicles = CacheManager.get<Vehicle[]>(`${CACHE_CONFIG.VEHICLES_KEY}_active`)
+          if (cachedVehicles && cachedVehicles.length > 0) {
+            setAllVehicles(cachedVehicles)
+            setLoading(false)
+            return
+          }
+          // Fallback to service (which also uses cache)
           data = await vehicleService.getVehicles()
         }
 
