@@ -16,11 +16,11 @@ The application uses Supabase as the backend-as-a-service (BaaS) solution, provi
 
 The following environment variables are configured:
 
-```env
+\`\`\`env
 NEXT_PUBLIC_SUPABASE_URL=https://mwzrrrnmtyiyrwdqhcqb.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 SUPABASE_SERVICE_ROLE_KEY=fgya6Usww5RM4TJ6Hmi/MRGNOY5BFFk95TFKW65JVK3K3MwxpypiyDSCcrCSNNUKRGUVzijyYHuv8tq4ZlUNqA==
-```
+\`\`\`
 
 ### Client Configuration
 
@@ -57,7 +57,7 @@ The Supabase client is configured in `lib/supabase.ts` with:
 
 ### Implementation
 
-```typescript
+\`\`\`typescript
 // Sign up
 const { user, session } = await authService.signUp(email, password, userData)
 
@@ -69,7 +69,7 @@ await authService.signInWithOAuth('google')
 
 // Sign out
 await authService.signOut()
-```
+\`\`\`
 
 ## Data Operations
 
@@ -77,7 +77,7 @@ await authService.signOut()
 
 The `vehicleService` provides comprehensive CRUD operations:
 
-```typescript
+\`\`\`typescript
 // Create vehicle
 const vehicle = await vehicleService.createVehicle(vehicleData)
 
@@ -89,7 +89,7 @@ const updatedVehicle = await vehicleService.updateVehicle(id, updates)
 
 // Delete vehicle
 await vehicleService.deleteVehicle(id)
-```
+\`\`\`
 
 ### Real-time Updates
 
@@ -97,7 +97,7 @@ Real-time subscriptions are available for:
 - Vehicle changes
 - Saved vehicles updates
 
-```typescript
+\`\`\`typescript
 // Subscribe to vehicle changes
 const subscription = vehicleService.subscribeToVehicles((payload) => {
   console.log('Vehicle updated:', payload)
@@ -113,7 +113,7 @@ const savedSubscription = vehicleService.subscribeToSavedVehicles(userId, (paylo
 // Cleanup subscriptions
 subscription.unsubscribe()
 savedSubscription.unsubscribe()
-```
+\`\`\`
 
 ## Security
 
@@ -141,13 +141,13 @@ The `errorHandler` utility provides:
 - Logging for debugging
 - Toast notifications for UI feedback
 
-```typescript
+\`\`\`typescript
 try {
   await vehicleService.createVehicle(data)
 } catch (error) {
   errorHandler.handle(error, 'vehicle creation')
 }
-```
+\`\`\`
 
 ## Performance Optimizations
 
@@ -177,10 +177,10 @@ try {
 
 ### Running Tests
 
-```bash
+\`\`\`bash
 npm run test
 npm run test:integration
-```
+\`\`\`
 
 ## Deployment
 
@@ -196,18 +196,18 @@ The application is configured for seamless Vercel deployment with:
 
 Run migrations using the Supabase CLI:
 
-```bash
+\`\`\`bash
 supabase db push
 supabase db reset
-```
+\`\`\`
 
 ## Monitoring and Maintenance
 
 ### Health Checks
 
-```typescript
+\`\`\`typescript
 const isHealthy = await checkSupabaseConnection()
-```
+\`\`\`
 
 ### Performance Monitoring
 
