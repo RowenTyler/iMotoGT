@@ -4,6 +4,9 @@ import { Inter } from "next/font/google"
 import "./globals.css"
 import { UserProvider } from "@/components/UserContext"
 import { ThemeProvider } from "@/components/theme-provider"
+import { GDPRProvider } from "@/components/gdpr/gdpr-provider"
+import { CookieConsentBanner } from "@/components/gdpr/cookie-consent-banner"
+import { CookiePreferencesModal } from "@/components/gdpr/cookie-preferences-modal"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -60,7 +63,11 @@ export default function RootLayout({
       </head>
       <body className={inter.className}>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
-          <UserProvider>{children}</UserProvider>
+          <GDPRProvider>
+            <UserProvider>{children}</UserProvider>
+            <CookieConsentBanner />
+            <CookiePreferencesModal />
+          </GDPRProvider>
         </ThemeProvider>
       </body>
     </html>

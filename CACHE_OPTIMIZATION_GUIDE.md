@@ -14,15 +14,15 @@ This guide implements a comprehensive caching strategy to dramatically improve p
 ## Implementation Steps
 
 ### 1. Add Cache Manager (Already Created)
-```typescript
+\`\`\`typescript
 // lib/cache-manager.ts
 // Already provided above - copy this file to your project
-```
+\`\`\`
 
 ### 2. Update Vehicle Service
 Replace `lib/vehicle-operations.ts` imports in `lib/vehicle-service.ts`:
 
-```typescript
+\`\`\`typescript
 // lib/vehicle-service.ts
 import {
   getVehicles,
@@ -48,12 +48,12 @@ export const vehicleService = {
   invalidateCaches,
   // ... other methods
 }
-```
+\`\`\`
 
 ### 3. Update car-marketplace.tsx
 Add cache preloading and use optimized loading:
 
-```typescript
+\`\`\`typescript
 // components/car-marketplace.tsx
 
 // Add at the top
@@ -110,12 +110,12 @@ useEffect(() => {
   
   fetchVehicles()
 }, [])
-```
+\`\`\`
 
 ### 4. Update Dashboard Component
 Add user-specific caching:
 
-```typescript
+\`\`\`typescript
 // components/dashboard.tsx
 
 useEffect(() => {
@@ -145,12 +145,12 @@ useEffect(() => {
   
   loadUserVehicles()
 }, [user?.id])
-```
+\`\`\`
 
 ### 5. Update Results Page
 Add filtered cache support:
 
-```typescript
+\`\`\`typescript
 // components/results-page.tsx
 
 useEffect(() => {
@@ -187,10 +187,10 @@ useEffect(() => {
   
   fetchAndSetVehicles()
 }, [filters])
-```
+\`\`\`
 
 ### 6. Add Cache Preloading in App Root
-```typescript
+\`\`\`typescript
 // app/layout.tsx or pages/_app.tsx
 
 import { preloadCache } from "@/lib/cache-manager"
@@ -199,12 +199,12 @@ useEffect(() => {
   // Preload cache on app startup
   preloadCache()
 }, [])
-```
+\`\`\`
 
 ### 7. Cache Invalidation After Actions
 Automatically invalidate caches after create/update/delete:
 
-```typescript
+\`\`\`typescript
 // components/upload-vehicle.tsx
 
 const handleSubmitVehicle = async () => {
@@ -224,14 +224,14 @@ const handleSubmitVehicle = async () => {
     // ... error handling
   }
 }
-```
+\`\`\`
 
 ---
 
 ## Database Optimization
 
 ### Add Indexes (Run in Supabase SQL Editor)
-```sql
+\`\`\`sql
 -- Add indexes for faster queries
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_vehicles_status_created 
   ON vehicles(status, created_at DESC);
@@ -245,10 +245,10 @@ CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_vehicles_search
 -- Add composite index for common filters
 CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_vehicles_filters 
   ON vehicles(status, province, year, price) WHERE status = 'active';
-```
+\`\`\`
 
 ### Optimize Supabase Query
-```typescript
+\`\`\`typescript
 // Before (slow)
 .select('*')
 
@@ -263,14 +263,14 @@ CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_vehicles_filters
   images,
   users(first_name, last_name, email)
 `)
-```
+\`\`\`
 
 ---
 
 ## Testing Performance
 
 ### Test Cache Hit Rate
-```typescript
+\`\`\`typescript
 // Add to any page to test
 import { CacheManager } from "@/lib/cache-manager"
 
@@ -282,24 +282,24 @@ useEffect(() => {
     oldest: `${(stats.oldestAge / 1000 / 60).toFixed(1)} minutes`
   })
 }, [])
-```
+\`\`\`
 
 ### Measure Load Times
-```typescript
+\`\`\`typescript
 const measureLoadTime = async () => {
   const start = performance.now()
   await vehicleService.getVehicles()
   const end = performance.now()
   console.log(`Load time: ${(end - start).toFixed(0)}ms`)
 }
-```
+\`\`\`
 
 ---
 
 ## Monitoring & Maintenance
 
 ### Clear Cache When Needed
-```typescript
+\`\`\`typescript
 // Clear all caches (useful for debugging)
 CacheManager.clearAll()
 
@@ -308,17 +308,17 @@ CacheManager.clearUserCache(userId)
 
 // Clear specific cache
 CacheManager.delete(CACHE_CONFIG.VEHICLES_KEY)
-```
+\`\`\`
 
 ### Cache Expiry Settings
 Adjust in `lib/cache-manager.ts`:
-```typescript
+\`\`\`typescript
 export const CACHE_CONFIG = {
   CACHE_DURATION: 5 * 60 * 1000,              // 5 minutes (adjust as needed)
   BACKGROUND_REFRESH_THRESHOLD: 2 * 60 * 1000, // 2 minutes
   MAX_CACHE_SIZE: 5 * 1024 * 1024,            // 5MB per entry
 }
-```
+\`\`\`
 
 ---
 

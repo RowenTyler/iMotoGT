@@ -33,7 +33,7 @@ iMoto is a South African car marketplace platform that enables users to buy and 
 ### Color Palette
 
 #### Light Mode (Default)
-```css
+\`\`\`css
 Primary Colors:
 - Orange: #FF6700 (Primary CTAs, accents, links)
 - Dark Green: #3E5641 (Headings, primary text)
@@ -51,10 +51,10 @@ Semantic Colors:
 - Error: #EF4444 (Red - errors, destructive actions)
 - Warning: #F59E0B (Yellow - warnings, pending states)
 - Info: #3B82F6 (Blue - informational messages)
-```
+\`\`\`
 
 #### Dark Mode
-```css
+\`\`\`css
 Primary Colors:
 - Orange: #FF7D33 (Brighter variant for dark backgrounds)
 - White: #FFFFFF (Headings, primary text)
@@ -65,18 +65,18 @@ Background Colors:
 - Card Background: #2A352A (Dark green-gray)
 - Input Background: #1F2B20 (Slightly darker than cards)
 - Border Color: #4A4D45 (Subtle borders)
-```
+\`\`\`
 
 ### Typography
 
 #### Font Family
-```css
+\`\`\`css
 Primary Font: Inter, system-ui, -apple-system, sans-serif
 Fallback: Arial, Helvetica, sans-serif
-```
+\`\`\`
 
 #### Font Sizes & Weights
-```css
+\`\`\`css
 Headings:
 - H1: 2.25rem (36px) / font-weight: 700 (bold)
 - H2: 1.875rem (30px) / font-weight: 700
@@ -92,18 +92,18 @@ Body Text:
 Special:
 - Button Text: 0.875rem-1rem / font-weight: 500 (medium)
 - Label Text: 0.875rem / font-weight: 500
-```
+\`\`\`
 
 ### Spacing System
 
 #### Base Unit
-```css
+\`\`\`css
 Base spacing unit: 0.25rem (4px)
 Multiplier scale: 1, 2, 3, 4, 5, 6, 8, 10, 12, 16, 20, 24, 32, 40, 48, 64
-```
+\`\`\`
 
 #### Common Spacings
-```css
+\`\`\`css
 Tight:
 - xs: 0.25rem (4px)
 - sm: 0.5rem (8px)
@@ -118,11 +118,11 @@ Loose:
 - 2xl: 3rem (48px)
 - 3xl: 4rem (64px)
 - 4xl: 6rem (96px)
-```
+\`\`\`
 
 ### Border Radius
 
-```css
+\`\`\`css
 Rounded Corners:
 - sm: 0.25rem (4px) - Small elements
 - md: 0.5rem (8px) - Buttons, inputs
@@ -131,11 +131,11 @@ Rounded Corners:
 - 2xl: 1.5rem (24px) - Feature cards
 - 3xl: 2rem (32px) - Hero sections
 - full: 9999px - Pills, circular buttons
-```
+\`\`\`
 
 ### Shadows
 
-```css
+\`\`\`css
 Box Shadows:
 - sm: 0 1px 2px 0 rgb(0 0 0 / 0.05)
 - base: 0 1px 3px 0 rgb(0 0 0 / 0.1)
@@ -146,7 +146,7 @@ Box Shadows:
 Custom Shadows:
 - Card Hover: 0 20px 25px -5px rgb(0 0 0 / 0.15)
 - Modal: 0 25px 50px -12px rgb(0 0 0 / 0.25)
-```
+\`\`\`
 
 ---
 
@@ -154,7 +154,7 @@ Custom Shadows:
 
 ### Tech Stack
 
-```
+\`\`\`
 Frontend Framework: Next.js 14+ (App Router)
 Language: TypeScript
 Styling: Tailwind CSS
@@ -164,11 +164,11 @@ Authentication: Supabase Auth
 Database: Supabase (PostgreSQL)
 Image Handling: Next.js Image component
 Deployment: Vercel
-```
+\`\`\`
 
 ### Folder Structure
 
-```
+\`\`\`
 /app
   /api                     # API routes
     /auth
@@ -244,7 +244,7 @@ Deployment: Vercel
 
 /supabase
   /migrations              # Database migrations
-```
+\`\`\`
 
 ---
 
@@ -255,7 +255,7 @@ Deployment: Vercel
 **File**: `components/ui/header.tsx`
 
 #### Desktop Header
-```
+\`\`\`
 Layout Structure:
 ┌─────────────────────────────────────────────────────────┐
 │  [Browse][Sell][About]  [LOGO]  [Services][Contact][User] │
@@ -269,37 +269,37 @@ Dimensions:
 - Border Radius: Full rounded (pill shape)
 - Position: Fixed top-0, z-50
 - Padding: 16px (p-4) from viewport edges
-```
+\`\`\`
 
 #### Header Sections
 
 **Left Navigation** (3 items)
-```
+\`\`\`
 - Width: ~240px
 - Items: Browse | Sell | About
 - Spacing: gap-8 (32px between items)
 - Text: 16px, medium weight
 - Color: White (hover: #FF6700)
-```
+\`\`\`
 
 **Center Logo**
-```
+\`\`\`
 - Image: 280px × 84px
 - Object Fit: Contain
 - Clickable: Navigates to home
-```
+\`\`\`
 
 **Right Navigation** (3-4 items)
-```
+\`\`\`
 - Width: ~240px
 - Items: Services | Contact | User/Login
 - Spacing: gap-6 (24px between items)
 - User Avatar: 32px × 32px rounded-full
 - Border: 2px solid white
-```
+\`\`\`
 
 #### Mobile Header
-```
+\`\`\`
 Layout Structure:
 ┌─────────────────────┐
 │  [LOGO]    [Menu ≡] │
@@ -310,10 +310,10 @@ Dimensions:
 - Height: 50px
 - Top Position: 8px from top
 - Horizontal Center: left-1/2 transform -translate-x-1/2
-```
+\`\`\`
 
 **Mobile Menu (Full Screen)**
-```
+\`\`\`
 Overlay:
 - Background: rgba(0,0,0,0.8) with backdrop-blur
 - Height: 100vh
@@ -324,14 +324,14 @@ Content:
 - Navigation items: text-2xl, white
 - Spacing: gap-8 (32px vertical spacing)
 - Center aligned vertically and horizontally
-```
+\`\`\`
 
 ### 2. Home Page
 
 **File**: `app/home/page.tsx`
 
 #### Hero Section
-```
+\`\`\`
 Layout:
 ┌──────────────────────────────────────┐
 │                                      │
@@ -347,10 +347,10 @@ Dimensions:
 - Background: Video or gradient
 - Padding Top: pt-20 (80px) - accounts for header
 - Content Max Width: max-w-7xl (1280px)
-```
+\`\`\`
 
 **Hero Typography**
-```css
+\`\`\`css
 Main Heading:
 - Font Size: 4rem (64px) on desktop, 2.5rem (40px) mobile
 - Font Weight: 700 (bold)
@@ -363,10 +363,10 @@ Subheading:
 - Font Weight: 400 (regular)
 - Color: rgba(255,255,255,0.9)
 - Margin Bottom: 3rem (48px)
-```
+\`\`\`
 
 **Search Bar Component**
-```
+\`\`\`
 Dimensions:
 - Width: 100% max-w-4xl (896px)
 - Height: 64px
@@ -390,10 +390,10 @@ Search Button:
 - Border Radius: 1.5rem (24px)
 - Color: White
 - Font Weight: 500
-```
+\`\`\`
 
 #### Featured Cars Section
-```
+\`\`\`
 Layout:
 - Grid: 3 columns on desktop, 1 on mobile
 - Gap: 2rem (32px)
@@ -405,14 +405,14 @@ Card Dimensions:
 - Border Radius: 1rem (16px)
 - Shadow: 0 4px 6px rgba(0,0,0,0.1)
 - Hover: Scale 1.02, shadow increases
-```
+\`\`\`
 
 ### 3. Dashboard Page
 
 **File**: `app/dashboard/page.tsx`
 
 #### Desktop Layout (12-column grid)
-```
+\`\`\`
 ┌──────────────────────────────────────────┐
 │ Welcome, [Name]                          │
 ├─────────────────┬────────────────────────┤
@@ -440,10 +440,10 @@ Grid Setup:
 - gap: 1rem (16px)
 - padding: 1.5rem (24px)
 - max-width: 7xl (1280px)
-```
+\`\`\`
 
 #### Profile Card
-```
+\`\`\`
 Dimensions:
 - Columns: span 3
 - Aspect Ratio: 1:1
@@ -459,10 +459,10 @@ Text Layout:
 - Name: 2xl (24px), bold, white
 - Badge: Border 1px white/50, rounded-full
 - Position: absolute bottom-0
-```
+\`\`\`
 
 #### Metrics Card
-```
+\`\`\`
 Dimensions:
 - Columns: span 3
 - Border Radius: 3xl (1.5rem / 24px)
@@ -490,10 +490,10 @@ Progress Bar:
 - Background: gray-100
 - Fill: #FF6700
 - Border Radius: full
-```
+\`\`\`
 
 #### Upload Card
-```
+\`\`\`
 Dimensions:
 - Columns: span 3
 - Border Radius: 3xl
@@ -507,10 +507,10 @@ Layout:
 - Text: 18px bold, 14px regular
 - Cursor: pointer
 - Hover: shadow-lg
-```
+\`\`\`
 
 #### Subscription Card
-```
+\`\`\`
 Dimensions:
 - Columns: span 3
 - Border Radius: 3xl
@@ -536,10 +536,10 @@ Sections:
    - Border: 2px dashed gray-300
    - Padding: 1rem
    - Button: Outline style
-```
+\`\`\`
 
 #### Saved Cars Carousel
-```
+\`\`\`
 Dimensions:
 - Columns: span 6
 - Border Radius: 3xl
@@ -569,10 +569,10 @@ Content Areas:
    - Dots: 8px × 8px
    - Active: white, width 16px
    - Inactive: white/40
-```
+\`\`\`
 
 #### Recently Listed Cars
-```
+\`\`\`
 Dimensions:
 - Columns: span 3
 - Border Radius: 3xl
@@ -599,14 +599,14 @@ Car Item:
 - Gap: 12px
 - Padding: 12px
 - Hover: bg-gray-50
-```
+\`\`\`
 
 ### 4. Vehicle Details Page
 
 **File**: `components/vehicle-details.tsx`
 
 #### Layout Structure
-```
+\`\`\`
 ┌─────────────────────────────────────────┐
 │ ← Back            R 250,000       ♥ Save │
 ├─────────────────────────────────────────┤
@@ -624,12 +624,12 @@ Car Item:
 │                  │                      │
 │                  │  [Map]               │
 └──────────────────┴──────────────────────┘
-```
+\`\`\`
 
 #### Image Gallery (Desktop)
 
 **Main Image + Thumbnails**
-```
+\`\`\`
 Layout: 3-Section Horizontal Scrolling
 - Display: flex
 - Overflow-x: auto
@@ -658,20 +658,20 @@ Section 2 & 3 (8 images each):
 - Height: 400px
 - Gap: 1rem
 - Aspect: square
-```
+\`\`\`
 
 **Hover Effects**
-```css
+\`\`\`css
 Group hover states:
 - Scale: 1.05
 - Overlay: rgba(0,0,0,0.2)
 - Search Icon: Appears centered
 - Duration: 300ms
 - Timing: ease-out
-```
+\`\`\`
 
 #### Mobile Gallery
-```
+\`\`\`
 Layout: Single Carousel
 - Height: 33vh
 - Full width
@@ -696,10 +696,10 @@ Controls:
    - Bottom-16 center
    - "Swipe to browse"
    - Animation: pulse
-```
+\`\`\`
 
 #### Image Modal (Full Screen)
-```
+\`\`\`
 Overlay:
 - Position: fixed inset-0
 - Z-index: 50
@@ -735,10 +735,10 @@ Keyboard Support:
 - Left Arrow: Previous
 - Right Arrow: Next
 - Double Click: Zoom toggle
-```
+\`\`\`
 
 #### Vehicle Information Tabs
-```
+\`\`\`
 Tab Bar:
 - Border Bottom: 1px gray-200
 - Padding: 0 1.5rem (24px)
@@ -756,10 +756,10 @@ Inactive Tab:
 Tab Content Area:
 - Padding: 1.5rem (24px)
 - Min Height: 400px
-```
+\`\`\`
 
 **Details Tab Content**
-```
+\`\`\`
 Description Section:
 - Font Size: 1rem (16px)
 - Line Height: 1.5
@@ -779,10 +779,10 @@ Each Detail Item:
 └──────────────┘
 - Padding: 0.5rem (8px)
 - Background: Subtle on hover
-```
+\`\`\`
 
 **Coming Soon Tabs**
-```css
+\`\`\`css
 Overlay Structure:
 - Position: relative
 - Height: 400px
@@ -797,10 +797,10 @@ Overlay Message:
 - Background: rgba(0,0,0,0.3)
 - Flex: center center
 - Text: "Coming Soon" (32px, white, bold)
-```
+\`\`\`
 
 #### Seller Contact Card
-```
+\`\`\`
 Dimensions:
 - Width: 33.33% (1/3 on desktop)
 - Background: rgba(62,86,65,0.8)
@@ -832,10 +832,10 @@ Spacing:
 - Text: white
 - Labels: gray-300 (14px)
 - Values: white (16px, medium)
-```
+\`\`\`
 
 **Contact Button**
-```css
+\`\`\`css
 Full Width Button:
 - Background: #FF6700
 - Hover: #FF7D33
@@ -848,10 +848,10 @@ Full Width Button:
 Mobile Behavior:
 - Opens phone dialer (tel:)
 - Desktop: Opens contact form modal
-```
+\`\`\`
 
 #### Location Map
-```
+\`\`\`
 Dimensions:
 - Margin Top: 1.5rem (24px)
 - Height: 150px
@@ -866,14 +866,14 @@ Implementation:
 - Zoom: Appropriate for city view
 - Style: Default
 - Loading: lazy
-```
+\`\`\`
 
 ### 5. Upload Vehicle Page
 
 **File**: `components/upload-vehicle.tsx`
 
 #### Layout Structure
-```
+\`\`\`
 ┌──────────────────────────────────────────┐
 │ ← Back                                   │
 │ List Your Vehicle                        │
@@ -889,12 +889,12 @@ Implementation:
 │              │  [Save Button]            │
 │              │  (2/3)                    │
 └──────────────┴───────────────────────────┘
-```
+\`\`\`
 
 #### Image Upload Section
 
 **Main Image Display**
-```
+\`\`\`
 Dimensions:
 - Aspect Ratio: 16:9
 - Width: 100%
@@ -921,10 +921,10 @@ With Image:
 - Size: 32px × 32px, rounded-full
 - Background: white/80
 - Icon: Camera (16px)
-```
+\`\`\`
 
 **Image Gallery Grid**
-```
+\`\`\`
 Header:
 - Display: flex justify-between
 - Title: "Gallery (12)" - 18px bold
@@ -964,10 +964,10 @@ Remove Button:
 - Background: red-500/80
 - Hover: red-600/90
 - Icon: XCircle (16px)
-```
+\`\`\`
 
 **Image Processing Indicator**
-```
+\`\`\`
 Progress Bar:
 ┌─────────────────────────────────────┐
 │ Processing images...        45%     │
@@ -981,12 +981,12 @@ Progress Bar:
 - Height: 8px progress bar
 - Color: blue-600
 - Animated transition
-```
+\`\`\`
 
 #### Seller Information Card
 
 **Display Mode (Not Editing)**
-```
+\`\`\`
 Layout:
 ┌─────────────────────────────┐
 │ Seller Information   [Edit] │
@@ -1008,10 +1008,10 @@ Layout:
 - Padding: 1.5rem (24px)
 - Background: white
 - Border: 1px gray-200
-```
+\`\`\`
 
 **Edit Mode**
-```
+\`\`\`
 Layout: Same card with form fields
 
 Fields:
@@ -1034,10 +1034,10 @@ Button Change:
 Auto-save:
 - Saves on every change
 - No manual save required
-```
+\`\`\`
 
 **Incomplete Profile Warning**
-```
+\`\`\`
 Alert Box:
 - Background: yellow-50
 - Border: yellow-200
@@ -1049,12 +1049,12 @@ Alert Box:
 Message:
 "Your seller profile is incomplete. Please fill 
 out all fields and save before listing a vehicle."
-```
+\`\`\`
 
 #### Vehicle Details Form
 
 **Basic Information Section**
-```
+\`\`\`
 Grid: 3 columns (Make, Model, Variant)
 
 Label Style:
@@ -1073,10 +1073,10 @@ Input Style:
 Placeholder:
 - Color: gray-400
 - Font: 16px
-```
+\`\`\`
 
 **Price/Mileage/Year Section**
-```
+\`\`\`
 Grid: 3 columns equal width
 
 Price Input Special:
@@ -1097,10 +1097,10 @@ Year Input:
 - Min: 1900
 - Max: Current year
 - Step: 1
-```
+\`\`\`
 
 **Technical Specifications**
-```
+\`\`\`
 Grid: 4 columns (Transmission, Fuel, Engine, Body)
 
 Dropdowns:
@@ -1130,10 +1130,10 @@ Body Type:
 - Options: Sedan, SUV, Hatchback, Bakkie, etc.
 - Each option has icon (Car/Truck/Bike)
 - Icon size: 16px
-```
+\`\`\`
 
 **Condition Section**
-```
+\`\`\`
 Dropdown:
 - Full width
 - Options:
@@ -1142,10 +1142,10 @@ Dropdown:
   * Fair
   * Poor
 - Default: Good
-```
+\`\`\`
 
 **Description Section**
-```
+\`\`\`
 Textarea:
 - Min Height: 120px
 - Width: 100%
@@ -1160,10 +1160,10 @@ Placeholder:
 "Describe your vehicle, including any special 
 features, condition details, or other information 
 potential buyers should know..."
-```
+\`\`\`
 
 **Submit Button**
-```
+\`\`\`
 Position: Bottom right of form
 Dimensions:
 - Padding: 0.5rem 1rem (8px 16px)
@@ -1183,14 +1183,14 @@ Progress During Submit:
 │ Uploading vehicle...        78%     │
 │ ████████████████████░░░░░░░░░░░░   │
 └─────────────────────────────────────┘
-```
+\`\`\`
 
 ### 6. Login Page
 
 **File**: `components/login-page.tsx`
 
 #### Layout Structure
-```
+\`\`\`
 ┌─────────────────────────────────┐
 │          [Header]               │
 │                                 │
@@ -1209,10 +1209,10 @@ Progress During Submit:
 │     ╚═══════════════════╝      │
 │                                 │
 └─────────────────────────────────┘
-```
+\`\`\`
 
 #### Form Card
-```
+\`\`\`
 Dimensions:
 - Max Width: 28rem (448px)
 - Background: white (dark: #2A352A)
@@ -1221,10 +1221,10 @@ Dimensions:
 - Padding: 2rem (32px)
 - Shadow: lg
 - Margin: auto (centered)
-```
+\`\`\`
 
 #### Title Section
-```
+\`\`\`
 Typography:
 - Heading: 36px (text-4xl), bold
 - Color: #3E5641 (dark: white)
@@ -1236,12 +1236,12 @@ Subtitle:
 - Color: #6F7F69 (dark: gray-400)
 - Text Align: center
 - Margin Bottom: 2rem (32px)
-```
+\`\`\`
 
 #### Form Fields
 
 **Sign Up Mode (4 fields)**
-```
+\`\`\`
 1. First Name + Last Name (Grid 2 cols)
    - Gap: 1rem (16px)
 
@@ -1250,18 +1250,18 @@ Subtitle:
 3. Password (Full width with toggle)
 
 Field Spacing: gap-6 (24px vertical)
-```
+\`\`\`
 
 **Sign In Mode (2 fields)**
-```
+\`\`\`
 1. Email (Full width)
 2. Password (Full width with toggle)
 
 Field Spacing: gap-6 (24px vertical)
-```
+\`\`\`
 
 **Input Styling**
-```css
+\`\`\`css
 Label:
 - Font: 14px, medium
 - Color: #3E5641 (dark: gray-300)
@@ -1282,10 +1282,10 @@ Password Toggle:
 - Icon: Eye/EyeOff (20px)
 - Color: gray-500
 - Cursor: pointer
-```
+\`\`\`
 
 **Error Alert**
-```
+\`\`\`
 Box:
 - Background: red-50 (dark: red-900/20)
 - Border: red-200 (dark: red-800)
@@ -1294,10 +1294,10 @@ Box:
 - Font: 14px
 - Color: red-800 (dark: red-200)
 - Margin Bottom: 1rem
-```
+\`\`\`
 
 **Submit Button**
-```css
+\`\`\`css
 Full Width Button:
 - Height: 40px
 - Background: #FF6700
@@ -1313,10 +1313,10 @@ Loading State:
 - Disabled: true
 - Cursor: not-allowed
 - Opacity: 0.7
-```
+\`\`\`
 
 #### OAuth Section
-```
+\`\`\`
 Divider:
 ┌─────────────────────────────────┐
 │        ──── or ────              │
@@ -1341,10 +1341,10 @@ Layout:
 - Icon: 20px × 20px
 - Gap: 0.5rem (8px)
 - Center aligned
-```
+\`\`\`
 
 #### Toggle Link
-```
+\`\`\`
 Position: Bottom center
 Margin Top: 1.5rem (24px)
 
@@ -1355,10 +1355,10 @@ Text:
 - Color: #FF6700
 - Hover: underline
 - Cursor: pointer
-```
+\`\`\`
 
 #### Verification Success Screen
-```
+\`\`\`
 Layout:
 ┌─────────────────────────────────┐
 │          [Mail Icon]            │
@@ -1384,14 +1384,14 @@ Icon:
 - Background: green-100
 - Border Radius: full
 - Margin: auto
-```
+\`\`\`
 
 ### 7. Search Results Page
 
 **File**: `app/results/page.tsx`
 
 #### Layout Structure
-```
+\`\`\`
 ┌──────────────────────────────────────────┐
 │            [Header]                      │
 ├──────────────────────────────────────────┤
@@ -1409,10 +1409,10 @@ Icon:
 │                                          │
 │          [Load More / Pagination]        │
 └──────────────────────────────────────────┘
-```
+\`\`\`
 
 #### Filters Bar
-```
+\`\`\`
 Dimensions:
 - Height: 64px
 - Background: white
@@ -1437,10 +1437,10 @@ Active Filter:
 - Border: 2px #FF6700
 - Background: #FFF8E0
 - Color: #FF6700
-```
+\`\`\`
 
 #### Results Grid
-```
+\`\`\`
 Container:
 - Max Width: 7xl (1280px)
 - Padding: 2rem 1.5rem (32px 24px)
@@ -1456,10 +1456,10 @@ Results Header:
 - Font: 16px, medium
 - Color: #6F7F69
 - Margin Bottom: 1.5rem (24px)
-```
+\`\`\`
 
 #### Vehicle Card Component
-```
+\`\`\`
 Dimensions:
 - Border Radius: lg (12px)
 - Background: white (dark: gray-800)
@@ -1487,10 +1487,10 @@ Structure:
 └──────────────────────┘
 
 Padding: 1rem (16px) bottom section
-```
+\`\`\`
 
 **Image Section**
-```
+\`\`\`
 Dimensions:
 - Height: 224px (h-56)
 - Width: 100%
@@ -1512,10 +1512,10 @@ Save Button:
 States:
 - Unsaved: outline heart, white
 - Saved: filled heart, orange
-```
+\`\`\`
 
 **Info Section**
-```
+\`\`\`
 Padding: 1rem (16px)
 Display: flex flex-col
 Gap: 0.75rem (12px)
@@ -1548,14 +1548,14 @@ Button Area:
 - Text: center, 14px, semibold
 - Color: #FF6700
 - Hover: #FF7D33
-```
+\`\`\`
 
 ### 8. Profile Settings Page
 
 **File**: `components/profile-settings.tsx`
 
 #### Layout Structure
-```
+\`\`\`
 ┌──────────────────────────────────────────┐
 │ ← Back to Dashboard                      │
 │ Profile Settings                         │
@@ -1575,10 +1575,10 @@ Button Area:
 
 Desktop: 1/3 left, 2/3 right
 Mobile: Stacked vertically
-```
+\`\`\`
 
 #### Profile Card (Left)
-```
+\`\`\`
 Dimensions:
 - Width: 33.33% (desktop)
 - Border Radius: 3xl (24px)
@@ -1611,10 +1611,10 @@ Sign Out Button:
 - Margin Top: 1.5rem (24px)
 - Variant: destructive (red)
 - Full width
-```
+\`\`\`
 
 #### Settings Tabs
-```
+\`\`\`
 Tab List:
 - Grid: 2 columns
 - Background: gray-100 (dark: #1F2B20)
@@ -1636,10 +1636,10 @@ Inactive State:
 - Background: transparent
 - Color: gray-600
 - Hover: gray-200
-```
+\`\`\`
 
 #### Personal Info Tab
-```
+\`\`\`
 Form Layout:
 - Display: flex flex-col
 - Gap: 1rem (16px)
@@ -1675,10 +1675,10 @@ Save Button:
 - Background: #FF6700
 - Icon: Save (16px)
 - Text: "Save Personal Info"
-```
+\`\`\`
 
 #### Security Tab
-```
+\`\`\`
 Layout:
 ┌─────────────────────────────────┐
 │ Change Password                 │
@@ -1724,14 +1724,14 @@ through your [Provider] account"
 - Background: gray-50
 - Padding: 1rem (16px)
 - Border Radius: lg
-```
+\`\`\`
 
 ---
 
 ## User Flows
 
 ### 1. Browse Vehicles Flow
-```
+\`\`\`
 1. User lands on home page
 2. Uses search bar or clicks "Browse"
 3. Results page loads with filters
@@ -1744,10 +1744,10 @@ through your [Provider] account"
    - Contact seller
    - View more details
    - Go back to results
-```
+\`\`\`
 
 ### 2. Sign Up Flow
-```
+\`\`\`
 1. User clicks "Login" in header
 2. Login page opens
 3. User clicks "Don't have an account? Sign Up"
@@ -1760,10 +1760,10 @@ through your [Provider] account"
 10. Redirected to login page
 11. User signs in
 12. Redirected to dashboard
-```
+\`\`\`
 
 ### 3. List Vehicle Flow
-```
+\`\`\`
 1. User must be logged in and verified
 2. User clicks "Sell" in header or "Upload" in dashboard
 3. Profile check:
@@ -1784,10 +1784,10 @@ through your [Provider] account"
 9. Success message appears
 10. Redirect to dashboard
 11. Vehicle appears in "Recently Listed"
-```
+\`\`\`
 
 ### 4. Save Vehicle Flow
-```
+\`\`\`
 1. User must be logged in
 2. User browses vehicles
 3. User clicks heart icon on vehicle card
@@ -1797,10 +1797,10 @@ through your [Provider] account"
    - Dashboard > Saved Cars carousel
    - Header > Dashboard > Saved section
 7. User can unsave by clicking heart again
-```
+\`\`\`
 
 ### 5. Contact Seller Flow
-```
+\`\`\`
 1. User views vehicle details
 2. User clicks "Contact Seller" button
 3. On mobile: Opens phone dialer
@@ -1809,10 +1809,10 @@ through your [Provider] account"
    - See seller phone/email
    - Send message
    - View location on map
-```
+\`\`\`
 
 ### 6. Edit Profile Flow
-```
+\`\`\`
 1. User navigates to Settings
 2. User clicks "Edit" on Profile Card
 3. Fields become editable
@@ -1821,14 +1821,14 @@ through your [Provider] account"
 6. Or clicks "Save" button (personal info)
 7. Success message appears
 8. Profile updates across app
-```
+\`\`\`
 
 ---
 
 ## Styling & Dimensions
 
 ### Responsive Breakpoints
-```css
+\`\`\`css
 Tailwind Breakpoints:
 - sm: 640px   (Small tablets)
 - md: 768px   (Tablets)
@@ -1840,10 +1840,10 @@ Custom Breakpoints:
 - Mobile: < 768px
 - Tablet: 768px - 1024px
 - Desktop: > 1024px
-```
+\`\`\`
 
 ### Container Widths
-```css
+\`\`\`css
 Page Containers:
 - max-w-sm: 384px
 - max-w-md: 448px
@@ -1860,12 +1860,12 @@ Padding:
 - Mobile: px-4 (16px)
 - Tablet: px-6 (24px)
 - Desktop: px-6 (24px)
-```
+\`\`\`
 
 ### Component Dimensions
 
 #### Buttons
-```css
+\`\`\`css
 Sizes:
 - Small: h-8 (32px) | px-3 py-1.5
 - Default: h-10 (40px) | px-4 py-2
@@ -1881,10 +1881,10 @@ Variants:
 Border Radius: lg (12px)
 Font Weight: 500 (medium)
 Transition: all 200ms
-```
+\`\`\`
 
 #### Cards
-```css
+\`\`\`css
 Standard Card:
 - Border: 1px solid rgba(159,167,145,0.2)
 - Border Radius: xl (16px) or 3xl (24px)
@@ -1900,10 +1900,10 @@ Hover State:
 Card Grid:
 - Gap: 1rem-2rem (16px-32px)
 - Columns: 1 (mobile), 2-3 (desktop)
-```
+\`\`\`
 
 #### Inputs
-```css
+\`\`\`css
 Text Input:
 - Height: 40px (h-10)
 - Border: 1px solid #9FA791
@@ -1926,10 +1926,10 @@ Error State:
 - Border: red-500
 - Ring: red-500
 - Background: red-50
-```
+\`\`\`
 
 #### Dropdowns
-```css
+\`\`\`css
 Select:
 - Height: 40px
 - Border: 1px solid #9FA791
@@ -1951,10 +1951,10 @@ Option:
 - Hover: bg-[#FFF8E0]
 - Active: bg-[#FF6700] text-white
 - Font: 14px
-```
+\`\`\`
 
 #### Modals
-```css
+\`\`\`css
 Overlay:
 - Position: fixed inset-0
 - Background: rgba(0,0,0,0.5)
@@ -1975,12 +1975,12 @@ Close Button:
 - Border Radius: full
 - Background: gray-100
 - Hover: gray-200
-```
+\`\`\`
 
 ### Animation & Transitions
 
 #### Hover Effects
-```css
+\`\`\`css
 Scale Transform:
 - Default: scale(1)
 - Hover: scale(1.02-1.05)
@@ -1996,10 +1996,10 @@ Shadow Transitions:
 - From: shadow-md
 - To: shadow-xl
 - Duration: 300ms
-```
+\`\`\`
 
 #### Loading States
-```css
+\`\`\`css
 Skeleton Loader:
 - Background: linear-gradient(90deg, 
     #f0f0f0 25%, 
@@ -2021,10 +2021,10 @@ Progress Bar:
 - Fill: #FF6700
 - Border Radius: full
 - Transition: width 300ms ease-out
-```
+\`\`\`
 
 #### Page Transitions
-```css
+\`\`\`css
 Enter:
 - Opacity: 0 → 1
 - Transform: translateY(10px) → translateY(0)
@@ -2036,7 +2036,7 @@ Exit:
 - Transform: translateY(0) → translateY(-10px)
 - Duration: 200ms
 - Timing: ease-in
-```
+\`\`\`
 
 ---
 
@@ -2044,7 +2044,7 @@ Exit:
 
 ### Click/Tap Areas
 
-```css
+\`\`\`css
 Minimum Touch Target:
 - Size: 44px × 44px (mobile)
 - Size: 40px × 40px (desktop)
@@ -2059,11 +2059,11 @@ Hover States:
 - Color change
 - Shadow increase
 - Cursor: pointer
-```
+\`\`\`
 
 ### Keyboard Navigation
 
-```
+\`\`\`
 Tab Order:
 1. Skip to main content (hidden)
 2. Header navigation
@@ -2084,11 +2084,11 @@ Keyboard Shortcuts:
 - Space: Toggle checkboxes, activate buttons
 - Tab: Move forward
 - Shift + Tab: Move backward
-```
+\`\`\`
 
 ### Form Validation
 
-```
+\`\`\`
 Real-time Validation:
 - On blur (when field loses focus)
 - On submit attempt
@@ -2128,11 +2128,11 @@ Price Validation:
 - Auto-formatting as user types
 - Min: 0, Max: 99,999,999.99
 - Error: "Please enter a valid price"
-```
+\`\`\`
 
 ### Touch Gestures
 
-```
+\`\`\`
 Swipe Gestures:
 - Image Gallery: Left/right swipe
 - Carousel: Left/right swipe
@@ -2152,11 +2152,11 @@ Double Tap:
 Long Press:
 - Context menu (future feature)
 - Duration: 500ms
-```
+\`\`\`
 
 ### Scroll Behavior
 
-```css
+\`\`\`css
 Smooth Scrolling:
 - scroll-behavior: smooth
 - Duration: 300ms-500ms
@@ -2178,7 +2178,7 @@ Scroll to Top:
 - Icon: ChevronUp
 - Background: #FF6700
 - Shadow: lg
-```
+\`\`\`
 
 ---
 
@@ -2186,7 +2186,7 @@ Scroll to Top:
 
 ### User Profile Schema
 
-```typescript
+\`\`\`typescript
 interface UserProfile {
   id: string                    // UUID from Supabase Auth
   email: string                 // Required, unique
@@ -2202,11 +2202,11 @@ interface UserProfile {
   created_at: string            // ISO timestamp
   updated_at: string            // ISO timestamp
 }
-```
+\`\`\`
 
 ### Vehicle Schema
 
-```typescript
+\`\`\`typescript
 interface Vehicle {
   id: string                    // UUID
   user_id: string               // Foreign key to users
@@ -2258,22 +2258,22 @@ interface Vehicle {
   deleted_at?: string           // Soft delete timestamp
   deletion_reason?: string      // Why was it deleted
 }
-```
+\`\`\`
 
 ### Saved Vehicle Schema
 
-```typescript
+\`\`\`typescript
 interface SavedVehicle {
   id: string                    // UUID
   user_id: string               // Foreign key to users
   vehicle_id: string            // Foreign key to vehicles
   created_at: string            // ISO timestamp
 }
-```
+\`\`\`
 
 ### Deleted Vehicle Schema
 
-```typescript
+\`\`\`typescript
 interface DeletedVehicle {
   id: string                    // Original vehicle ID
   user_id: string               // Who deleted it
@@ -2283,7 +2283,7 @@ interface DeletedVehicle {
   // Reasons: 'sold' | 'no_longer_selling' | 
   //          'no_longer_need_service' | 'other'
 }
-```
+\`\`\`
 
 ---
 
@@ -2291,7 +2291,7 @@ interface DeletedVehicle {
 
 ### State Management
 
-```typescript
+\`\`\`typescript
 // Global User Context
 const UserContext = createContext<{
   user: UserProfile | null
@@ -2308,11 +2308,11 @@ const UserContext = createContext<{
   deleteListedVehicle: (id: string) => Promise<void>
   refreshVehicles: () => Promise<void>
 }>()
-```
+\`\`\`
 
 ### API Routes
 
-```typescript
+\`\`\`typescript
 // User Profile
 GET    /api/user/profile
 POST   /api/user/profile
@@ -2336,11 +2336,11 @@ POST   /api/auth/signin
 POST   /api/auth/signout
 POST   /api/auth/reset-password
 GET    /api/auth/callback         // OAuth callback
-```
+\`\`\`
 
 ### Database Tables
 
-```sql
+\`\`\`sql
 -- Users table (managed by Supabase Auth)
 CREATE TABLE auth.users (
   id UUID PRIMARY KEY,
@@ -2436,11 +2436,11 @@ CREATE INDEX idx_vehicles_price ON public.vehicles(price);
 CREATE INDEX idx_vehicles_year ON public.vehicles(year);
 CREATE INDEX idx_saved_vehicles_user_id ON public.saved_vehicles(user_id);
 CREATE INDEX idx_saved_vehicles_vehicle_id ON public.saved_vehicles(vehicle_id);
-```
+\`\`\`
 
 ### Row Level Security (RLS)
 
-```sql
+\`\`\`sql
 -- Enable RLS
 ALTER TABLE public.user_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.vehicles ENABLE ROW LEVEL SECURITY;
@@ -2484,11 +2484,11 @@ CREATE POLICY "Users can insert own saved vehicles"
 CREATE POLICY "Users can delete own saved vehicles"
   ON public.saved_vehicles FOR DELETE
   USING (auth.uid() = user_id);
-```
+\`\`\`
 
 ### Environment Variables
 
-```bash
+\`\`\`bash
 # Supabase
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
@@ -2505,11 +2505,11 @@ GOOGLE_CLIENT_SECRET=your_google_client_secret
 
 # Deployment
 NEXT_PUBLIC_SITE_URL=https://your-domain.com
-```
+\`\`\`
 
 ### Performance Optimizations
 
-```typescript
+\`\`\`typescript
 // Image Optimization
 - Next.js Image component with:
   - Lazy loading
@@ -2539,7 +2539,7 @@ NEXT_PUBLIC_SITE_URL=https://your-domain.com
 - Remove unused dependencies
 - Analyze bundle with @next/bundle-analyzer
 - Target < 200KB initial JS
-```
+\`\`\`
 
 ---
 
@@ -2547,7 +2547,7 @@ NEXT_PUBLIC_SITE_URL=https://your-domain.com
 
 ### WCAG 2.1 AA Compliance
 
-```
+\`\`\`
 Color Contrast:
 - Normal text: 4.5:1 minimum
 - Large text (18px+): 3:1 minimum
@@ -2570,11 +2570,11 @@ Forms:
 - Error messages announced
 - Required fields indicated
 - Field descriptions provided
-```
+\`\`\`
 
 ### ARIA Attributes
 
-```html
+\`\`\`html
  Navigation 
 <nav aria-label="Main navigation">
   <ul role="list">
@@ -2610,13 +2610,13 @@ Forms:
 >
   Loading vehicles...
 </div>
-```
+\`\`\`
 
 ---
 
 ## Browser Support
 
-```
+\`\`\`
 Modern Browsers (Full Support):
 - Chrome 90+
 - Firefox 88+
@@ -2632,13 +2632,13 @@ Fallbacks:
 - CSS Grid → Flexbox fallback
 - CSS Variables → Static colors
 - Modern JS → Babel transpilation to ES5
-```
+\`\`\`
 
 ---
 
 ## Testing Strategy
 
-```typescript
+\`\`\`typescript
 // Unit Tests
 - Component rendering
 - Utility functions
@@ -2661,7 +2661,7 @@ Fallbacks:
 - Screenshot comparison
 - Component variations
 - Responsive layouts
-```
+\`\`\`
 
 ---
 
@@ -2669,7 +2669,7 @@ Fallbacks:
 
 ### Vercel Configuration
 
-```json
+\`\`\`json
 {
   "buildCommand": "npm run build",
   "outputDirectory": ".next",
@@ -2679,11 +2679,11 @@ Fallbacks:
     "NEXT_PUBLIC_SUPABASE_ANON_KEY": "@supabase-anon-key"
   }
 }
-```
+\`\`\`
 
 ### Build Optimization
 
-```javascript
+\`\`\`javascript
 // next.config.js
 module.exports = {
   images: {
@@ -2695,13 +2695,13 @@ module.exports = {
   reactStrictMode: true,
   swcMinify: true
 }
-```
+\`\`\`
 
 ---
 
 ## Future Enhancements
 
-```
+\`\`\`
 Phase 2:
 - Advanced search filters (color, features)
 - Vehicle comparison tool
@@ -2722,7 +2722,7 @@ Phase 4:
 - Review and rating system
 - Vehicle history reports
 - Multi-language support
-```
+\`\`\`
 
 ---
 

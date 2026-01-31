@@ -2,7 +2,7 @@
 
 import { useRouter, usePathname } from "next/navigation"
 import { useState, useEffect } from "react"
-import { Menu, X, User } from "lucide-react"
+import { Menu, X, User, Shield } from "lucide-react"
 import { useUser } from "@/components/UserContext"
 import { useMobile } from "@/hooks/use-mobile"
 import Image from "next/image"
@@ -103,6 +103,15 @@ export function Header({
         break
       case "contact":
         router.push("/contact")
+        break
+      case "privacy":
+        router.push("/privacy")
+        break
+      case "cookie-settings":
+        // Dispatch custom event to open cookie preferences modal
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('open-cookie-preferences'))
+        }
         break
       case "home":
         router.push("/home")
@@ -277,6 +286,23 @@ export function Header({
                       </button>
                     </div>
                   )}
+
+                  {/* Privacy & Cookie Settings */}
+                  <div className="pt-8 border-t border-white/10 space-y-4 text-center">
+                    <button
+                      onClick={() => handleNavigation("privacy")}
+                      className="text-white/70 text-sm hover:text-orange-500 transition-colors flex items-center justify-center gap-2"
+                    >
+                      <Shield size={14} />
+                      Privacy Policy
+                    </button>
+                    <button
+                      onClick={() => handleNavigation("cookie-settings")}
+                      className="text-white/70 text-sm hover:text-orange-500 transition-colors"
+                    >
+                      Cookie Settings
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
