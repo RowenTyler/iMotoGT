@@ -12,7 +12,7 @@ import type { Vehicle } from "@/types/vehicle"
 import { useUser } from "@/components/UserContext"
 import { Header } from "./ui/header"
 import VehicleCard from "./vehicle-card"
-import { useVehicleList, useVehicleContext } from "@/context/VehicleProvider" // Updated import path
+import { useVehicleList, useVehicleContext } from "@/components/VehicleProvider" // Updated import path
 
 // Common South African car make abbreviations
 const MAKE_ABBREVIATIONS: Record<string, string> = {
