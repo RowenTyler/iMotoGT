@@ -1,27 +1,54 @@
+"use client"
+
 import React, { createContext, useContext, useEffect, useState } from 'react';
 
-const VehicleContext = createContext(null);
+interface Vehicle {
+  id: string;
+  make: string;
+  model: string;
+  // Add other vehicle properties as needed
+}
 
-export const VehicleProvider = ({ children }) => {
-    const [vehicles, setVehicles] = useState([]);
+interface VehicleContextType {
+  vehicles: Vehicle[];
+  loadVehicles: () => Promise<void>;
+  loading: boolean;
+}
 
-    useEffect(() => {
-        const fetchVehicles = async () => {
+const VehicleContext = createContext<VehicleContextType | null>(null);
+
+export const VehicleProvider = ({ children }: { children: React.ReactNode }) => {
+    const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+    const [loading, setLoading] = useState(false);
+
+    const loadVehicles = async () => {
+        setLoading(true);
+        try {
             const response = await fetch('/api/vehicles');
             const data = await response.json();
             setVehicles(data);
-        };
+        } catch (error) {
+            console.error('Failed to fetch vehicles:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
 
-        fetchVehicles();
+    useEffect(() => {
+        loadVehicles();
     }, []);
 
     return (
-        <VehicleContext.Provider value={{ vehicles }}>
+        <VehicleContext.Provider value={{ vehicles, loadVehicles, loading }}>
             {children}
         </VehicleContext.Provider>
     );
 };
 
-export const useVehicles = () => {
-    return useContext(VehicleContext);
+export const useVehicleContext = () => {
+    const context = useContext(VehicleContext);
+    if (!context) {
+        throw new Error('useVehicleContext must be used within a VehicleProvider');
+    }
+    return context;
 };
