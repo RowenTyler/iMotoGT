@@ -1,25 +1,19 @@
 "use client"
 
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
-import { CacheManager } from '@/lib/cache/CacheManager';
+import { CacheManager } from '@/lib/cache-manager';
 
-// Extend the Vehicle interface as needed
-interface Vehicle {
-  id: string;
-  make: string;
-  model: string;
-  year?: number;
-  price?: number;
-  mileage?: number;
-  images?: string[];
-  // Add other vehicle properties as needed
-}
+// Import your actual Vehicle type
+import type { Vehicle } from '@/types/vehicle';
 
 interface VehicleListResponse {
   vehicles: Vehicle[];
   totalCount?: number;
   page?: number;
   limit?: number;
+  hierarchy?: Record<string, string[]>;
+  timestamp?: number;
+  filters?: any;
 }
 
 interface VehicleCache {
@@ -32,6 +26,7 @@ interface VehicleCache {
 }
 
 interface VehicleContextType {
+  // === NEW CACHE SYSTEM ===
   // Get vehicle by ID (cached)
   getVehicle: (id: string) => Promise<Vehicle | null>;
   // Get vehicle list (cached)
@@ -48,6 +43,12 @@ interface VehicleContextType {
   clearCache: (key?: string) => void;
   // Loading states
   loadingStates: Record<string, boolean>;
+  
+  // === LEGACY SUPPORT (for backward compatibility) ===
+  vehicles: Vehicle[];
+  loadVehicles: () => Promise<void>;
+  loading: boolean;
+  getVehicleById: (id: string) => Promise<Vehicle | null>;
 }
 
 const VehicleContext = createContext<VehicleContextType | null>(null);
@@ -64,8 +65,7 @@ export const VehicleProvider = ({ children }: { children: React.ReactNode }) => 
     }
     
     try {
-      const cacheManager = CacheManager.getInstance();
-      const savedCache = cacheManager.get('vehicleCache');
+      const savedCache = CacheManager.get<VehicleCache>('vehicleCache');
       return savedCache || { byId: {}, lists: {}, timestamps: {} };
     } catch (error) {
       console.error('Failed to load cache from localStorage:', error);
@@ -74,16 +74,19 @@ export const VehicleProvider = ({ children }: { children: React.ReactNode }) => 
   });
   
   const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({});
+  
+  // Legacy state for backward compatibility
+  const [legacyVehicles, setLegacyVehicles] = useState<Vehicle[]>([]);
+  const [legacyLoading, setLegacyLoading] = useState(false);
 
   // Save cache to localStorage when it changes
   useEffect(() => {
     if (typeof window === 'undefined') return;
     
     try {
-      const cacheManager = CacheManager.getInstance();
       // Debounce the save to prevent excessive writes
       const timeoutId = setTimeout(() => {
-        cacheManager.set('vehicleCache', cache);
+        CacheManager.set('vehicleCache', cache);
       }, 300);
       
       return () => clearTimeout(timeoutId);
@@ -91,6 +94,8 @@ export const VehicleProvider = ({ children }: { children: React.ReactNode }) => 
       console.error('Failed to save cache to localStorage:', error);
     }
   }, [cache]);
+
+  // === NEW CACHE FUNCTIONS ===
 
   // Get vehicle by ID with caching
   const getVehicle = useCallback(async (id: string): Promise<Vehicle | null> => {
@@ -118,7 +123,21 @@ export const VehicleProvider = ({ children }: { children: React.ReactNode }) => 
     
     try {
       const response = await fetch(`/api/vehicles/${id}`);
-      if (!response.ok) throw new Error('Failed to fetch vehicle');
+      if (!response.ok) {
+        // Try alternative API endpoint if available
+        const altResponse = await fetch(`/api/vehicle/${id}`);
+        if (!altResponse.ok) throw new Error('Failed to fetch vehicle');
+        const vehicle: Vehicle = await altResponse.json();
+        
+        // Update cache
+        setCache(prev => ({
+          ...prev,
+          byId: { ...prev.byId, [id]: vehicle },
+          timestamps: { ...prev.timestamps, [cacheKey]: Date.now() }
+        }));
+        
+        return vehicle;
+      }
       
       const vehicle: Vehicle = await response.json();
       
@@ -182,21 +201,12 @@ export const VehicleProvider = ({ children }: { children: React.ReactNode }) => 
       
       // Also cache individual vehicles from the list
       if (response.vehicles) {
-        setCache(prev => {
-          const newById = { ...prev.byId };
-          const newTimestamps = { ...prev.timestamps };
-          
-          response.vehicles.forEach(vehicle => {
-            const vehicleKey = `vehicle:${vehicle.id}`;
-            newById[vehicle.id] = vehicle;
-            newTimestamps[vehicleKey] = Date.now();
-          });
-          
-          return {
+        response.vehicles.forEach(vehicle => {
+          setCache(prev => ({
             ...prev,
-            byId: newById,
-            timestamps: newTimestamps
-          };
+            byId: { ...prev.byId, [vehicle.id]: vehicle },
+            timestamps: { ...prev.timestamps, [`vehicle:${vehicle.id}`]: Date.now() }
+          }));
         });
       }
       
@@ -257,8 +267,47 @@ export const VehicleProvider = ({ children }: { children: React.ReactNode }) => 
     }
   }, []);
 
+  // === LEGACY FUNCTIONS (for backward compatibility) ===
+
+  const loadVehicles = useCallback(async () => {
+    setLegacyLoading(true);
+    try {
+      const response = await fetch('/api/vehicles');
+      const data = await response.json();
+      const vehicles = Array.isArray(data) ? data : data.vehicles || [];
+      setLegacyVehicles(vehicles);
+      
+      // Also update cache for future use
+      const cacheKey = 'legacy:all';
+      setCache(prev => ({
+        ...prev,
+        lists: {
+          ...prev.lists,
+          [cacheKey]: { vehicles, totalCount: vehicles.length, timestamp: Date.now() }
+        },
+        timestamps: { ...prev.timestamps, [cacheKey]: Date.now() }
+      }));
+      
+      // Cache individual vehicles
+      vehicles.forEach(vehicle => {
+        updateVehicleInCache(vehicle);
+      });
+      
+    } catch (error) {
+      console.error('Failed to fetch vehicles:', error);
+    } finally {
+      setLegacyLoading(false);
+    }
+  }, [updateVehicleInCache]);
+
+  // Legacy function for backward compatibility
+  const getVehicleById = useCallback(async (id: string): Promise<Vehicle | null> => {
+    return getVehicle(id);
+  }, [getVehicle]);
+
   // Context value
   const contextValue = useMemo(() => ({
+    // New cache system
     getVehicle,
     getVehicleList,
     getCachedVehicle,
@@ -267,6 +316,12 @@ export const VehicleProvider = ({ children }: { children: React.ReactNode }) => 
     updateVehicleInCache,
     clearCache,
     loadingStates,
+    
+    // Legacy properties for backward compatibility
+    vehicles: legacyVehicles,
+    loadVehicles,
+    loading: legacyLoading,
+    getVehicleById,
   }), [
     getVehicle,
     getVehicleList,
@@ -276,6 +331,10 @@ export const VehicleProvider = ({ children }: { children: React.ReactNode }) => 
     updateVehicleInCache,
     clearCache,
     loadingStates,
+    legacyVehicles,
+    loadVehicles,
+    legacyLoading,
+    getVehicleById,
   ]);
 
   return (
@@ -321,7 +380,7 @@ export const useVehicle = (id?: string) => {
         
         // Fetch with cache fallback
         const fetchedVehicle = await getVehicle(id);
-        if (fetchedVehicle && fetchedVehicle !== cached) {
+        if (fetchedVehicle) {
           setVehicle(fetchedVehicle);
         }
       } catch (err) {
@@ -344,6 +403,7 @@ export const useVehicleList = (
   options?: {
     enabled?: boolean;
     forceRefresh?: boolean;
+    maxAge?: number;
   }
 ) => {
   const [data, setData] = useState<VehicleListResponse | null>(null);
@@ -353,6 +413,7 @@ export const useVehicleList = (
 
   const enabled = options?.enabled ?? true;
   const forceRefresh = options?.forceRefresh ?? false;
+  const maxAge = options?.maxAge ?? DEFAULT_STALE_TIME;
 
   useEffect(() => {
     if (!enabled) {
@@ -368,7 +429,7 @@ export const useVehicleList = (
         // Check cache first (unless force refresh)
         if (!forceRefresh) {
           const cached = getCachedList(cacheKey);
-          if (cached && isFresh(cacheKey)) {
+          if (cached && isFresh(cacheKey, maxAge)) {
             setData(cached);
             setLoading(false);
           }
@@ -385,7 +446,7 @@ export const useVehicleList = (
     };
 
     loadList();
-  }, [cacheKey, fetchFn, enabled, forceRefresh, getVehicleList, getCachedList, isFresh]);
+  }, [cacheKey, fetchFn, enabled, forceRefresh, maxAge, getVehicleList, getCachedList, isFresh]);
 
   return { data, loading, error };
 };
