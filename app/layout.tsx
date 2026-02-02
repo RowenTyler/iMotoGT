@@ -7,6 +7,7 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { GDPRProvider } from "@/components/gdpr/gdpr-provider"
 import { CookieConsentBanner } from "@/components/gdpr/cookie-consent-banner"
 import { CookiePreferencesModal } from "@/components/gdpr/cookie-preferences-modal"
+import { VehicleProvider } from "@/components/VehicleProvider" // NEW
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -68,7 +69,9 @@ export default function RootLayout({
       <body className={inter.className}>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
           <GDPRProvider>
-            <UserProvider>{children}</UserProvider>
+            <UserProvider>
+              <VehicleProvider>{children}</VehicleProvider> {/* WRAPPED */}
+            </UserProvider>
             <CookieConsentBanner />
             <CookiePreferencesModal />
           </GDPRProvider>
