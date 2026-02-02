@@ -7,7 +7,8 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { GDPRProvider } from "@/components/gdpr/gdpr-provider"
 import { CookieConsentBanner } from "@/components/gdpr/cookie-consent-banner"
 import { CookiePreferencesModal } from "@/components/gdpr/cookie-preferences-modal"
-import { VehicleProvider } from "@/components/VehicleProvider" // NEW
+import { VehicleProvider } from "@/components/VehicleProvider"
+import { NavigationCacheHandler } from "@/components/NavigationCacheHandler" // NEW IMPORT
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -70,7 +71,10 @@ export default function RootLayout({
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
           <GDPRProvider>
             <UserProvider>
-              <VehicleProvider>{children}</VehicleProvider> {/* WRAPPED */}
+              <VehicleProvider>
+                <NavigationCacheHandler /> {/* ADDED COMPONENT */}
+                {children}
+              </VehicleProvider>
             </UserProvider>
             <CookieConsentBanner />
             <CookiePreferencesModal />
