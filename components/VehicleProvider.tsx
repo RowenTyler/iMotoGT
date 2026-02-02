@@ -1,7 +1,8 @@
 // components/VehicleProvider.tsx
 "use client"
 
-import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { CacheManager } from '@/lib/cache-manager';
 import type { Vehicle } from '@/types/vehicle';
 
@@ -30,6 +31,14 @@ interface VehicleCache {
   timestamps: Record<string, number>;
   // Last accessed timestamps for LRU eviction
   lastAccessed: Record<string, number>;
+  // Navigation history for back/forward buttons
+  navigationHistory: {
+    path: string;
+    searchParams?: string;
+    data?: any;
+    scrollPosition?: number;
+    timestamp: number;
+  }[];
 }
 
 interface VehicleContextType {
@@ -51,6 +60,30 @@ interface VehicleContextType {
   // Preload cache (for navigation)
   preloadCache: (key: string, data: VehicleListResponse) => void;
   
+  // === NAVIGATION CACHE ===
+  // Save current page state before navigating away
+  savePageState: (data?: any) => void;
+  // Restore page state when navigating back/forward
+  restorePageState: () => any;
+  // Get navigation history
+  getNavigationHistory: () => VehicleCache['navigationHistory'];
+  // Clear navigation history
+  clearNavigationHistory: () => void;
+  // Save scroll position for current page
+  saveScrollPosition: (position: number) => void;
+  // Restore scroll position for current page
+  restoreScrollPosition: () => number | null;
+  
+  // === ROUTE-BASED CACHING ===
+  // Get current route cache key
+  getCurrentRouteKey: () => string;
+  // Save data for current route
+  saveForCurrentRoute: (data: any, type?: 'list' | 'detail') => void;
+  // Get data for current route
+  getForCurrentRoute: () => any;
+  // Check if current route is cached
+  isCurrentRouteCached: () => boolean;
+  
   // === LEGACY SUPPORT ===
   vehicles: Vehicle[];
   loadVehicles: () => Promise<void>;
@@ -64,11 +97,24 @@ const VehicleContext = createContext<VehicleContextType | null>(null);
 const DEFAULT_STALE_TIME = 30 * 60 * 1000; // 30 minutes for lists
 const VEHICLE_STALE_TIME = 60 * 60 * 1000; // 60 minutes for individual vehicles
 const MAX_CACHE_SIZE = 100; // Maximum number of cache entries to prevent memory bloat
+const MAX_NAVIGATION_HISTORY = 20; // Maximum pages in navigation history
+const NAVIGATION_CACHE_KEY = 'vehicle_navigation_cache';
 
 export const VehicleProvider = ({ children }: { children: React.ReactNode }) => {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const isInitialMount = useRef(true);
+  const currentRouteKeyRef = useRef<string>('');
+  
   const [cache, setCache] = useState<VehicleCache>(() => {
     if (typeof window === 'undefined') {
-      return { byId: {}, lists: {}, timestamps: {}, lastAccessed: {} };
+      return { 
+        byId: {}, 
+        lists: {}, 
+        timestamps: {}, 
+        lastAccessed: {},
+        navigationHistory: []
+      };
     }
     
     try {
@@ -78,22 +124,56 @@ export const VehicleProvider = ({ children }: { children: React.ReactNode }) => 
         log('✅ Loaded cached data from localStorage', {
           vehicles: Object.keys(savedCache.byId || {}).length,
           lists: Object.keys(savedCache.lists || {}).length,
-          timestamps: Object.keys(savedCache.timestamps || {}).length
+          timestamps: Object.keys(savedCache.timestamps || {}).length,
+          navigationHistory: (savedCache.navigationHistory || []).length
         });
         return {
           byId: savedCache.byId || {},
           lists: savedCache.lists || {},
           timestamps: savedCache.timestamps || {},
-          lastAccessed: savedCache.lastAccessed || {}
+          lastAccessed: savedCache.lastAccessed || {},
+          navigationHistory: savedCache.navigationHistory || []
         };
       }
       log('📭 No cache found in localStorage');
-      return { byId: {}, lists: {}, timestamps: {}, lastAccessed: {} };
+      return { 
+        byId: {}, 
+        lists: {}, 
+        timestamps: {}, 
+        lastAccessed: {},
+        navigationHistory: []
+      };
     } catch (error) {
       console.error('❌ Failed to load cache from localStorage:', error);
-      return { byId: {}, lists: {}, timestamps: {}, lastAccessed: {} };
+      return { 
+        byId: {}, 
+        lists: {}, 
+        timestamps: {}, 
+        lastAccessed: {},
+        navigationHistory: []
+      };
     }
   });
+
+  // Update current route key when pathname or searchParams change
+  useEffect(() => {
+    const paramsString = searchParams.toString();
+    currentRouteKeyRef.current = paramsString 
+      ? `${pathname}?${paramsString}`
+      : pathname;
+    
+    log(`📍 Current route key updated: ${currentRouteKeyRef.current}`);
+    
+    // Auto-restore state for this route if available
+    if (!isInitialMount.current) {
+      const cachedData = getForCurrentRoute();
+      if (cachedData) {
+        log(`🔄 Auto-restored cached data for route: ${currentRouteKeyRef.current}`);
+      }
+    }
+    
+    isInitialMount.current = false;
+  }, [pathname, searchParams]);
 
   // Save cache to localStorage with debounce
   useEffect(() => {
@@ -103,7 +183,8 @@ export const VehicleProvider = ({ children }: { children: React.ReactNode }) => 
       try {
         log('💾 Saving cache to localStorage', {
           vehicles: Object.keys(cache.byId).length,
-          lists: Object.keys(cache.lists).length
+          lists: Object.keys(cache.lists).length,
+          navigationHistory: cache.navigationHistory.length
         });
         CacheManager.set('vehicleCache', cache);
       } catch (error) {
@@ -126,7 +207,7 @@ export const VehicleProvider = ({ children }: { children: React.ReactNode }) => 
         // Clean up old timestamps
         Object.keys(newCache.timestamps).forEach(key => {
           const age = now - newCache.timestamps[key];
-          const isList = key.startsWith('home') || key.startsWith('results') || key.startsWith('search');
+          const isList = key.startsWith('home') || key.startsWith('results') || key.startsWith('search') || key.includes('?');
           const maxAge = isList ? DEFAULT_STALE_TIME : VEHICLE_STALE_TIME;
           
           if (age > maxAge * 2) { // Double the stale time before cleanup
@@ -143,6 +224,12 @@ export const VehicleProvider = ({ children }: { children: React.ReactNode }) => 
             log('🧹 Cleaned up old cache entry:', key);
           }
         });
+
+        // Clean up old navigation history
+        if (newCache.navigationHistory.length > MAX_NAVIGATION_HISTORY) {
+          newCache.navigationHistory = newCache.navigationHistory
+            .slice(0, MAX_NAVIGATION_HISTORY);
+        }
 
         return newCache;
       });
@@ -371,9 +458,216 @@ export const VehicleProvider = ({ children }: { children: React.ReactNode }) => 
       });
     } else {
       log('🧹 Clearing all cache');
-      setCache({ byId: {}, lists: {}, timestamps: {}, lastAccessed: {} });
+      setCache({ 
+        byId: {}, 
+        lists: {}, 
+        timestamps: {}, 
+        lastAccessed: {},
+        navigationHistory: []
+      });
     }
   }, []);
+
+  // === NAVIGATION CACHE FUNCTIONS ===
+  
+  // Save current page state before navigating away
+  const savePageState = useCallback((data?: any) => {
+    const routeKey = currentRouteKeyRef.current;
+    if (!routeKey) return;
+    
+    log(`💾 Saving page state for route: ${routeKey}`);
+    
+    setCache(prev => {
+      const newHistory = [...(prev.navigationHistory || [])];
+      
+      // Remove existing entry for this route if it exists
+      const existingIndex = newHistory.findIndex(entry => entry.path === routeKey);
+      if (existingIndex !== -1) {
+        newHistory.splice(existingIndex, 1);
+      }
+      
+      // Add current state to history
+      newHistory.unshift({
+        path: routeKey,
+        searchParams: searchParams.toString(),
+        data: data || getForCurrentRoute(),
+        timestamp: Date.now()
+      });
+      
+      // Limit history size
+      if (newHistory.length > MAX_NAVIGATION_HISTORY) {
+        newHistory.pop();
+      }
+      
+      return {
+        ...prev,
+        navigationHistory: newHistory
+      };
+    });
+  }, [searchParams]);
+
+  // Restore page state when navigating back/forward
+  const restorePageState = useCallback(() => {
+    const routeKey = currentRouteKeyRef.current;
+    if (!routeKey) return null;
+    
+    log(`🔄 Attempting to restore page state for route: ${routeKey}`);
+    
+    const historyEntry = cache.navigationHistory.find(entry => entry.path === routeKey);
+    
+    if (historyEntry) {
+      log(`✅ Restored page state from navigation history for: ${routeKey}`);
+      return historyEntry.data;
+    }
+    
+    // If not in navigation history, try regular cache
+    const cachedData = getForCurrentRoute();
+    if (cachedData) {
+      log(`✅ Restored page state from regular cache for: ${routeKey}`);
+      return cachedData;
+    }
+    
+    log(`❌ No cached data found for route: ${routeKey}`);
+    return null;
+  }, [cache.navigationHistory]);
+
+  // Get navigation history
+  const getNavigationHistory = useCallback(() => {
+    return cache.navigationHistory || [];
+  }, [cache.navigationHistory]);
+
+  // Clear navigation history
+  const clearNavigationHistory = useCallback(() => {
+    log('🧹 Clearing navigation history');
+    setCache(prev => ({
+      ...prev,
+      navigationHistory: []
+    }));
+  }, []);
+
+  // Save scroll position for current page
+  const saveScrollPosition = useCallback((position: number) => {
+    const routeKey = currentRouteKeyRef.current;
+    if (!routeKey) return;
+    
+    log(`📐 Saving scroll position ${position} for route: ${routeKey}`);
+    
+    setCache(prev => {
+      const newHistory = [...(prev.navigationHistory || [])];
+      const existingIndex = newHistory.findIndex(entry => entry.path === routeKey);
+      
+      if (existingIndex !== -1) {
+        newHistory[existingIndex] = {
+          ...newHistory[existingIndex],
+          scrollPosition: position
+        };
+      } else {
+        newHistory.unshift({
+          path: routeKey,
+          searchParams: searchParams.toString(),
+          scrollPosition: position,
+          timestamp: Date.now()
+        });
+      }
+      
+      // Limit history size
+      if (newHistory.length > MAX_NAVIGATION_HISTORY) {
+        newHistory.pop();
+      }
+      
+      return {
+        ...prev,
+        navigationHistory: newHistory
+      };
+    });
+  }, [searchParams]);
+
+  // Restore scroll position for current page
+  const restoreScrollPosition = useCallback(() => {
+    const routeKey = currentRouteKeyRef.current;
+    if (!routeKey) return null;
+    
+    const historyEntry = cache.navigationHistory.find(entry => entry.path === routeKey);
+    return historyEntry?.scrollPosition || null;
+  }, [cache.navigationHistory]);
+
+  // === ROUTE-BASED CACHING ===
+  
+  // Get current route cache key
+  const getCurrentRouteKey = useCallback(() => {
+    return currentRouteKeyRef.current;
+  }, []);
+
+  // Save data for current route
+  const saveForCurrentRoute = useCallback((data: any, type: 'list' | 'detail' = 'list') => {
+    const routeKey = currentRouteKeyRef.current;
+    if (!routeKey) return;
+    
+    log(`💾 Saving data for current route: ${routeKey} (type: ${type})`);
+    
+    setCache(prev => {
+      const newCache = { ...prev };
+      
+      // Store in appropriate cache based on type
+      if (type === 'list') {
+        newCache.lists[routeKey] = data;
+      } else if (type === 'detail' && data.id) {
+        newCache.byId[data.id] = data;
+        newCache.timestamps[`vehicle:${data.id}`] = Date.now();
+        newCache.lastAccessed[`vehicle:${data.id}`] = Date.now();
+      }
+      
+      // Always update timestamps for the route
+      newCache.timestamps[routeKey] = Date.now();
+      newCache.lastAccessed[routeKey] = Date.now();
+      
+      return newCache;
+    });
+  }, []);
+
+  // Get data for current route
+  const getForCurrentRoute = useCallback(() => {
+    const routeKey = currentRouteKeyRef.current;
+    if (!routeKey) return null;
+    
+    // First try lists (for search results, home page, etc.)
+    const listData = cache.lists[routeKey];
+    if (listData) {
+      log(`🔍 Found cached list data for route: ${routeKey}`);
+      return listData;
+    }
+    
+    // Then check if this is a vehicle detail page
+    const vehicleIdMatch = routeKey.match(/\/vehicle\/([^\/?]+)/);
+    if (vehicleIdMatch) {
+      const vehicleId = vehicleIdMatch[1];
+      const vehicleData = cache.byId[vehicleId];
+      if (vehicleData) {
+        log(`🔍 Found cached vehicle data for route: ${routeKey}`);
+        return vehicleData;
+      }
+    }
+    
+    return null;
+  }, [cache.lists, cache.byId, currentRouteKeyRef.current]);
+
+  // Check if current route is cached
+  const isCurrentRouteCached = useCallback(() => {
+    const routeKey = currentRouteKeyRef.current;
+    if (!routeKey) return false;
+    
+    const hasListCache = !!cache.lists[routeKey];
+    const hasVehicleCache = (() => {
+      const vehicleIdMatch = routeKey.match(/\/vehicle\/([^\/?]+)/);
+      if (vehicleIdMatch) {
+        const vehicleId = vehicleIdMatch[1];
+        return !!cache.byId[vehicleId];
+      }
+      return false;
+    })();
+    
+    return hasListCache || hasVehicleCache;
+  }, [cache.lists, cache.byId, currentRouteKeyRef.current]);
 
   // === LEGACY FUNCTIONS ===
   const [legacyVehicles, setLegacyVehicles] = useState<Vehicle[]>([]);
@@ -400,6 +694,28 @@ export const VehicleProvider = ({ children }: { children: React.ReactNode }) => 
     return getVehicle(id);
   }, [getVehicle]);
 
+  // Save state before page unload
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      log('⚠️ Page unloading, saving current state');
+      savePageState();
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [savePageState]);
+
+  // Auto-save state when navigating away (route changes)
+  useEffect(() => {
+    if (isInitialMount.current) return;
+    
+    log(`📍 Route changed to: ${currentRouteKeyRef.current}, saving previous state`);
+    savePageState();
+  }, [pathname, searchParams, savePageState]);
+
   // Context value
   const contextValue = useMemo(() => ({
     // Cache system
@@ -411,6 +727,20 @@ export const VehicleProvider = ({ children }: { children: React.ReactNode }) => 
     updateVehicleInCache,
     preloadCache,
     clearCache,
+    
+    // Navigation cache
+    savePageState,
+    restorePageState,
+    getNavigationHistory,
+    clearNavigationHistory,
+    saveScrollPosition,
+    restoreScrollPosition,
+    
+    // Route-based caching
+    getCurrentRouteKey,
+    saveForCurrentRoute,
+    getForCurrentRoute,
+    isCurrentRouteCached,
     
     // Legacy
     vehicles: legacyVehicles,
@@ -426,6 +756,16 @@ export const VehicleProvider = ({ children }: { children: React.ReactNode }) => 
     updateVehicleInCache,
     preloadCache,
     clearCache,
+    savePageState,
+    restorePageState,
+    getNavigationHistory,
+    clearNavigationHistory,
+    saveScrollPosition,
+    restoreScrollPosition,
+    getCurrentRouteKey,
+    saveForCurrentRoute,
+    getForCurrentRoute,
+    isCurrentRouteCached,
     legacyVehicles,
     loadVehicles,
     legacyLoading,
@@ -435,7 +775,9 @@ export const VehicleProvider = ({ children }: { children: React.ReactNode }) => 
   log('🎯 VehicleProvider state:', {
     cacheSize: Object.keys(cache.byId).length,
     listKeys: Object.keys(cache.lists),
-    lastLoad: cache.timestamps['home'] ? new Date(cache.timestamps['home']).toLocaleTimeString() : 'never'
+    navigationHistory: cache.navigationHistory.length,
+    currentRoute: currentRouteKeyRef.current,
+    isCurrentRouteCached: isCurrentRouteCached()
   });
 
   return (
@@ -467,7 +809,7 @@ export const useVehicleList = (
   const [data, setData] = useState<VehicleListResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { getVehicleList, getCachedList, isFresh } = useVehicleContext();
+  const { getVehicleList, getCachedList, isFresh, saveForCurrentRoute } = useVehicleContext();
 
   const enabled = options?.enabled ?? true;
   const forceRefresh = options?.forceRefresh ?? false;
@@ -503,6 +845,9 @@ export const useVehicleList = (
           setData(cached);
           setLoading(false);
           
+          // Save to route cache for navigation
+          saveForCurrentRoute(cached, 'list');
+          
           // If force refresh is true, still fetch in background
           if (forceRefresh) {
             console.log(`🔄 useVehicleList ${cacheKey}: Force refresh in background`);
@@ -511,6 +856,7 @@ export const useVehicleList = (
               if (response !== cached) {
                 console.log(`🔄 useVehicleList ${cacheKey}: Updated with fresh data`);
                 setData(response);
+                saveForCurrentRoute(response, 'list');
               }
             } catch (bgError) {
               console.error(`❌ useVehicleList ${cacheKey}: Background refresh failed:`, bgError);
@@ -526,6 +872,9 @@ export const useVehicleList = (
           setData(cached);
           setLoading(false);
           
+          // Save to route cache for navigation
+          saveForCurrentRoute(cached, 'list');
+          
           // Fetch fresh data in background
           console.log(`🔄 useVehicleList ${cacheKey}: Fetching fresh data in background`);
           try {
@@ -533,6 +882,7 @@ export const useVehicleList = (
             if (response !== cached) {
               console.log(`🔄 useVehicleList ${cacheKey}: Updated with fresh data`);
               setData(response);
+              saveForCurrentRoute(response, 'list');
             }
           } catch (bgError) {
             console.error(`❌ useVehicleList ${cacheKey}: Background refresh failed:`, bgError);
@@ -546,6 +896,7 @@ export const useVehicleList = (
         const response = await getVehicleList(cacheKey, fetchFn);
         console.log(`✅ useVehicleList ${cacheKey}: Fetched ${response.vehicles?.length || 0} vehicles`);
         setData(response);
+        saveForCurrentRoute(response, 'list');
       } catch (err) {
         const errorMsg = err instanceof Error ? err.message : 'Failed to load vehicles';
         console.error(`❌ useVehicleList error for ${cacheKey}:`, errorMsg);
@@ -556,6 +907,7 @@ export const useVehicleList = (
         if (cached) {
           console.log(`🔄 useVehicleList ${cacheKey}: Using stale cache as fallback after error`);
           setData(cached);
+          saveForCurrentRoute(cached, 'list');
         }
       } finally {
         setLoading(false);
@@ -563,7 +915,7 @@ export const useVehicleList = (
     };
 
     loadList();
-  }, [cacheKey, fetchFn, enabled, forceRefresh, maxAge, getVehicleList, getCachedList, isFresh]);
+  }, [cacheKey, fetchFn, enabled, forceRefresh, maxAge, getVehicleList, getCachedList, isFresh, saveForCurrentRoute]);
 
   console.log(`📊 useVehicleList state for ${cacheKey}:`, { 
     loading, 
@@ -579,7 +931,7 @@ export const useVehicle = (id?: string) => {
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const { getVehicle, getCachedVehicle } = useVehicleContext();
+  const { getVehicle, getCachedVehicle, saveForCurrentRoute } = useVehicleContext();
 
   useEffect(() => {
     if (!id) {
@@ -603,6 +955,9 @@ export const useVehicle = (id?: string) => {
           setVehicle(cached);
           setLoading(false);
           
+          // Save to route cache for navigation
+          saveForCurrentRoute(cached, 'detail');
+          
           // Always fetch fresh data in background
           console.log(`🔄 useVehicle: Fetching fresh data in background for ${id}`);
           try {
@@ -610,6 +965,7 @@ export const useVehicle = (id?: string) => {
             if (fetchedVehicle && fetchedVehicle !== cached) {
               console.log(`🔄 useVehicle: Updated with fresh data for ${id}`);
               setVehicle(fetchedVehicle);
+              saveForCurrentRoute(fetchedVehicle, 'detail');
             }
           } catch (bgError) {
             console.error(`❌ useVehicle: Background refresh failed for ${id}:`, bgError);
@@ -624,6 +980,7 @@ export const useVehicle = (id?: string) => {
         if (fetchedVehicle) {
           console.log(`✅ useVehicle: Fetched vehicle ${id}`);
           setVehicle(fetchedVehicle);
+          saveForCurrentRoute(fetchedVehicle, 'detail');
         }
       } catch (err) {
         const errorMsg = err instanceof Error ? err.message : 'Failed to load vehicle';
@@ -635,9 +992,30 @@ export const useVehicle = (id?: string) => {
     };
 
     loadVehicle();
-  }, [id, getVehicle, getCachedVehicle]);
+  }, [id, getVehicle, getCachedVehicle, saveForCurrentRoute]);
 
   console.log(`📊 useVehicle state for ${id}:`, { loading, hasVehicle: !!vehicle, error });
 
   return { vehicle, loading, error };
+};
+
+// Hook for handling navigation caching
+export const useNavigationCache = () => {
+  const { 
+    savePageState, 
+    restorePageState, 
+    saveScrollPosition, 
+    restoreScrollPosition,
+    getNavigationHistory,
+    clearNavigationHistory
+  } = useVehicleContext();
+  
+  return {
+    savePageState,
+    restorePageState,
+    saveScrollPosition,
+    restoreScrollPosition,
+    getNavigationHistory,
+    clearNavigationHistory
+  };
 };
