@@ -1,10 +1,8 @@
-// components/VehicleProvider.tsx (Debug Version)
+// components/VehicleProvider.tsx
 "use client"
 
 import React, { createContext, useContext, useEffect, useState, useCallback, useMemo } from 'react';
 import { CacheManager } from '@/lib/cache-manager';
-
-// Import your actual Vehicle type
 import type { Vehicle } from '@/types/vehicle';
 
 // Debug logging flag
@@ -30,10 +28,12 @@ interface VehicleCache {
   lists: Record<string, VehicleListResponse>;
   // Timestamps for freshness checks
   timestamps: Record<string, number>;
+  // Last accessed timestamps for LRU eviction
+  lastAccessed: Record<string, number>;
 }
 
 interface VehicleContextType {
-  // === NEW CACHE SYSTEM ===
+  // === CACHE SYSTEM ===
   // Get vehicle by ID (cached)
   getVehicle: (id: string) => Promise<Vehicle | null>;
   // Get vehicle list (cached)
@@ -48,10 +48,10 @@ interface VehicleContextType {
   updateVehicleInCache: (vehicle: Vehicle) => void;
   // Clear specific cache
   clearCache: (key?: string) => void;
-  // Loading states
-  loadingStates: Record<string, boolean>;
+  // Preload cache (for navigation)
+  preloadCache: (key: string, data: VehicleListResponse) => void;
   
-  // === LEGACY SUPPORT (for backward compatibility) ===
+  // === LEGACY SUPPORT ===
   vehicles: Vehicle[];
   loadVehicles: () => Promise<void>;
   loading: boolean;
@@ -60,63 +60,96 @@ interface VehicleContextType {
 
 const VehicleContext = createContext<VehicleContextType | null>(null);
 
-// Default stale times (in milliseconds)
-const DEFAULT_STALE_TIME = 5 * 60 * 1000; // 5 minutes for lists
-const VEHICLE_STALE_TIME = 10 * 60 * 1000; // 10 minutes for individual vehicles
+// Cache configuration
+const DEFAULT_STALE_TIME = 30 * 60 * 1000; // 30 minutes for lists
+const VEHICLE_STALE_TIME = 60 * 60 * 1000; // 60 minutes for individual vehicles
+const MAX_CACHE_SIZE = 100; // Maximum number of cache entries to prevent memory bloat
 
 export const VehicleProvider = ({ children }: { children: React.ReactNode }) => {
   const [cache, setCache] = useState<VehicleCache>(() => {
-    // Initialize cache from localStorage on client side
     if (typeof window === 'undefined') {
-      log('🔍 Initializing cache (server-side)');
-      return { byId: {}, lists: {}, timestamps: {} };
+      return { byId: {}, lists: {}, timestamps: {}, lastAccessed: {} };
     }
     
     try {
       log('🔍 Loading cache from localStorage');
       const savedCache = CacheManager.get<VehicleCache>('vehicleCache');
       if (savedCache) {
-        log('✅ Loaded cached data:', {
-          vehiclesCount: Object.keys(savedCache.byId || {}).length,
-          listsCount: Object.keys(savedCache.lists || {}).length
+        log('✅ Loaded cached data from localStorage', {
+          vehicles: Object.keys(savedCache.byId || {}).length,
+          lists: Object.keys(savedCache.lists || {}).length,
+          timestamps: Object.keys(savedCache.timestamps || {}).length
         });
-      } else {
-        log('📭 No cache found in localStorage');
+        return {
+          byId: savedCache.byId || {},
+          lists: savedCache.lists || {},
+          timestamps: savedCache.timestamps || {},
+          lastAccessed: savedCache.lastAccessed || {}
+        };
       }
-      return savedCache || { byId: {}, lists: {}, timestamps: {} };
+      log('📭 No cache found in localStorage');
+      return { byId: {}, lists: {}, timestamps: {}, lastAccessed: {} };
     } catch (error) {
       console.error('❌ Failed to load cache from localStorage:', error);
-      return { byId: {}, lists: {}, timestamps: {} };
+      return { byId: {}, lists: {}, timestamps: {}, lastAccessed: {} };
     }
   });
-  
-  const [loadingStates, setLoadingStates] = useState<Record<string, boolean>>({});
-  
-  // Legacy state for backward compatibility
-  const [legacyVehicles, setLegacyVehicles] = useState<Vehicle[]>([]);
-  const [legacyLoading, setLegacyLoading] = useState(false);
 
-  // Save cache to localStorage when it changes
+  // Save cache to localStorage with debounce
   useEffect(() => {
     if (typeof window === 'undefined') return;
     
-    try {
-      // Debounce the save to prevent excessive writes
-      const timeoutId = setTimeout(() => {
+    const saveCache = () => {
+      try {
         log('💾 Saving cache to localStorage', {
-          vehiclesCount: Object.keys(cache.byId).length,
-          listsCount: Object.keys(cache.lists).length
+          vehicles: Object.keys(cache.byId).length,
+          lists: Object.keys(cache.lists).length
         });
         CacheManager.set('vehicleCache', cache);
-      }, 300);
-      
-      return () => clearTimeout(timeoutId);
-    } catch (error) {
-      console.error('❌ Failed to save cache to localStorage:', error);
-    }
+      } catch (error) {
+        console.error('❌ Failed to save cache to localStorage:', error);
+      }
+    };
+
+    // Debounce to prevent excessive writes
+    const timeoutId = setTimeout(saveCache, 1000);
+    return () => clearTimeout(timeoutId);
   }, [cache]);
 
-  // === NEW CACHE FUNCTIONS ===
+  // Clean up old cache entries periodically
+  useEffect(() => {
+    const cleanupInterval = setInterval(() => {
+      setCache(prev => {
+        const now = Date.now();
+        const newCache = { ...prev };
+        
+        // Clean up old timestamps
+        Object.keys(newCache.timestamps).forEach(key => {
+          const age = now - newCache.timestamps[key];
+          const isList = key.startsWith('home') || key.startsWith('results') || key.startsWith('search');
+          const maxAge = isList ? DEFAULT_STALE_TIME : VEHICLE_STALE_TIME;
+          
+          if (age > maxAge * 2) { // Double the stale time before cleanup
+            delete newCache.timestamps[key];
+            delete newCache.lastAccessed[key];
+            
+            if (key.startsWith('vehicle:')) {
+              const id = key.replace('vehicle:', '');
+              delete newCache.byId[id];
+            } else {
+              delete newCache.lists[key];
+            }
+            
+            log('🧹 Cleaned up old cache entry:', key);
+          }
+        });
+
+        return newCache;
+      });
+    }, 5 * 60 * 1000); // Clean up every 5 minutes
+
+    return () => clearInterval(cleanupInterval);
+  }, []);
 
   // Get vehicle by ID with caching
   const getVehicle = useCallback(async (id: string): Promise<Vehicle | null> => {
@@ -124,32 +157,21 @@ export const VehicleProvider = ({ children }: { children: React.ReactNode }) => 
     
     log(`🔄 getVehicle called for ID: ${id}`);
     
-    // Check if already loading
-    if (loadingStates[cacheKey]) {
-      log(`⏳ Vehicle ${id} already loading, waiting...`);
-      await new Promise(resolve => setTimeout(resolve, 50));
-      const cached = cache.byId[id];
-      if (cached) {
-        log(`✅ Returning cached vehicle ${id} (was loading)`);
-        return cached;
-      }
-    }
-    
-    // Check cache first
+    // Check cache first (even if loading)
     const cachedVehicle = cache.byId[id];
     const cachedTimestamp = cache.timestamps[cacheKey];
     
-    if (cachedVehicle && cachedTimestamp && 
-        Date.now() - cachedTimestamp < VEHICLE_STALE_TIME) {
-      log(`✅ Returning fresh cached vehicle ${id}`);
+    if (cachedVehicle && cachedTimestamp && Date.now() - cachedTimestamp < VEHICLE_STALE_TIME) {
+      log(`✅ Returning cached vehicle ${id}`);
+      // Update last accessed time
+      setCache(prev => ({
+        ...prev,
+        lastAccessed: { ...prev.lastAccessed, [cacheKey]: Date.now() }
+      }));
       return cachedVehicle;
-    } else if (cachedVehicle) {
-      log(`⚠️  Returning stale cached vehicle ${id}`);
     }
     
-    // Set loading state
     log(`🚀 Fetching vehicle ${id} from API`);
-    setLoadingStates(prev => ({ ...prev, [cacheKey]: true }));
     
     try {
       const response = await fetch(`/api/vehicles/${id}`);
@@ -162,11 +184,28 @@ export const VehicleProvider = ({ children }: { children: React.ReactNode }) => 
       log(`✅ Fetched vehicle ${id}: ${vehicle.make} ${vehicle.model}`);
       
       // Update cache
-      setCache(prev => ({
-        ...prev,
-        byId: { ...prev.byId, [id]: vehicle },
-        timestamps: { ...prev.timestamps, [cacheKey]: Date.now() }
-      }));
+      setCache(prev => {
+        const newCache = { ...prev };
+        newCache.byId[id] = vehicle;
+        newCache.timestamps[cacheKey] = Date.now();
+        newCache.lastAccessed[cacheKey] = Date.now();
+        
+        // Limit cache size
+        if (Object.keys(newCache.byId).length > MAX_CACHE_SIZE) {
+          const entries = Object.entries(newCache.lastAccessed).sort((a, b) => a[1] - b[1]);
+          const toRemove = entries.slice(0, Math.floor(MAX_CACHE_SIZE * 0.1)); // Remove 10% oldest
+          toRemove.forEach(([key]) => {
+            if (key.startsWith('vehicle:')) {
+              const vehicleId = key.replace('vehicle:', '');
+              delete newCache.byId[vehicleId];
+            }
+            delete newCache.timestamps[key];
+            delete newCache.lastAccessed[key];
+          });
+        }
+        
+        return newCache;
+      });
       
       return vehicle;
     } catch (error) {
@@ -179,11 +218,8 @@ export const VehicleProvider = ({ children }: { children: React.ReactNode }) => 
       }
       
       return null;
-    } finally {
-      // Clear loading state
-      setLoadingStates(prev => ({ ...prev, [cacheKey]: false }));
     }
-  }, [cache, loadingStates]);
+  }, [cache]);
 
   // Get vehicle list with caching
   const getVehicleList = useCallback(async (
@@ -192,55 +228,59 @@ export const VehicleProvider = ({ children }: { children: React.ReactNode }) => 
   ): Promise<VehicleListResponse> => {
     log(`🔄 getVehicleList called for cacheKey: ${cacheKey}`);
     
-    // Check if already loading
-    if (loadingStates[cacheKey]) {
-      log(`⏳ List ${cacheKey} already loading, waiting...`);
-      await new Promise(resolve => setTimeout(resolve, 50));
-      const cached = cache.lists[cacheKey];
-      if (cached) {
-        log(`✅ Returning cached list ${cacheKey} (was loading)`);
-        return cached;
-      }
-    }
-    
     // Check cache first
     const cachedList = cache.lists[cacheKey];
     const cachedTimestamp = cache.timestamps[cacheKey];
     
-    if (cachedList && cachedTimestamp && 
-        Date.now() - cachedTimestamp < DEFAULT_STALE_TIME) {
-      log(`✅ Returning fresh cached list ${cacheKey} with ${cachedList.vehicles?.length || 0} vehicles`);
+    if (cachedList && cachedTimestamp && Date.now() - cachedTimestamp < DEFAULT_STALE_TIME) {
+      log(`✅ Returning cached list ${cacheKey} with ${cachedList.vehicles?.length || 0} vehicles`);
+      // Update last accessed time
+      setCache(prev => ({
+        ...prev,
+        lastAccessed: { ...prev.lastAccessed, [cacheKey]: Date.now() }
+      }));
       return cachedList;
-    } else if (cachedList) {
-      log(`⚠️  Cached list ${cacheKey} is stale (${Date.now() - cachedTimestamp}ms old)`);
     }
     
-    // Set loading state
     log(`🚀 Fetching list ${cacheKey} from API`);
-    setLoadingStates(prev => ({ ...prev, [cacheKey]: true }));
     
     try {
       const response = await fetchFn();
       log(`✅ Fetched list ${cacheKey} with ${response.vehicles?.length || 0} vehicles`);
       
-      // Update list cache
-      setCache(prev => ({
-        ...prev,
-        lists: { ...prev.lists, [cacheKey]: response },
-        timestamps: { ...prev.timestamps, [cacheKey]: Date.now() }
-      }));
-      
-      // Also cache individual vehicles from the list
-      if (response.vehicles) {
-        log(`💾 Caching ${response.vehicles.length} individual vehicles`);
-        response.vehicles.forEach(vehicle => {
-          setCache(prev => ({
-            ...prev,
-            byId: { ...prev.byId, [vehicle.id]: vehicle },
-            timestamps: { ...prev.timestamps, [`vehicle:${vehicle.id}`]: Date.now() }
-          }));
-        });
-      }
+      // Update cache
+      setCache(prev => {
+        const newCache = { ...prev };
+        newCache.lists[cacheKey] = response;
+        newCache.timestamps[cacheKey] = Date.now();
+        newCache.lastAccessed[cacheKey] = Date.now();
+        
+        // Also cache individual vehicles
+        if (response.vehicles) {
+          response.vehicles.forEach(vehicle => {
+            const vehicleKey = `vehicle:${vehicle.id}`;
+            newCache.byId[vehicle.id] = vehicle;
+            newCache.timestamps[vehicleKey] = Date.now();
+            newCache.lastAccessed[vehicleKey] = Date.now();
+          });
+        }
+        
+        // Limit cache size
+        if (Object.keys(newCache.lists).length > MAX_CACHE_SIZE / 2) {
+          const listEntries = Object.entries(newCache.lastAccessed)
+            .filter(([key]) => !key.startsWith('vehicle:'))
+            .sort((a, b) => a[1] - b[1]);
+          
+          const toRemove = listEntries.slice(0, Math.floor(MAX_CACHE_SIZE * 0.1));
+          toRemove.forEach(([key]) => {
+            delete newCache.lists[key];
+            delete newCache.timestamps[key];
+            delete newCache.lastAccessed[key];
+          });
+        }
+        
+        return newCache;
+      });
       
       return response;
     } catch (error) {
@@ -253,40 +293,46 @@ export const VehicleProvider = ({ children }: { children: React.ReactNode }) => 
       }
       
       throw error;
-    } finally {
-      // Clear loading state
-      setLoadingStates(prev => ({ ...prev, [cacheKey]: false }));
     }
-  }, [cache, loadingStates]);
+  }, [cache]);
 
   // Get cached vehicle immediately (no fetch)
   const getCachedVehicle = useCallback((id: string): Vehicle | null => {
     const vehicle = cache.byId[id] || null;
     if (vehicle) {
       log(`🔍 Found cached vehicle ${id}: ${vehicle.make} ${vehicle.model}`);
+      // Update last accessed time
+      setCache(prev => ({
+        ...prev,
+        lastAccessed: { ...prev.lastAccessed, [`vehicle:${id}`]: Date.now() }
+      }));
     }
     return vehicle;
-  }, [cache.byId]);
+  }, [cache]);
 
   // Get cached list immediately (no fetch)
   const getCachedList = useCallback((cacheKey: string): VehicleListResponse | null => {
     const list = cache.lists[cacheKey] || null;
     if (list) {
       log(`🔍 Found cached list ${cacheKey} with ${list.vehicles?.length || 0} vehicles`);
+      // Update last accessed time
+      setCache(prev => ({
+        ...prev,
+        lastAccessed: { ...prev.lastAccessed, [cacheKey]: Date.now() }
+      }));
     }
     return list;
-  }, [cache.lists]);
+  }, [cache]);
 
   // Check if cache is fresh
   const isFresh = useCallback((key: string, maxAge: number = DEFAULT_STALE_TIME): boolean => {
     const timestamp = cache.timestamps[key];
     if (!timestamp) {
-      log(`❌ Cache key ${key} has no timestamp`);
       return false;
     }
     const age = Date.now() - timestamp;
     const fresh = age < maxAge;
-    log(`📅 Cache key ${key} age: ${age}ms, fresh: ${fresh}`);
+    log(`📅 Cache key ${key} age: ${age}ms, fresh: ${fresh}, maxAge: ${maxAge}`);
     return fresh;
   }, [cache.timestamps]);
 
@@ -296,7 +342,19 @@ export const VehicleProvider = ({ children }: { children: React.ReactNode }) => 
     setCache(prev => ({
       ...prev,
       byId: { ...prev.byId, [vehicle.id]: vehicle },
-      timestamps: { ...prev.timestamps, [`vehicle:${vehicle.id}`]: Date.now() }
+      timestamps: { ...prev.timestamps, [`vehicle:${vehicle.id}`]: Date.now() },
+      lastAccessed: { ...prev.lastAccessed, [`vehicle:${vehicle.id}`]: Date.now() }
+    }));
+  }, []);
+
+  // Preload cache (for navigation)
+  const preloadCache = useCallback((key: string, data: VehicleListResponse) => {
+    log(`⚡ Preloading cache for key: ${key}`);
+    setCache(prev => ({
+      ...prev,
+      lists: { ...prev.lists, [key]: data },
+      timestamps: { ...prev.timestamps, [key]: Date.now() },
+      lastAccessed: { ...prev.lastAccessed, [key]: Date.now() }
     }));
   }, []);
 
@@ -308,15 +366,18 @@ export const VehicleProvider = ({ children }: { children: React.ReactNode }) => 
         const newCache = { ...prev };
         delete newCache.lists[key];
         delete newCache.timestamps[key];
+        delete newCache.lastAccessed[key];
         return newCache;
       });
     } else {
       log('🧹 Clearing all cache');
-      setCache({ byId: {}, lists: {}, timestamps: {} });
+      setCache({ byId: {}, lists: {}, timestamps: {}, lastAccessed: {} });
     }
   }, []);
 
-  // === LEGACY FUNCTIONS (for backward compatibility) ===
+  // === LEGACY FUNCTIONS ===
+  const [legacyVehicles, setLegacyVehicles] = useState<Vehicle[]>([]);
+  const [legacyLoading, setLegacyLoading] = useState(false);
 
   const loadVehicles = useCallback(async () => {
     log('🔄 Legacy loadVehicles called');
@@ -326,33 +387,14 @@ export const VehicleProvider = ({ children }: { children: React.ReactNode }) => 
       const data = await response.json();
       const vehicles = Array.isArray(data) ? data : data.vehicles || [];
       setLegacyVehicles(vehicles);
-      
       log(`✅ Legacy loaded ${vehicles.length} vehicles`);
-      
-      // Also update cache for future use
-      const cacheKey = 'legacy:all';
-      setCache(prev => ({
-        ...prev,
-        lists: {
-          ...prev.lists,
-          [cacheKey]: { vehicles, totalCount: vehicles.length, timestamp: Date.now() }
-        },
-        timestamps: { ...prev.timestamps, [cacheKey]: Date.now() }
-      }));
-      
-      // Cache individual vehicles
-      vehicles.forEach(vehicle => {
-        updateVehicleInCache(vehicle);
-      });
-      
     } catch (error) {
       console.error('❌ Legacy failed to fetch vehicles:', error);
     } finally {
       setLegacyLoading(false);
     }
-  }, [updateVehicleInCache]);
+  }, []);
 
-  // Legacy function for backward compatibility
   const getVehicleById = useCallback(async (id: string): Promise<Vehicle | null> => {
     log(`🔄 Legacy getVehicleById called for ${id}`);
     return getVehicle(id);
@@ -360,17 +402,17 @@ export const VehicleProvider = ({ children }: { children: React.ReactNode }) => 
 
   // Context value
   const contextValue = useMemo(() => ({
-    // New cache system
+    // Cache system
     getVehicle,
     getVehicleList,
     getCachedVehicle,
     getCachedList,
     isFresh,
     updateVehicleInCache,
+    preloadCache,
     clearCache,
-    loadingStates,
     
-    // Legacy properties for backward compatibility
+    // Legacy
     vehicles: legacyVehicles,
     loadVehicles,
     loading: legacyLoading,
@@ -382,18 +424,18 @@ export const VehicleProvider = ({ children }: { children: React.ReactNode }) => 
     getCachedList,
     isFresh,
     updateVehicleInCache,
+    preloadCache,
     clearCache,
-    loadingStates,
     legacyVehicles,
     loadVehicles,
     legacyLoading,
     getVehicleById,
   ]);
 
-  log('🎯 VehicleProvider rendering with state:', {
+  log('🎯 VehicleProvider state:', {
     cacheSize: Object.keys(cache.byId).length,
     listKeys: Object.keys(cache.lists),
-    loadingStates: Object.keys(loadingStates)
+    lastLoad: cache.timestamps['home'] ? new Date(cache.timestamps['home']).toLocaleTimeString() : 'never'
   });
 
   return (
@@ -410,62 +452,6 @@ export const useVehicleContext = () => {
     throw new Error('useVehicleContext must be used within a VehicleProvider');
   }
   return context;
-};
-
-// Custom hook for vehicle details with caching
-export const useVehicle = (id?: string) => {
-  const [vehicle, setVehicle] = useState<Vehicle | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const { getVehicle, getCachedVehicle } = useVehicleContext();
-
-  useEffect(() => {
-    if (!id) {
-      console.log('⚠️ useVehicle: No ID provided');
-      setVehicle(null);
-      setLoading(false);
-      return;
-    }
-
-    console.log(`🔄 useVehicle hook called for ID: ${id}`);
-    
-    const loadVehicle = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        // Check cache first
-        const cached = getCachedVehicle(id);
-        if (cached) {
-          console.log(`✅ useVehicle: Found cached vehicle ${id}`);
-          setVehicle(cached);
-          setLoading(false);
-        } else {
-          console.log(`📭 useVehicle: No cache for ${id}`);
-        }
-        
-        // Fetch with cache fallback
-        console.log(`🚀 useVehicle: Fetching vehicle ${id}`);
-        const fetchedVehicle = await getVehicle(id);
-        if (fetchedVehicle && fetchedVehicle !== cached) {
-          console.log(`✅ useVehicle: Fetched vehicle ${id}`);
-          setVehicle(fetchedVehicle);
-        }
-      } catch (err) {
-        const errorMsg = err instanceof Error ? err.message : 'Failed to load vehicle';
-        console.error(`❌ useVehicle error for ${id}:`, errorMsg);
-        setError(errorMsg);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadVehicle();
-  }, [id, getVehicle, getCachedVehicle]);
-
-  console.log(`📊 useVehicle state for ${id}:`, { loading, hasVehicle: !!vehicle, error });
-
-  return { vehicle, loading, error };
 };
 
 // Custom hook for vehicle lists with caching
@@ -501,27 +487,62 @@ export const useVehicleList = (
         setLoading(true);
         setError(null);
         
-        // Check cache first (unless force refresh)
-        if (!forceRefresh) {
-          const cached = getCachedList(cacheKey);
-          const fresh = isFresh(cacheKey, maxAge);
-          console.log(`🔍 useVehicleList ${cacheKey}: Cache check`, { hasCache: !!cached, fresh });
+        // ALWAYS check cache first, even on force refresh
+        const cached = getCachedList(cacheKey);
+        const fresh = isFresh(cacheKey, maxAge);
+        
+        console.log(`🔍 useVehicleList ${cacheKey}: Cache check`, { 
+          hasCache: !!cached, 
+          fresh,
+          forceRefresh 
+        });
+        
+        // If we have cached data and it's fresh, use it immediately
+        if (cached && fresh && !forceRefresh) {
+          console.log(`✅ useVehicleList ${cacheKey}: Using cached data`);
+          setData(cached);
+          setLoading(false);
           
-          if (cached && fresh) {
-            console.log(`✅ useVehicleList ${cacheKey}: Using cached data`);
-            setData(cached);
-            setLoading(false);
-          } else if (cached) {
-            console.log(`⚠️ useVehicleList ${cacheKey}: Cache stale, fetching new data`);
-          } else {
-            console.log(`📭 useVehicleList ${cacheKey}: No cache found`);
+          // If force refresh is true, still fetch in background
+          if (forceRefresh) {
+            console.log(`🔄 useVehicleList ${cacheKey}: Force refresh in background`);
+            try {
+              const response = await getVehicleList(cacheKey, fetchFn);
+              if (response !== cached) {
+                console.log(`🔄 useVehicleList ${cacheKey}: Updated with fresh data`);
+                setData(response);
+              }
+            } catch (bgError) {
+              console.error(`❌ useVehicleList ${cacheKey}: Background refresh failed:`, bgError);
+              // Don't show error to user for background refresh
+            }
           }
-        } else {
-          console.log(`🔄 useVehicleList ${cacheKey}: Force refresh requested`);
+          return;
         }
         
-        // Fetch (will use cache internally if fresh)
-        console.log(`🚀 useVehicleList ${cacheKey}: Fetching data`);
+        // If we have cached data but it's stale, show it immediately while fetching fresh
+        if (cached && !fresh && !forceRefresh) {
+          console.log(`⚠️ useVehicleList ${cacheKey}: Cache stale, showing cached while fetching`);
+          setData(cached);
+          setLoading(false);
+          
+          // Fetch fresh data in background
+          console.log(`🔄 useVehicleList ${cacheKey}: Fetching fresh data in background`);
+          try {
+            const response = await getVehicleList(cacheKey, fetchFn);
+            if (response !== cached) {
+              console.log(`🔄 useVehicleList ${cacheKey}: Updated with fresh data`);
+              setData(response);
+            }
+          } catch (bgError) {
+            console.error(`❌ useVehicleList ${cacheKey}: Background refresh failed:`, bgError);
+            // Don't show error to user for background refresh
+          }
+          return;
+        }
+        
+        // No cache or force refresh - fetch fresh
+        console.log(`🚀 useVehicleList ${cacheKey}: Fetching fresh data`);
         const response = await getVehicleList(cacheKey, fetchFn);
         console.log(`✅ useVehicleList ${cacheKey}: Fetched ${response.vehicles?.length || 0} vehicles`);
         setData(response);
@@ -529,6 +550,13 @@ export const useVehicleList = (
         const errorMsg = err instanceof Error ? err.message : 'Failed to load vehicles';
         console.error(`❌ useVehicleList error for ${cacheKey}:`, errorMsg);
         setError(errorMsg);
+        
+        // Try to use stale cache as fallback
+        const cached = getCachedList(cacheKey);
+        if (cached) {
+          console.log(`🔄 useVehicleList ${cacheKey}: Using stale cache as fallback after error`);
+          setData(cached);
+        }
       } finally {
         setLoading(false);
       }
@@ -544,4 +572,72 @@ export const useVehicleList = (
   });
 
   return { data, loading, error };
+};
+
+// Custom hook for vehicle details with caching
+export const useVehicle = (id?: string) => {
+  const [vehicle, setVehicle] = useState<Vehicle | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { getVehicle, getCachedVehicle } = useVehicleContext();
+
+  useEffect(() => {
+    if (!id) {
+      console.log('⚠️ useVehicle: No ID provided');
+      setVehicle(null);
+      setLoading(false);
+      return;
+    }
+
+    console.log(`🔄 useVehicle hook called for ID: ${id}`);
+    
+    const loadVehicle = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        
+        // ALWAYS check cache first
+        const cached = getCachedVehicle(id);
+        if (cached) {
+          console.log(`✅ useVehicle: Found cached vehicle ${id}`);
+          setVehicle(cached);
+          setLoading(false);
+          
+          // Always fetch fresh data in background
+          console.log(`🔄 useVehicle: Fetching fresh data in background for ${id}`);
+          try {
+            const fetchedVehicle = await getVehicle(id);
+            if (fetchedVehicle && fetchedVehicle !== cached) {
+              console.log(`🔄 useVehicle: Updated with fresh data for ${id}`);
+              setVehicle(fetchedVehicle);
+            }
+          } catch (bgError) {
+            console.error(`❌ useVehicle: Background refresh failed for ${id}:`, bgError);
+            // Don't show error to user for background refresh
+          }
+          return;
+        }
+        
+        // No cache - fetch fresh
+        console.log(`🚀 useVehicle: Fetching vehicle ${id}`);
+        const fetchedVehicle = await getVehicle(id);
+        if (fetchedVehicle) {
+          console.log(`✅ useVehicle: Fetched vehicle ${id}`);
+          setVehicle(fetchedVehicle);
+        }
+      } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : 'Failed to load vehicle';
+        console.error(`❌ useVehicle error for ${id}:`, errorMsg);
+        setError(errorMsg);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadVehicle();
+  }, [id, getVehicle, getCachedVehicle]);
+
+  console.log(`📊 useVehicle state for ${id}:`, { loading, hasVehicle: !!vehicle, error });
+
+  return { vehicle, loading, error };
 };
