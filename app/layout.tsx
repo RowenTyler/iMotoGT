@@ -13,10 +13,14 @@ const inter = Inter({ subsets: ["latin"] })
 export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = {
-  title: "iMoto GT - Find Your Perfect Car",
-  description: "Browse and discover amazing cars in South Africa",
-    generator: 'v0.app'
-}
+  title: {
+    default: "Buy & Sell Affordable Cars in South Africa | iMoto GT",
+    template: "%s | iMoto GT",
+  },
+  description:
+    "Buy and sell affordable cars across South Africa on a trusted local marketplace. Transparent listings, real people, fair prices, and a simpler way to trade cars.",
+  generator: "v0.app",
+};
 
 export default function RootLayout({
   children,
