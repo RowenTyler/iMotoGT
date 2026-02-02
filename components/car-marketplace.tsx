@@ -12,7 +12,7 @@ import type { Vehicle } from "@/types/vehicle"
 import { useUser } from "@/components/UserContext"
 import { Header } from "./ui/header"
 import VehicleCard from "./vehicle-card"
-import { useVehicleList, useVehicleContext } from "@/components/VehicleProvider" // Updated import path
+import { useVehicleList, useVehicleContext } from "@/components/VehicleProvider"
 
 // Common South African car make abbreviations
 const MAKE_ABBREVIATIONS: Record<string, string> = {
@@ -80,26 +80,35 @@ export default function CarMarketplace() {
   const [showEngineCapacitySlider, setShowEngineCapacitySlider] = useState(false)
   const [currentSliderEngineValues, setCurrentSliderEngineValues] = useState<[number, number]>([1.0, 8.0])
 
-  // Use the new useVehicleList hook for fetching and caching
+  // Define the fetch function for useVehicleList
   const fetchVehicles = useCallback(async () => {
+    console.log("🔄 [CarMarketplace] Fetching vehicles...")
     try {
-      console.log("🔄 Fetching fresh vehicle data...")
       const result = await vehicleService.getVehicles()
-      console.log("✅ getVehicles returned:", result)
-      const vehicles = Array.isArray(result) ? result : result.vehicles || []
-      console.log("✅ Setting vehicles:", vehicles.length)
+      console.log("✅ [CarMarketplace] getVehicles returned:", result)
+      
+      let vehicles: Vehicle[] = []
+      if (Array.isArray(result)) {
+        vehicles = result
+      } else if (result && typeof result === 'object' && result.vehicles) {
+        vehicles = result.vehicles
+      }
+      
+      console.log(`✅ [CarMarketplace] Parsed ${vehicles.length} vehicles`)
       
       // Build hierarchy from vehicles
       const hierarchy: VehicleHierarchy = {}
       vehicles.forEach(vehicle => {
         const { make, model } = vehicle
         
-        if (!hierarchy[make]) {
-          hierarchy[make] = []
-        }
-        
-        if (!hierarchy[make].includes(model)) {
-          hierarchy[make].push(model)
+        if (make && model) {
+          if (!hierarchy[make]) {
+            hierarchy[make] = []
+          }
+          
+          if (!hierarchy[make].includes(model)) {
+            hierarchy[make].push(model)
+          }
         }
       })
       
@@ -108,38 +117,55 @@ export default function CarMarketplace() {
         hierarchy[make].sort()
       })
       
-      return { vehicles, hierarchy }
+      console.log("✅ [CarMarketplace] Built hierarchy:", Object.keys(hierarchy).length, "makes")
+      
+      return {
+        vehicles,
+        hierarchy,
+        totalCount: vehicles.length,
+        timestamp: Date.now()
+      }
     } catch (error) {
-      console.error("❌ Failed to fetch vehicles:", error)
-      throw error
+      console.error("❌ [CarMarketplace] Failed to fetch vehicles:", error)
+      // Return empty structure instead of throwing
+      return {
+        vehicles: [],
+        hierarchy: {},
+        totalCount: 0,
+        timestamp: Date.now(),
+        error: error instanceof Error ? error.message : 'Unknown error'
+      }
     }
   }, [])
 
+  // Use the vehicle list hook with caching
   const { 
     data: vehicleData, 
     loading, 
     error 
   } = useVehicleList(
     'home', // Cache key for home page
-    async () => {
-      const { vehicles, hierarchy } = await fetchVehicles()
-      return { 
-        vehicles, 
-        hierarchy,
-        totalCount: vehicles.length,
-        timestamp: Date.now()
-      }
-    },
+    fetchVehicles,
     {
       enabled: true,
       maxAge: 5 * 60 * 1000, // 5 minutes cache
+      forceRefresh: false,
     }
   )
 
+  console.log("📊 [CarMarketplace] useVehicleList state:", { 
+    loading, 
+    error, 
+    dataLength: vehicleData?.vehicles?.length || 0,
+    hasData: !!vehicleData,
+    vehicleData
+  })
+
   // Update local state when vehicleData changes
   useEffect(() => {
-    if (vehicleData) {
-      setVehicleHierarchy(vehicleData.hierarchy || {})
+    if (vehicleData && vehicleData.hierarchy) {
+      console.log("🔄 [CarMarketplace] Updating vehicleHierarchy from vehicleData")
+      setVehicleHierarchy(vehicleData.hierarchy)
     }
   }, [vehicleData])
 
@@ -147,6 +173,7 @@ export default function CarMarketplace() {
   useEffect(() => {
     const cachedData = getCachedList('home')
     if (cachedData && cachedData.hierarchy) {
+      console.log("📦 [CarMarketplace] Found cached data, setting hierarchy")
       setVehicleHierarchy(cachedData.hierarchy)
     }
   }, [getCachedList])
@@ -296,18 +323,20 @@ export default function CarMarketplace() {
     const abbrFull = MAKE_ABBREVIATIONS[lowerInput]
 
     vehicleData.vehicles.forEach((vehicle) => {
-      if (
+      if (vehicle.make && (
         vehicle.make.toLowerCase().includes(lowerInput) ||
         (abbrFull && vehicle.make.toLowerCase() === abbrFull.toLowerCase())
-      ) {
+      )) {
         uniqueSuggestions.add(vehicle.make)
       }
-      const modelTerm = `${vehicle.make} ${vehicle.model}`
-      if (
-        modelTerm.toLowerCase().includes(lowerInput) ||
-        (abbrFull && modelTerm.toLowerCase().includes(abbrFull.toLowerCase()))
-      ) {
-        uniqueSuggestions.add(modelTerm)
+      if (vehicle.make && vehicle.model) {
+        const modelTerm = `${vehicle.make} ${vehicle.model}`
+        if (
+          modelTerm.toLowerCase().includes(lowerInput) ||
+          (abbrFull && modelTerm.toLowerCase().includes(abbrFull.toLowerCase()))
+        ) {
+          uniqueSuggestions.add(modelTerm)
+        }
       }
     })
 
@@ -416,7 +445,7 @@ export default function CarMarketplace() {
   }
 
   // Navigation handlers using Next.js routing
-  const navigationHandlers = {
+  const navigationHandlers = useMemo(() => ({
     onLoginClick: () => router.push("/login"),
     onDashboardClick: () => router.push("/dashboard"),
     onGoHome: () => {
@@ -429,7 +458,7 @@ export default function CarMarketplace() {
     },
     onGoToSellPage: () => router.push("/upload-vehicle"),
     onSignOut: handleSignOut,
-  }
+  }), [router])
 
   // Routing Logic
   if (selectedProvince) {
@@ -953,28 +982,26 @@ export default function CarMarketplace() {
                 <div className="text-center py-12">
                   <p className="text-lg text-red-500">Error loading vehicles: {error}</p>
                 </div>
-              ) : (
+              ) : vehicleData?.vehicles && vehicleData.vehicles.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {vehicleData?.vehicles && vehicleData.vehicles.length > 0 ? (
-                    vehicleData.vehicles
-                      .slice(0, 8)
-                      .map((vehicle) => (
-                        <VehicleCard
-                          key={vehicle.id}
-                          vehicle={vehicle}
-                          onViewDetails={() => setSelectedVehicle(vehicle)}
-                          isSaved={savedVehiclesData.some((saved) => saved.id === vehicle.id)}
-                          onToggleSave={() => toggleSaveVehicle(vehicle)}
-                          isLoggedIn={!!user}
-                        />
-                      ))
-                  ) : (
-                    <div className="col-span-full text-center py-12">
-                      <p className="text-lg text-[#6F7F69] dark:text-gray-300">
-                        {loading ? "Loading vehicles..." : "No vehicles available at the moment."}
-                      </p>
-                    </div>
-                  )}
+                  {vehicleData.vehicles
+                    .slice(0, 8)
+                    .map((vehicle) => (
+                      <VehicleCard
+                        key={vehicle.id}
+                        vehicle={vehicle}
+                        onViewDetails={() => setSelectedVehicle(vehicle)}
+                        isSaved={savedVehiclesData.some((saved) => saved.id === vehicle.id)}
+                        onToggleSave={() => toggleSaveVehicle(vehicle)}
+                        isLoggedIn={!!user}
+                      />
+                    ))}
+                </div>
+              ) : (
+                <div className="col-span-full text-center py-12">
+                  <p className="text-lg text-[#6F7F69] dark:text-gray-300">
+                    {loading ? "Loading vehicles..." : "No vehicles available at the moment."}
+                  </p>
                 </div>
               )}
 
