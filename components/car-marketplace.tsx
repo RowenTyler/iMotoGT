@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect, useRef } from "react"
+import { useEffect, useState, useRef } from "react"
 import { useRouter } from "next/navigation"
 import * as SliderPrimitive from "@radix-ui/react-slider"
 import { Search, X, ChevronDown, ChevronRight, Truck, CarIcon, Bike, Facebook, Instagram, Twitter } from "lucide-react"
@@ -13,6 +13,7 @@ import type { Vehicle } from "@/types/vehicle"
 import { useUser } from "@/components/UserContext"
 import { Header } from "./ui/header"
 import VehicleCard from "./vehicle-card"
+import { useVehicleContext } from "@/components/VehicleProvider" // NEW
 
 // Common South African car make abbreviations
 const MAKE_ABBREVIATIONS: Record<string, string> = {
@@ -61,6 +62,15 @@ interface VehicleHierarchy {
 export default function CarMarketplace() {
   const router = useRouter()
   const { user, setUser, savedVehicles, toggleSaveVehicle } = useUser()
+  const { vehicles, loadVehicles, loading: contextLoading } = useVehicleContext() // NEW - renamed to avoid conflict
+  
+  // Add this useEffect to load vehicles from context if empty
+  useEffect(() => {
+    if (!vehicles || vehicles.length === 0) {
+      loadVehicles().catch(() => {})
+    }
+  }, [vehicles, loadVehicles])
+  
   const [search, setSearch] = useState("")
   const [showMoreOptions, setShowMoreOptions] = useState(false)
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null)
@@ -68,7 +78,7 @@ export default function CarMarketplace() {
   const [allVehicles, setAllVehicles] = useState<Vehicle[]>([])
   const [filteredVehicles, setFilteredVehicles] = useState<Vehicle[]>([])
   const [isSearchPage, setIsSearchPage] = useState(true)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(true) // Local loading state
   const [savedVehiclesData, setSavedVehiclesData] = useState<Vehicle[]>([])
 
   const [searchTerm, setSearchTerm] = useState("")
