@@ -18,7 +18,7 @@ export const metadata: Metadata = {
     template: "%s | iMoto GT",
   },
   description:
-    "Buy and sell affordable cars across South Africa on a trusted local marketplace. Transparent listings, real people, fair prices, and a simpler way to trade cars.",
+    "Buy and sell affordable cars across South Africa on a trusted local marketplace. Transparent listings, real people, fair prices, & a simpler way to trade cars.",
   generator: "v0.app",
 };
 
