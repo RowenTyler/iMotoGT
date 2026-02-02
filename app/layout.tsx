@@ -14,7 +14,7 @@ export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = {
   title: "Buy & Sell Affordable Cars in South Africa | iMoto GT",
-  description: "Browse and discover amazing cars in South Africa",
+  description: "Buy and sell affordable cars across South Africa on a trusted local marketplace. Transparent listings, real people, fair prices, and a simpler way to trade cars.",
     generator: 'v0.app'
 }
 
