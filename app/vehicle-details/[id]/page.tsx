@@ -1,4 +1,3 @@
-// vehicle-details/[id]/page.tsx
 "use client"
 
 import { notFound, useRouter } from "next/navigation"
