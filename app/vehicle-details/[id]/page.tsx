@@ -4,7 +4,7 @@ import { notFound, useRouter } from "next/navigation"
 import { Header } from "@/components/ui/header"
 import { useUser } from "@/components/UserContext"
 import VehicleDetails from "@/components/vehicle-details"
-import { useVehicle } from "@/context/VehicleProvider" // Updated import
+import { useVehicle } from "@/components/VehicleProvider" // Updated import
 import { Skeleton } from "@/components/ui/skeleton" // Add a skeleton component for loading
 
 interface VehicleDetailsPageProps {
