@@ -1,4 +1,3 @@
-// app/vehicle/[id]/page.tsx
 "use client"
 
 import { notFound, useRouter } from "next/navigation"
@@ -18,9 +17,6 @@ interface VehicleDetailsPageProps {
     [key: string]: string | string[] | undefined
   }
 }
-
-// Remove dynamic = 'force-dynamic' since we're using client-side caching
-// export const dynamic = 'force-dynamic'
 
 export default function VehicleDetailsPage({ params }: VehicleDetailsPageProps) {
   const router = useRouter()
@@ -391,28 +387,4 @@ export default function VehicleDetailsPage({ params }: VehicleDetailsPageProps) 
       )}
     </div>
   )
-}
-
-// Optional: Generate static paths for better performance (if you know common vehicle IDs)
-// This is useful for SEO and initial load performance
-export async function generateStaticParams() {
-  // You can fetch common vehicle IDs here to pre-render them
-  // This is optional and depends on your data structure
-  try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/vehicles/popular-ids`, {
-      next: { revalidate: 3600 } // Revalidate every hour
-    })
-    
-    if (!response.ok) {
-      return []
-    }
-    
-    const data = await response.json()
-    return data.vehicleIds?.slice(0, 50).map((id: string) => ({
-      id,
-    })) || []
-  } catch (error) {
-    console.error('Error generating static params:', error)
-    return []
-  }
 }
