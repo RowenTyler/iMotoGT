@@ -1,19 +1,18 @@
 "use client"
 
 import type React from "react"
-import { useEffect, useState, useRef } from "react"
+import { useEffect, useState, useRef, useCallback, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import * as SliderPrimitive from "@radix-ui/react-slider"
 import { Search, X, ChevronDown, ChevronRight, Truck, CarIcon, Bike, Facebook, Instagram, Twitter } from "lucide-react"
 import VehicleDetails from "./vehicle-details"
 import LocationPage from "./location-page"
 import { vehicleService } from "@/lib/vehicle-service"
-import { CacheManager, CACHE_CONFIG } from "@/lib/cache-manager"
 import type { Vehicle } from "@/types/vehicle"
 import { useUser } from "@/components/UserContext"
 import { Header } from "./ui/header"
 import VehicleCard from "./vehicle-card"
-import { useVehicleContext } from "@/components/VehicleProvider" // NEW
+import { useVehicleList, useVehicleContext } from "@/context/VehicleProvider" // Updated import path
 
 // Common South African car make abbreviations
 const MAKE_ABBREVIATIONS: Record<string, string> = {
@@ -45,16 +44,6 @@ const MAKE_ABBREVIATIONS: Record<string, string> = {
   mini: "MINI",
 }
 
-// Cache keys
-const CACHE_KEYS = {
-  VEHICLES: 'cached_vehicles',
-  VEHICLES_TIMESTAMP: 'cached_vehicles_timestamp',
-  VEHICLE_HIERARCHY: 'cached_vehicle_hierarchy'
-}
-
-// Cache duration: 5 minutes
-const CACHE_DURATION = 5 * 60 * 1000
-
 interface VehicleHierarchy {
   [make: string]: string[] // models only
 }
@@ -62,23 +51,15 @@ interface VehicleHierarchy {
 export default function CarMarketplace() {
   const router = useRouter()
   const { user, setUser, savedVehicles, toggleSaveVehicle } = useUser()
-  const { vehicles, loadVehicles, loading: contextLoading } = useVehicleContext() // NEW - renamed to avoid conflict
   
-  // Add this useEffect to load vehicles from context if empty
-  useEffect(() => {
-    if (!vehicles || vehicles.length === 0) {
-      loadVehicles().catch(() => {})
-    }
-  }, [vehicles, loadVehicles])
+  // Use the vehicle context for cache management
+  const { getCachedList } = useVehicleContext()
   
   const [search, setSearch] = useState("")
   const [showMoreOptions, setShowMoreOptions] = useState(false)
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null)
   const [selectedProvince, setSelectedProvince] = useState<string | null>(null)
-  const [allVehicles, setAllVehicles] = useState<Vehicle[]>([])
-  const [filteredVehicles, setFilteredVehicles] = useState<Vehicle[]>([])
   const [isSearchPage, setIsSearchPage] = useState(true)
-  const [loading, setLoading] = useState(true) // Local loading state
   const [savedVehiclesData, setSavedVehiclesData] = useState<Vehicle[]>([])
 
   const [searchTerm, setSearchTerm] = useState("")
@@ -99,135 +80,76 @@ export default function CarMarketplace() {
   const [showEngineCapacitySlider, setShowEngineCapacitySlider] = useState(false)
   const [currentSliderEngineValues, setCurrentSliderEngineValues] = useState<[number, number]>([1.0, 8.0])
 
-  // Cache functions using centralized CacheManager
-  const getCachedData = <T,>(key: string): T | null => {
-    // Map local keys to CacheManager keys
-    if (key === CACHE_KEYS.VEHICLES) {
-      return CacheManager.get<T>(`${CACHE_CONFIG.VEHICLES_KEY}_active`)
-    }
-    if (key === CACHE_KEYS.VEHICLE_HIERARCHY) {
-      return CacheManager.get<T>(CACHE_KEYS.VEHICLE_HIERARCHY)
-    }
-    return CacheManager.get<T>(key)
-  }
-
-  const setCachedData = (key: string, data: any) => {
-    // Map local keys to CacheManager keys
-    if (key === CACHE_KEYS.VEHICLES) {
-      CacheManager.set(`${CACHE_CONFIG.VEHICLES_KEY}_active`, data, CACHE_CONFIG.TTL)
-      return
-    }
-    if (key === CACHE_KEYS.VEHICLE_HIERARCHY) {
-      CacheManager.set(CACHE_KEYS.VEHICLE_HIERARCHY, data, CACHE_CONFIG.TTL)
-      return
-    }
-    if (key === CACHE_KEYS.VEHICLES_TIMESTAMP) {
-      // Timestamp is handled internally by CacheManager, skip
-      return
-    }
-    CacheManager.set(key, data, CACHE_CONFIG.TTL)
-  }
-
-  const isCacheValid = (timestampKey: string): boolean => {
-    // CacheManager handles TTL internally, check if data exists
-    const cached = CacheManager.get(`${CACHE_CONFIG.VEHICLES_KEY}_active`)
-    return cached !== null
-  }
-
-  // Build vehicle hierarchy from vehicles (makes → models only)
-  const buildVehicleHierarchy = (vehicles: Vehicle[]): VehicleHierarchy => {
-    const hierarchy: VehicleHierarchy = {}
-    
-    vehicles.forEach(vehicle => {
-      const { make, model } = vehicle
+  // Use the new useVehicleList hook for fetching and caching
+  const fetchVehicles = useCallback(async () => {
+    try {
+      console.log("🔄 Fetching fresh vehicle data...")
+      const result = await vehicleService.getVehicles()
+      console.log("✅ getVehicles returned:", result)
+      const vehicles = Array.isArray(result) ? result : result.vehicles || []
+      console.log("✅ Setting vehicles:", vehicles.length)
       
-      if (!hierarchy[make]) {
-        hierarchy[make] = []
-      }
-      
-      if (!hierarchy[make].includes(model)) {
-        hierarchy[make].push(model)
-      }
-    })
-    
-    // Sort models alphabetically
-    Object.keys(hierarchy).forEach(make => {
-      hierarchy[make].sort()
-    })
-    
-    return hierarchy
-  }
-
-  // UPDATED: Fetch vehicles with caching and background updates
-  useEffect(() => {
-    const fetchVehicles = async (forceRefresh = false) => {
-      try {
-        if (!forceRefresh) setLoading(true)
+      // Build hierarchy from vehicles
+      const hierarchy: VehicleHierarchy = {}
+      vehicles.forEach(vehicle => {
+        const { make, model } = vehicle
         
-        // Check cache first unless forcing refresh
-        const cachedVehicles = getCachedData<Vehicle[]>(CACHE_KEYS.VEHICLES)
-        const cachedHierarchy = getCachedData<VehicleHierarchy>(CACHE_KEYS.VEHICLE_HIERARCHY)
-        const isCacheStillValid = isCacheValid(CACHE_KEYS.VEHICLES_TIMESTAMP)
-        
-        if (cachedVehicles && cachedHierarchy && isCacheStillValid && !forceRefresh) {
-          console.log("🚀 Loading vehicles from cache")
-          setAllVehicles(cachedVehicles)
-          setFilteredVehicles(cachedVehicles)
-          setVehicleHierarchy(cachedHierarchy)
-          if (!forceRefresh) setLoading(false)
-          
-          // Schedule background refresh if cache is older than 2 minutes
-          const cacheAge = Date.now() - (getCachedData<number>(CACHE_KEYS.VEHICLES_TIMESTAMP) || 0)
-          if (cacheAge > 2 * 60 * 1000) {
-            console.log("🔄 Scheduling background cache refresh...")
-            setTimeout(() => fetchVehicles(true), 1000) // Refresh in background after 1 second
-          }
-          return
+        if (!hierarchy[make]) {
+          hierarchy[make] = []
         }
         
-        console.log(forceRefresh ? "🔄 Background refreshing vehicle data..." : "🔄 Fetching fresh vehicle data...")
-        const result = await vehicleService.getVehicles()
-        console.log("✅ getVehicles returned:", result)
-        const vehicles = Array.isArray(result) ? result : result.vehicles || []
-        console.log("✅ Setting vehicles:", vehicles.length)
-        
-        // Build hierarchy
-        const hierarchy = buildVehicleHierarchy(vehicles)
-        
-        // Update state
-        setAllVehicles(vehicles)
-        setFilteredVehicles(vehicles)
-        setVehicleHierarchy(hierarchy)
-        
-        // Update cache
-        setCachedData(CACHE_KEYS.VEHICLES, vehicles)
-        setCachedData(CACHE_KEYS.VEHICLE_HIERARCHY, hierarchy)
-        setCachedData(CACHE_KEYS.VEHICLES_TIMESTAMP, Date.now())
-        
-      } catch (error) {
-        console.error("❌ Failed to fetch vehicles:", error)
-        
-        // Fallback to cache even if stale
-        const cachedVehicles = getCachedData<Vehicle[]>(CACHE_KEYS.VEHICLES)
-        const cachedHierarchy = getCachedData<VehicleHierarchy>(CACHE_KEYS.VEHICLE_HIERARCHY)
-        
-        if (cachedVehicles && cachedHierarchy) {
-          console.log("🔄 Using stale cache as fallback")
-          setAllVehicles(cachedVehicles)
-          setFilteredVehicles(cachedVehicles)
-          setVehicleHierarchy(cachedHierarchy)
-        } else {
-          setAllVehicles([])
-          setFilteredVehicles([])
-          setVehicleHierarchy({})
+        if (!hierarchy[make].includes(model)) {
+          hierarchy[make].push(model)
         }
-      } finally {
-        if (!forceRefresh) setLoading(false)
-      }
+      })
+      
+      // Sort models alphabetically
+      Object.keys(hierarchy).forEach(make => {
+        hierarchy[make].sort()
+      })
+      
+      return { vehicles, hierarchy }
+    } catch (error) {
+      console.error("❌ Failed to fetch vehicles:", error)
+      throw error
     }
-    
-    fetchVehicles()
   }, [])
+
+  const { 
+    data: vehicleData, 
+    loading, 
+    error 
+  } = useVehicleList(
+    'home', // Cache key for home page
+    async () => {
+      const { vehicles, hierarchy } = await fetchVehicles()
+      return { 
+        vehicles, 
+        hierarchy,
+        totalCount: vehicles.length,
+        timestamp: Date.now()
+      }
+    },
+    {
+      enabled: true,
+      maxAge: 5 * 60 * 1000, // 5 minutes cache
+    }
+  )
+
+  // Update local state when vehicleData changes
+  useEffect(() => {
+    if (vehicleData) {
+      setVehicleHierarchy(vehicleData.hierarchy || {})
+    }
+  }, [vehicleData])
+
+  // Check cache on mount to see if we have data
+  useEffect(() => {
+    const cachedData = getCachedList('home')
+    if (cachedData && cachedData.hierarchy) {
+      setVehicleHierarchy(cachedData.hierarchy)
+    }
+  }, [getCachedList])
 
   // Load saved vehicles data from database
   useEffect(() => {
@@ -299,12 +221,12 @@ export default function CarMarketplace() {
     return `R ${formattedInteger || "0"}.${decimalPart}`
   }
 
-  // NEW: Check if a make is selected
+  // Check if a make is selected
   const isMakeSelected = (make: string): boolean => {
     return selectedTerms.includes(make)
   }
 
-  // NEW: Check if a model is selected
+  // Check if a model is selected
   const isModelSelected = (make: string, model: string): boolean => {
     return selectedTerms.includes(`${make} ${model}`)
   }
@@ -329,7 +251,7 @@ export default function CarMarketplace() {
     const term = make
     if (selectedTerms.includes(term)) {
       // Remove make and all its models
-      const termsToRemove = [term, ...vehicleHierarchy[make].map(model => `${make} ${model}`)]
+      const termsToRemove = [term, ...(vehicleHierarchy[make] || []).map(model => `${make} ${model}`)]
       setSelectedTerms(selectedTerms.filter(t => !termsToRemove.includes(t)))
     } else {
       // Add make only
@@ -362,9 +284,9 @@ export default function CarMarketplace() {
     setShowSuggestions(false)
   }
 
-  // UPDATED: Generate suggestions with hierarchy support
+  // Generate suggestions with hierarchy support
   const generateSuggestions = (input: string) => {
-    if (!input.trim() || !Array.isArray(allVehicles)) {
+    if (!input.trim() || !vehicleData?.vehicles) {
       setSuggestions([])
       return
     }
@@ -373,7 +295,7 @@ export default function CarMarketplace() {
     const uniqueSuggestions = new Set<string>()
     const abbrFull = MAKE_ABBREVIATIONS[lowerInput]
 
-    allVehicles.forEach((vehicle) => {
+    vehicleData.vehicles.forEach((vehicle) => {
       if (
         vehicle.make.toLowerCase().includes(lowerInput) ||
         (abbrFull && vehicle.make.toLowerCase() === abbrFull.toLowerCase())
@@ -503,10 +425,7 @@ export default function CarMarketplace() {
       setSelectedProvince(null)
     },
     onShowAllCars: () => {
-      setFilteredVehicles(allVehicles)
-      setIsSearchPage(false)
-      setSelectedVehicle(null)
-      setSelectedProvince(null)
+      router.push("/results") // Simply navigate to results page
     },
     onGoToSellPage: () => router.push("/upload-vehicle"),
     onSignOut: handleSignOut,
@@ -520,7 +439,7 @@ export default function CarMarketplace() {
         <div className="pt-16 md:pt-20">
           <LocationPage
             province={selectedProvince}
-            vehicles={allVehicles}
+            vehicles={vehicleData?.vehicles || []}
             onBack={() => setSelectedProvince(null)}
             user={user}
             {...navigationHandlers}
@@ -547,7 +466,7 @@ export default function CarMarketplace() {
     )
   }
 
-  // UPDATED: Render hierarchical dropdown with visual indicators and make selection
+  // Render hierarchical dropdown with visual indicators and make selection
   const renderHierarchicalDropdown = () => {
     const makes = Object.keys(vehicleHierarchy).sort()
     
@@ -1030,10 +949,14 @@ export default function CarMarketplace() {
                 <div className="flex justify-center items-center py-12">
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#FF6700]"></div>
                 </div>
+              ) : error ? (
+                <div className="text-center py-12">
+                  <p className="text-lg text-red-500">Error loading vehicles: {error}</p>
+                </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {Array.isArray(allVehicles) && allVehicles.length > 0 ? (
-                    allVehicles
+                  {vehicleData?.vehicles && vehicleData.vehicles.length > 0 ? (
+                    vehicleData.vehicles
                       .slice(0, 8)
                       .map((vehicle) => (
                         <VehicleCard
