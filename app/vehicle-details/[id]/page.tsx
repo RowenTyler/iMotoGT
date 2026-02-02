@@ -5,7 +5,7 @@ import { useEffect, useState } from "react"
 import VehicleDetails from "@/components/vehicle-details"
 import { Header } from "@/components/ui/header"
 import { useUser } from "@/components/UserContext"
-import { useVehicleContext } from "@/components/VehicleProvider" // NEW
+import { useVehicleContext } from "@/components/VehicleProvider"
 import type { Vehicle } from "@/types/vehicle"
 
 interface VehicleDetailsPageProps {
@@ -18,18 +18,16 @@ export const dynamic = 'force-dynamic'
 
 export default function VehicleDetailsPage({ params }: VehicleDetailsPageProps) {
   const router = useRouter()
-  const { user, toggleSaveVehicle } = useUser()
-  const { getVehicleById, savedVehicles, loadVehicles } = useVehicleContext() // NEW
+  const { user, toggleSaveVehicle, savedVehicles: savedVehiclesData } = useUser()
+  const { getVehicleById, loadVehicles } = useVehicleContext()
   const [vehicle, setVehicle] = useState<Vehicle | null>(null)
   const [loading, setLoading] = useState(true)
-  const [savedVehiclesData, setSavedVehiclesData] = useState<Vehicle[]>([])
 
   useEffect(() => {
     let cancelled = false
     async function fetchVehicle() {
       setLoading(true)
       try {
-        // Try provider (which checks cache) first
         const v = await getVehicleById(params.id)
         if (!v) {
           notFound()
@@ -44,17 +42,12 @@ export default function VehicleDetailsPage({ params }: VehicleDetailsPageProps) 
     }
     fetchVehicle()
 
-    // Ensure listing cache exists in background
     loadVehicles().catch(() => {})
 
     return () => {
       cancelled = true
     }
   }, [params.id, getVehicleById, loadVehicles])
-
-  useEffect(() => {
-    setSavedVehiclesData(savedVehicles)
-  }, [savedVehicles])
 
   if (loading) {
     return (
