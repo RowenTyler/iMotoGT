@@ -11,7 +11,7 @@ import type { Vehicle } from "@/types/vehicle"
 import { Search, SlidersHorizontal } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
-import { useVehicleList } from "@/context/VehicleProvider" // Add import
+import { useVehicleList } from "@/components/VehicleProvider" // Add import
 
 export default function ResultsPage() {
   const router = useRouter()
