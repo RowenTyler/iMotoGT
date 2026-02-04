@@ -49,11 +49,18 @@ async function signUp(
   try {
     console.log("🔐 Signing up user:", email, "with metadata:", metadata)
 
+    // Determine the correct redirect URL based on environment
+    const redirectUrl = typeof window !== 'undefined' 
+      ? `${window.location.origin}/api/auth/callback`
+      : `${process.env.NEXT_PUBLIC_SITE_URL || 'https://imotogtv7.vercel.app'}/api/auth/callback`
+
+    console.log("📧 Setting up email verification with redirect:", redirectUrl)
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: undefined,
+        emailRedirectTo: redirectUrl,
         data: {
           first_name: metadata?.firstName || "",
           last_name: metadata?.lastName || "",
@@ -71,7 +78,8 @@ async function signUp(
       return { user: null, error: new AuthError("Failed to create user", "SIGNUP_FAILED") }
     }
 
-    console.log("✅ User signed up successfully, creating profile in database")
+    console.log("✅ User signed up successfully, verification email should be sent")
+    console.log("📧 Email confirmation required:", !data.user.email_confirmed_at)
 
     await createUserProfile(data.user.id, email, metadata?.firstName, metadata?.lastName)
 
@@ -450,9 +458,17 @@ async function resendVerificationEmail(email: string): Promise<void> {
   try {
     console.log("📧 Resending verification email to:", email)
 
+    // Determine the correct redirect URL based on environment
+    const redirectUrl = typeof window !== 'undefined' 
+      ? `${window.location.origin}/api/auth/callback`
+      : `${process.env.NEXT_PUBLIC_SITE_URL || 'https://imotogtv7.vercel.app'}/api/auth/callback`
+
     const { error } = await supabase.auth.resend({
       type: "signup",
       email: email,
+      options: {
+        emailRedirectTo: redirectUrl,
+      },
     })
 
     if (error) {
