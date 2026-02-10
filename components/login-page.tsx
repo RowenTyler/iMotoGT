@@ -25,6 +25,7 @@ export default function LoginPage({
   loginContext = "default",
 }: LoginPageProps) {
   const [isSignUp, setIsSignUp] = useState(false)
+  const [isForgotPassword, setIsForgotPassword] = useState(false)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [firstName, setFirstName] = useState("")
@@ -34,7 +35,9 @@ export default function LoginPage({
   const [showPassword, setShowPassword] = useState(false)
   const [showVerificationMessage, setShowVerificationMessage] = useState(false)
   const [showExistingUserMessage, setShowExistingUserMessage] = useState(false)
+  const [showPasswordResetSent, setShowPasswordResetSent] = useState(false)
   const [verificationEmail, setVerificationEmail] = useState("")
+  const [resetEmail, setResetEmail] = useState("")
   const [isResending, setIsResending] = useState(false)
   const [resendSuccess, setResendSuccess] = useState(false)
   const router = useRouter()
@@ -95,6 +98,38 @@ export default function LoginPage({
       }
     } finally {
       setIsResending(false)
+    }
+  }
+
+  const handleForgotPassword = async () => {
+    if (!email) {
+      setError("Please enter your email address")
+      return
+    }
+
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      console.log("🔑 Requesting password reset for:", email)
+      const { error } = await authService.resetPassword(email)
+
+      if (error) {
+        setError(error.message)
+        return
+      }
+
+      console.log("✅ Password reset email sent")
+      setResetEmail(email)
+      setShowPasswordResetSent(true)
+    } catch (e) {
+      if (e instanceof AuthError) {
+        setError(e.message)
+      } else {
+        setError("Failed to send password reset email. Please try again.")
+      }
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -214,6 +249,80 @@ export default function LoginPage({
     setIsSignUp(false)
     setError(null)
     setResendSuccess(false)
+  }
+
+  if (showPasswordResetSent) {
+    return (
+      <>
+        <Header user={null} transparent={false} />
+        <main className="flex-1 flex items-center justify-center px-4 pt-20 md:pt-24">
+          <div className="w-full max-w-md">
+            <div className="text-center mb-8">
+              <div className="mx-auto w-16 h-16 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center mb-4">
+                <Mail className="h-8 w-8 text-green-600 dark:text-green-400" />
+              </div>
+              <h1 className="text-4xl font-bold text-[#3E5641] dark:text-white">Check Your Email</h1>
+              <p className="text-[#6F7F69] dark:text-gray-400 mt-2">
+                We've sent a password reset link to your email address.
+              </p>
+            </div>
+
+            <div className="bg-white dark:bg-[#2A352A] p-8 rounded-3xl shadow-lg border border-[#9FA791]/20 dark:border-[#4A4D45]/20">
+              <div className="text-center space-y-4">
+                <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                  <CheckCircle className="h-6 w-6 text-blue-600 dark:text-blue-400 mx-auto mb-2" />
+                  <p className="text-sm text-blue-800 dark:text-blue-200">
+                    <strong>Password reset email sent to:</strong>
+                  </p>
+                  <p className="text-sm font-medium text-blue-900 dark:text-blue-100 mt-1">{resetEmail}</p>
+                </div>
+
+                <div className="text-left space-y-2 text-sm text-[#6F7F69] dark:text-gray-400">
+                  <p>
+                    <strong>Next steps:</strong>
+                  </p>
+                  <ol className="list-decimal list-inside space-y-1 ml-2">
+                    <li>Check your email inbox (and spam folder)</li>
+                    <li>Click the password reset link in the email</li>
+                    <li>Create a new password</li>
+                    <li>Return here to sign in with your new password</li>
+                  </ol>
+                </div>
+
+                <div className="pt-4 space-y-3">
+                  <Button
+                    onClick={() => {
+                      setShowPasswordResetSent(false)
+                      setIsForgotPassword(false)
+                      setError(null)
+                    }}
+                    className="w-full bg-[#FF6700] text-white hover:bg-[#FF6700]/90 dark:bg-[#FF7D33] dark:hover:bg-[#FF7D33]/90"
+                  >
+                    <>
+                      Back to Sign In
+                      <LogIn className="ml-2 h-4 w-4" />
+                    </>
+                  </Button>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 text-center">
+              <div className="text-xs text-[#6F7F69] dark:text-gray-400 space-y-2">
+                <p>
+                  <strong>Troubleshooting:</strong>
+                </p>
+                <ul className="text-left space-y-1 max-w-sm mx-auto">
+                  <li>Check your spam/junk folder</li>
+                  <li>Wait a few minutes for email delivery</li>
+                  <li>Make sure you entered the correct email</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </main>
+      </>
+    )
   }
 
   if (showExistingUserMessage) {
@@ -394,6 +503,76 @@ export default function LoginPage({
     )
   }
 
+  // Forgot password form view
+  if (isForgotPassword) {
+    return (
+      <>
+        <Header user={null} transparent={false} />
+        <main className="flex-1 flex items-center justify-center px-4 pt-20 md:pt-24">
+          <div className="w-full max-w-md">
+            <div className="text-center mb-8">
+              <h1 className="text-4xl font-bold text-[#3E5641] dark:text-white">
+                Reset Your Password
+              </h1>
+              <p className="text-[#6F7F69] dark:text-gray-400 mt-2">
+                Enter your email address and we'll send you a link to reset your password.
+              </p>
+            </div>
+
+            <div className="bg-white dark:bg-[#2A352A] p-8 rounded-3xl shadow-lg border border-[#9FA791]/20 dark:border-[#4A4D45]/20">
+              <form onSubmit={(e) => { e.preventDefault(); handleForgotPassword(); }} className="space-y-6">
+                <div>
+                  <Label htmlFor="reset-email" className="text-sm font-medium text-[#3E5641] dark:text-gray-300">
+                    Email Address
+                  </Label>
+                  <Input
+                    id="reset-email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    required
+                    className="mt-1"
+                  />
+                </div>
+
+                {error && (
+                  <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800 text-sm text-red-800 dark:text-red-200">
+                    {error}
+                  </div>
+                )}
+
+                <Button
+                  type="submit"
+                  className="w-full bg-[#FF6700] text-white hover:bg-[#FF6700]/90 dark:bg-[#FF7D33] dark:hover:bg-[#FF7D33]/90"
+                  disabled={isLoading}
+                >
+                  <>
+                    {isLoading ? "Sending..." : "Send Reset Link"}
+                    <Mail className="ml-2 h-4 w-4" />
+                  </>
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setIsForgotPassword(false)
+                    setError(null)
+                  }}
+                  className="w-full bg-transparent"
+                  disabled={isLoading}
+                >
+                  Back to Sign In
+                </Button>
+              </form>
+            </div>
+          </div>
+        </main>
+      </>
+    )
+  }
+
   return (
     <>
       <Header user={null} transparent={false} />
@@ -459,9 +638,23 @@ export default function LoginPage({
               </div>
 
               <div>
-                <Label htmlFor="password" className="text-sm font-medium text-[#3E5641] dark:text-gray-300">
-                  Password
-                </Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password" className="text-sm font-medium text-[#3E5641] dark:text-gray-300">
+                    Password
+                  </Label>
+                  {!isSignUp && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsForgotPassword(true)
+                        setError(null)
+                      }}
+                      className="text-xs text-[#FF6700] hover:underline dark:text-[#FF7D33]"
+                    >
+                      Forgot Password?
+                    </button>
+                  )}
+                </div>
                 <div className="relative mt-1">
                   <Input
                     id="password"

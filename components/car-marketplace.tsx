@@ -1,18 +1,19 @@
 "use client"
 
 import type React from "react"
-import { useState, useEffect, useRef } from "react"
+import { useEffect, useState, useRef, useCallback, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import * as SliderPrimitive from "@radix-ui/react-slider"
 import { Search, X, ChevronDown, ChevronRight, Truck, CarIcon, Bike, Facebook, Instagram, Twitter } from "lucide-react"
 import VehicleDetails from "./vehicle-details"
 import LocationPage from "./location-page"
 import { vehicleService } from "@/lib/vehicle-service"
-import { CacheManager, CACHE_CONFIG } from "@/lib/cache-manager"
 import type { Vehicle } from "@/types/vehicle"
 import { useUser } from "@/components/UserContext"
 import { Header } from "./ui/header"
 import VehicleCard from "./vehicle-card"
+import { useVehicleList, useVehicleContext } from "@/components/VehicleProvider"
+import { useNavigationCache } from "@/components/NavigationCacheHandler"
 
 // Common South African car make abbreviations
 const MAKE_ABBREVIATIONS: Record<string, string> = {
@@ -44,31 +45,53 @@ const MAKE_ABBREVIATIONS: Record<string, string> = {
   mini: "MINI",
 }
 
-// Cache keys
-const CACHE_KEYS = {
-  VEHICLES: 'cached_vehicles',
-  VEHICLES_TIMESTAMP: 'cached_vehicles_timestamp',
-  VEHICLE_HIERARCHY: 'cached_vehicle_hierarchy'
-}
-
-// Cache duration: 5 minutes
-const CACHE_DURATION = 5 * 60 * 1000
-
 interface VehicleHierarchy {
   [make: string]: string[] // models only
+}
+
+// Interface for cached form state
+interface CachedFormState {
+  selectedTerms: string[]
+  bodyType: string
+  engineCapacityRange: [number, number]
+  searchTerm: string
+  currentSliderEngineValues: [number, number]
+  showMoreOptions: boolean
+  expandedMakes: string[]
+  // Filter values
+  minPrice?: string
+  maxPrice?: string
+  location?: string
+  minYear?: string
+  maxYear?: string
+  minMileage?: string
+  maxMileage?: string
+  fuelType?: string
+  transmission?: string
+  condition?: string
 }
 
 export default function CarMarketplace() {
   const router = useRouter()
   const { user, setUser, savedVehicles, toggleSaveVehicle } = useUser()
+  
+  // Use the vehicle context for cache management
+  const { getCachedList, saveForCurrentRoute } = useVehicleContext()
+  
+  // Use navigation cache for form state
+  const { 
+    saveCurrentState, 
+    restoreCurrentState, 
+    hasCachedData, 
+    getCachedData,
+    saveCurrentScrollPosition 
+  } = useNavigationCache()
+  
   const [search, setSearch] = useState("")
   const [showMoreOptions, setShowMoreOptions] = useState(false)
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null)
   const [selectedProvince, setSelectedProvince] = useState<string | null>(null)
-  const [allVehicles, setAllVehicles] = useState<Vehicle[]>([])
-  const [filteredVehicles, setFilteredVehicles] = useState<Vehicle[]>([])
   const [isSearchPage, setIsSearchPage] = useState(true)
-  const [loading, setLoading] = useState(true)
   const [savedVehiclesData, setSavedVehiclesData] = useState<Vehicle[]>([])
 
   const [searchTerm, setSearchTerm] = useState("")
@@ -89,135 +112,115 @@ export default function CarMarketplace() {
   const [showEngineCapacitySlider, setShowEngineCapacitySlider] = useState(false)
   const [currentSliderEngineValues, setCurrentSliderEngineValues] = useState<[number, number]>([1.0, 8.0])
 
-  // Cache functions using centralized CacheManager
-  const getCachedData = <T,>(key: string): T | null => {
-    // Map local keys to CacheManager keys
-    if (key === CACHE_KEYS.VEHICLES) {
-      return CacheManager.get<T>(`${CACHE_CONFIG.VEHICLES_KEY}_active`)
-    }
-    if (key === CACHE_KEYS.VEHICLE_HIERARCHY) {
-      return CacheManager.get<T>(CACHE_KEYS.VEHICLE_HIERARCHY)
-    }
-    return CacheManager.get<T>(key)
-  }
+  // Refs for form inputs
+  const minPriceInputRef = useRef<HTMLInputElement>(null)
+  const maxPriceInputRef = useRef<HTMLInputElement>(null)
+  const locationSelectRef = useRef<HTMLSelectElement>(null)
+  const fuelTypeSelectRef = useRef<HTMLSelectElement>(null)
+  const transmissionSelectRef = useRef<HTMLSelectElement>(null)
+  const minYearSelectRef = useRef<HTMLSelectElement>(null)
+  const maxYearSelectRef = useRef<HTMLSelectElement>(null)
+  const minMileageInputRef = useRef<HTMLInputElement>(null)
+  const maxMileageInputRef = useRef<HTMLInputElement>(null)
+  const conditionSelectRef = useRef<HTMLSelectElement>(null)
 
-  const setCachedData = (key: string, data: any) => {
-    // Map local keys to CacheManager keys
-    if (key === CACHE_KEYS.VEHICLES) {
-      CacheManager.set(`${CACHE_CONFIG.VEHICLES_KEY}_active`, data, CACHE_CONFIG.TTL)
-      return
-    }
-    if (key === CACHE_KEYS.VEHICLE_HIERARCHY) {
-      CacheManager.set(CACHE_KEYS.VEHICLE_HIERARCHY, data, CACHE_CONFIG.TTL)
-      return
-    }
-    if (key === CACHE_KEYS.VEHICLES_TIMESTAMP) {
-      // Timestamp is handled internally by CacheManager, skip
-      return
-    }
-    CacheManager.set(key, data, CACHE_CONFIG.TTL)
-  }
-
-  const isCacheValid = (timestampKey: string): boolean => {
-    // CacheManager handles TTL internally, check if data exists
-    const cached = CacheManager.get(`${CACHE_CONFIG.VEHICLES_KEY}_active`)
-    return cached !== null
-  }
-
-  // Build vehicle hierarchy from vehicles (makes → models only)
-  const buildVehicleHierarchy = (vehicles: Vehicle[]): VehicleHierarchy => {
-    const hierarchy: VehicleHierarchy = {}
-    
-    vehicles.forEach(vehicle => {
-      const { make, model } = vehicle
+  // Define the fetch function for useVehicleList
+  const fetchVehicles = useCallback(async () => {
+    console.log("🔄 [CarMarketplace] Fetching vehicles...")
+    try {
+      const result = await vehicleService.getVehicles()
+      console.log("✅ [CarMarketplace] getVehicles returned:", result)
       
-      if (!hierarchy[make]) {
-        hierarchy[make] = []
+      let vehicles: Vehicle[] = []
+      if (Array.isArray(result)) {
+        vehicles = result
+      } else if (result && typeof result === 'object' && result.vehicles) {
+        vehicles = result.vehicles
       }
       
-      if (!hierarchy[make].includes(model)) {
-        hierarchy[make].push(model)
-      }
-    })
-    
-    // Sort models alphabetically
-    Object.keys(hierarchy).forEach(make => {
-      hierarchy[make].sort()
-    })
-    
-    return hierarchy
-  }
-
-  // UPDATED: Fetch vehicles with caching and background updates
-  useEffect(() => {
-    const fetchVehicles = async (forceRefresh = false) => {
-      try {
-        if (!forceRefresh) setLoading(true)
+      console.log(`✅ [CarMarketplace] Parsed ${vehicles.length} vehicles`)
+      
+      // Build hierarchy from vehicles
+      const hierarchy: VehicleHierarchy = {}
+      vehicles.forEach(vehicle => {
+        const { make, model } = vehicle
         
-        // Check cache first unless forcing refresh
-        const cachedVehicles = getCachedData<Vehicle[]>(CACHE_KEYS.VEHICLES)
-        const cachedHierarchy = getCachedData<VehicleHierarchy>(CACHE_KEYS.VEHICLE_HIERARCHY)
-        const isCacheStillValid = isCacheValid(CACHE_KEYS.VEHICLES_TIMESTAMP)
-        
-        if (cachedVehicles && cachedHierarchy && isCacheStillValid && !forceRefresh) {
-          console.log("🚀 Loading vehicles from cache")
-          setAllVehicles(cachedVehicles)
-          setFilteredVehicles(cachedVehicles)
-          setVehicleHierarchy(cachedHierarchy)
-          if (!forceRefresh) setLoading(false)
-          
-          // Schedule background refresh if cache is older than 2 minutes
-          const cacheAge = Date.now() - (getCachedData<number>(CACHE_KEYS.VEHICLES_TIMESTAMP) || 0)
-          if (cacheAge > 2 * 60 * 1000) {
-            console.log("🔄 Scheduling background cache refresh...")
-            setTimeout(() => fetchVehicles(true), 1000) // Refresh in background after 1 second
+        if (make && model) {
+          if (!hierarchy[make]) {
+            hierarchy[make] = []
           }
-          return
+          
+          if (!hierarchy[make].includes(model)) {
+            hierarchy[make].push(model)
+          }
         }
-        
-        console.log(forceRefresh ? "🔄 Background refreshing vehicle data..." : "🔄 Fetching fresh vehicle data...")
-        const result = await vehicleService.getVehicles()
-        console.log("✅ getVehicles returned:", result)
-        const vehicles = Array.isArray(result) ? result : result.vehicles || []
-        console.log("✅ Setting vehicles:", vehicles.length)
-        
-        // Build hierarchy
-        const hierarchy = buildVehicleHierarchy(vehicles)
-        
-        // Update state
-        setAllVehicles(vehicles)
-        setFilteredVehicles(vehicles)
-        setVehicleHierarchy(hierarchy)
-        
-        // Update cache
-        setCachedData(CACHE_KEYS.VEHICLES, vehicles)
-        setCachedData(CACHE_KEYS.VEHICLE_HIERARCHY, hierarchy)
-        setCachedData(CACHE_KEYS.VEHICLES_TIMESTAMP, Date.now())
-        
-      } catch (error) {
-        console.error("❌ Failed to fetch vehicles:", error)
-        
-        // Fallback to cache even if stale
-        const cachedVehicles = getCachedData<Vehicle[]>(CACHE_KEYS.VEHICLES)
-        const cachedHierarchy = getCachedData<VehicleHierarchy>(CACHE_KEYS.VEHICLE_HIERARCHY)
-        
-        if (cachedVehicles && cachedHierarchy) {
-          console.log("🔄 Using stale cache as fallback")
-          setAllVehicles(cachedVehicles)
-          setFilteredVehicles(cachedVehicles)
-          setVehicleHierarchy(cachedHierarchy)
-        } else {
-          setAllVehicles([])
-          setFilteredVehicles([])
-          setVehicleHierarchy({})
-        }
-      } finally {
-        if (!forceRefresh) setLoading(false)
+      })
+      
+      // Sort models alphabetically
+      Object.keys(hierarchy).forEach(make => {
+        hierarchy[make].sort()
+      })
+      
+      console.log("✅ [CarMarketplace] Built hierarchy:", Object.keys(hierarchy).length, "makes")
+      
+      return {
+        vehicles,
+        hierarchy,
+        totalCount: vehicles.length,
+        timestamp: Date.now()
+      }
+    } catch (error) {
+      console.error("❌ [CarMarketplace] Failed to fetch vehicles:", error)
+      // Return empty structure instead of throwing
+      return {
+        vehicles: [],
+        hierarchy: {},
+        totalCount: 0,
+        timestamp: Date.now(),
+        error: error instanceof Error ? error.message : 'Unknown error'
       }
     }
-    
-    fetchVehicles()
   }, [])
+
+  // Use the vehicle list hook with caching
+  const { 
+    data: vehicleData, 
+    loading, 
+    error 
+  } = useVehicleList(
+    'home', // Cache key for home page
+    fetchVehicles,
+    {
+      enabled: true,
+      maxAge: 5 * 60 * 1000, // 5 minutes cache
+      forceRefresh: false,
+    }
+  )
+
+  console.log("📊 [CarMarketplace] useVehicleList state:", { 
+    loading, 
+    error, 
+    dataLength: vehicleData?.vehicles?.length || 0,
+    hasData: !!vehicleData,
+    vehicleData
+  })
+
+  // Update local state when vehicleData changes
+  useEffect(() => {
+    if (vehicleData && vehicleData.hierarchy) {
+      console.log("🔄 [CarMarketplace] Updating vehicleHierarchy from vehicleData")
+      setVehicleHierarchy(vehicleData.hierarchy)
+    }
+  }, [vehicleData])
+
+  // Check cache on mount to see if we have data
+  useEffect(() => {
+    const cachedData = getCachedList('home')
+    if (cachedData && cachedData.hierarchy) {
+      console.log("📦 [CarMarketplace] Found cached data, setting hierarchy")
+      setVehicleHierarchy(cachedData.hierarchy)
+    }
+  }, [getCachedList])
 
   // Load saved vehicles data from database
   useEffect(() => {
@@ -238,6 +241,111 @@ export default function CarMarketplace() {
     loadSavedVehiclesData()
   }, [user?.id, savedVehicles])
 
+  // Restore cached form state on mount
+  useEffect(() => {
+    console.log("🔄 [CarMarketplace] Attempting to restore cached form state")
+    
+    const restored = restoreCurrentState()
+    if (restored) {
+      console.log("✅ [CarMarketplace] Restored cached form state:", restored)
+      
+      // Restore form state from cache
+      if (restored.selectedTerms) setSelectedTerms(restored.selectedTerms)
+      if (restored.bodyType) setBodyType(restored.bodyType)
+      if (restored.engineCapacityRange) {
+        setEngineCapacityRange(restored.engineCapacityRange)
+        setCurrentSliderEngineValues(restored.engineCapacityRange)
+      }
+      if (restored.searchTerm) setSearchTerm(restored.searchTerm)
+      if (restored.currentSliderEngineValues) setCurrentSliderEngineValues(restored.currentSliderEngineValues)
+      if (restored.showMoreOptions) setShowMoreOptions(restored.showMoreOptions)
+      if (restored.expandedMakes) setExpandedMakes(new Set(restored.expandedMakes))
+      
+      // Restore input values
+      if (restored.minPrice && minPriceInputRef.current) minPriceInputRef.current.value = restored.minPrice
+      if (restored.maxPrice && maxPriceInputRef.current) maxPriceInputRef.current.value = restored.maxPrice
+      if (restored.location && locationSelectRef.current) locationSelectRef.current.value = restored.location
+      if (restored.fuelType && fuelTypeSelectRef.current) fuelTypeSelectRef.current.value = restored.fuelType
+      if (restored.transmission && transmissionSelectRef.current) transmissionSelectRef.current.value = restored.transmission
+      if (restored.minYear && minYearSelectRef.current) minYearSelectRef.current.value = restored.minYear
+      if (restored.maxYear && maxYearSelectRef.current) maxYearSelectRef.current.value = restored.maxYear
+      if (restored.minMileage && minMileageInputRef.current) minMileageInputRef.current.value = restored.minMileage
+      if (restored.maxMileage && maxMileageInputRef.current) maxMileageInputRef.current.value = restored.maxMileage
+      if (restored.condition && conditionSelectRef.current) conditionSelectRef.current.value = restored.condition
+    }
+  }, [restoreCurrentState])
+
+  // Save form state to cache when it changes
+  useEffect(() => {
+    if (!isSearchPage) return
+    
+    const formState: CachedFormState = {
+      selectedTerms,
+      bodyType,
+      engineCapacityRange,
+      searchTerm,
+      currentSliderEngineValues,
+      showMoreOptions,
+      expandedMakes: Array.from(expandedMakes),
+      // Capture current input values
+      minPrice: minPriceInputRef.current?.value || '',
+      maxPrice: maxPriceInputRef.current?.value || '',
+      location: locationSelectRef.current?.value || '',
+      fuelType: fuelTypeSelectRef.current?.value || '',
+      transmission: transmissionSelectRef.current?.value || '',
+      minYear: minYearSelectRef.current?.value || '',
+      maxYear: maxYearSelectRef.current?.value || '',
+      minMileage: minMileageInputRef.current?.value || '',
+      maxMileage: maxMileageInputRef.current?.value || '',
+      condition: conditionSelectRef.current?.value || ''
+    }
+    
+    console.log("💾 [CarMarketplace] Saving form state to cache")
+    saveCurrentState(formState)
+  }, [
+    selectedTerms,
+    bodyType,
+    engineCapacityRange,
+    searchTerm,
+    currentSliderEngineValues,
+    showMoreOptions,
+    expandedMakes,
+    isSearchPage,
+    saveCurrentState
+  ])
+
+  // Save vehicle data to route cache
+  useEffect(() => {
+    if (vehicleData && vehicleData.vehicles && vehicleData.vehicles.length > 0) {
+      console.log("💾 [CarMarketplace] Saving vehicle data to route cache")
+      saveForCurrentRoute(vehicleData, 'list')
+    }
+  }, [vehicleData, saveForCurrentRoute])
+
+  // Save scroll position on scroll
+  useEffect(() => {
+    const handleScroll = () => {
+      if (isSearchPage) {
+        saveCurrentScrollPosition()
+      }
+    }
+    
+    // Throttle scroll events
+    let scrollTimeout: NodeJS.Timeout
+    const throttledScroll = () => {
+      if (scrollTimeout) clearTimeout(scrollTimeout)
+      scrollTimeout = setTimeout(handleScroll, 500)
+    }
+    
+    window.addEventListener('scroll', throttledScroll)
+    
+    return () => {
+      window.removeEventListener('scroll', throttledScroll)
+      if (scrollTimeout) clearTimeout(scrollTimeout)
+    }
+  }, [isSearchPage, saveCurrentScrollPosition])
+
+  // Handle click outside for dropdowns
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
@@ -289,12 +397,12 @@ export default function CarMarketplace() {
     return `R ${formattedInteger || "0"}.${decimalPart}`
   }
 
-  // NEW: Check if a make is selected
+  // Check if a make is selected
   const isMakeSelected = (make: string): boolean => {
     return selectedTerms.includes(make)
   }
 
-  // NEW: Check if a model is selected
+  // Check if a model is selected
   const isModelSelected = (make: string, model: string): boolean => {
     return selectedTerms.includes(`${make} ${model}`)
   }
@@ -319,7 +427,7 @@ export default function CarMarketplace() {
     const term = make
     if (selectedTerms.includes(term)) {
       // Remove make and all its models
-      const termsToRemove = [term, ...vehicleHierarchy[make].map(model => `${make} ${model}`)]
+      const termsToRemove = [term, ...(vehicleHierarchy[make] || []).map(model => `${make} ${model}`)]
       setSelectedTerms(selectedTerms.filter(t => !termsToRemove.includes(t)))
     } else {
       // Add make only
@@ -352,9 +460,9 @@ export default function CarMarketplace() {
     setShowSuggestions(false)
   }
 
-  // UPDATED: Generate suggestions with hierarchy support
+  // Generate suggestions with hierarchy support
   const generateSuggestions = (input: string) => {
-    if (!input.trim() || !Array.isArray(allVehicles)) {
+    if (!input.trim() || !vehicleData?.vehicles) {
       setSuggestions([])
       return
     }
@@ -363,19 +471,21 @@ export default function CarMarketplace() {
     const uniqueSuggestions = new Set<string>()
     const abbrFull = MAKE_ABBREVIATIONS[lowerInput]
 
-    allVehicles.forEach((vehicle) => {
-      if (
+    vehicleData.vehicles.forEach((vehicle) => {
+      if (vehicle.make && (
         vehicle.make.toLowerCase().includes(lowerInput) ||
         (abbrFull && vehicle.make.toLowerCase() === abbrFull.toLowerCase())
-      ) {
+      )) {
         uniqueSuggestions.add(vehicle.make)
       }
-      const modelTerm = `${vehicle.make} ${vehicle.model}`
-      if (
-        modelTerm.toLowerCase().includes(lowerInput) ||
-        (abbrFull && modelTerm.toLowerCase().includes(abbrFull.toLowerCase()))
-      ) {
-        uniqueSuggestions.add(modelTerm)
+      if (vehicle.make && vehicle.model) {
+        const modelTerm = `${vehicle.make} ${vehicle.model}`
+        if (
+          modelTerm.toLowerCase().includes(lowerInput) ||
+          (abbrFull && modelTerm.toLowerCase().includes(abbrFull.toLowerCase()))
+        ) {
+          uniqueSuggestions.add(modelTerm)
+        }
       }
     })
 
@@ -399,30 +509,42 @@ export default function CarMarketplace() {
   }
 
   const handleSearch = () => {
-    const minPriceInput = document.getElementById("min-price-input") as HTMLInputElement
-    const maxPriceInput = document.getElementById("max-price-input") as HTMLInputElement
-    const locationSelect = document.getElementById("location-select") as HTMLSelectElement
-    const fuelTypeSelect = document.getElementById("fuel-type-select") as HTMLSelectElement
-    const transmissionSelect = document.getElementById("transmission-select") as HTMLSelectElement
-    const minYearSelect = document.getElementById("min-year-select") as HTMLSelectElement
-    const maxYearSelect = document.getElementById("max-year-select") as HTMLSelectElement
-    const minMileageInput = document.getElementById("min-mileage-input") as HTMLInputElement
-    const maxMileageInput = document.getElementById("max-mileage-input") as HTMLInputElement
+    // Save current state before navigation
+    console.log("💾 [CarMarketplace] Saving state before search navigation")
+    saveCurrentState({
+      selectedTerms,
+      bodyType,
+      engineCapacityRange,
+      searchTerm,
+      currentSliderEngineValues,
+      showMoreOptions,
+      expandedMakes: Array.from(expandedMakes),
+      minPrice: minPriceInputRef.current?.value || '',
+      maxPrice: maxPriceInputRef.current?.value || '',
+      location: locationSelectRef.current?.value || '',
+      fuelType: fuelTypeSelectRef.current?.value || '',
+      transmission: transmissionSelectRef.current?.value || '',
+      minYear: minYearSelectRef.current?.value || '',
+      maxYear: maxYearSelectRef.current?.value || '',
+      minMileage: minMileageInputRef.current?.value || '',
+      maxMileage: maxMileageInputRef.current?.value || '',
+      condition: conditionSelectRef.current?.value || ''
+    })
 
     const queryParams = new URLSearchParams()
 
     if (selectedTerms.length > 0) queryParams.set("query", selectedTerms.join(" "))
-    if (minPriceInput?.value) queryParams.set("minPrice", minPriceInput.value.replace(/\D/g, ""))
-    if (maxPriceInput?.value) queryParams.set("maxPrice", maxPriceInput.value.replace(/\D/g, ""))
-    if (locationSelect?.value) queryParams.set("province", locationSelect.value)
+    if (minPriceInputRef.current?.value) queryParams.set("minPrice", minPriceInputRef.current.value.replace(/\D/g, ""))
+    if (maxPriceInputRef.current?.value) queryParams.set("maxPrice", maxPriceInputRef.current.value.replace(/\D/g, ""))
+    if (locationSelectRef.current?.value) queryParams.set("province", locationSelectRef.current.value)
     if (bodyType) queryParams.set("bodyType", bodyType)
-    if (minYearSelect?.value) queryParams.set("minYear", minYearSelect.value)
-    if (maxYearSelect?.value) queryParams.set("maxYear", maxYearSelect.value)
-    if (minMileageInput?.value) queryParams.set("minMileage", minMileageInput.value.replace(/\D/g, ""))
-    if (maxMileageInput?.value) queryParams.set("maxMileage", maxMileageInput.value.replace(/\D/g, ""))
-    if (fuelTypeSelect?.value && fuelTypeSelect.value !== "All") queryParams.set("fuelType", fuelTypeSelect.value)
-    if (transmissionSelect?.value && transmissionSelect.value !== "All")
-      queryParams.set("transmission", transmissionSelect.value)
+    if (minYearSelectRef.current?.value) queryParams.set("minYear", minYearSelectRef.current.value)
+    if (maxYearSelectRef.current?.value) queryParams.set("maxYear", maxYearSelectRef.current.value)
+    if (minMileageInputRef.current?.value) queryParams.set("minMileage", minMileageInputRef.current.value.replace(/\D/g, ""))
+    if (maxMileageInputRef.current?.value) queryParams.set("maxMileage", maxMileageInputRef.current.value.replace(/\D/g, ""))
+    if (fuelTypeSelectRef.current?.value && fuelTypeSelectRef.current.value !== "All") queryParams.set("fuelType", fuelTypeSelectRef.current.value)
+    if (transmissionSelectRef.current?.value && transmissionSelectRef.current.value !== "All")
+      queryParams.set("transmission", transmissionSelectRef.current.value)
     queryParams.set("engineCapacityMin", engineCapacityRange[0].toFixed(1))
     queryParams.set("engineCapacityMax", engineCapacityRange[1].toFixed(1))
 
@@ -484,22 +606,116 @@ export default function CarMarketplace() {
   }
 
   // Navigation handlers using Next.js routing
-  const navigationHandlers = {
+  const navigationHandlers = useMemo(() => ({
     onLoginClick: () => router.push("/login"),
     onDashboardClick: () => router.push("/dashboard"),
     onGoHome: () => {
       setIsSearchPage(true)
       setSelectedVehicle(null)
       setSelectedProvince(null)
+      // Save state when going home
+      saveCurrentState({
+        selectedTerms,
+        bodyType,
+        engineCapacityRange,
+        searchTerm,
+        currentSliderEngineValues,
+        showMoreOptions,
+        expandedMakes: Array.from(expandedMakes)
+      })
     },
     onShowAllCars: () => {
-      setFilteredVehicles(allVehicles)
-      setIsSearchPage(false)
-      setSelectedVehicle(null)
-      setSelectedProvince(null)
+      // Save current form state before navigating
+      saveCurrentState({
+        selectedTerms,
+        bodyType,
+        engineCapacityRange,
+        searchTerm,
+        currentSliderEngineValues,
+        showMoreOptions,
+        expandedMakes: Array.from(expandedMakes)
+      })
+      router.push("/results")
     },
-    onGoToSellPage: () => router.push("/upload-vehicle"),
+    onGoToSellPage: () => {
+      // Save state before navigating to sell page
+      saveCurrentState({
+        selectedTerms,
+        bodyType,
+        engineCapacityRange,
+        searchTerm,
+        currentSliderEngineValues,
+        showMoreOptions,
+        expandedMakes: Array.from(expandedMakes)
+      })
+      router.push("/upload-vehicle")
+    },
     onSignOut: handleSignOut,
+  }), [router, selectedTerms, bodyType, engineCapacityRange, searchTerm, currentSliderEngineValues, showMoreOptions, expandedMakes, saveCurrentState])
+
+  // Handle vehicle selection with cache saving
+  const handleVehicleSelect = (vehicle: Vehicle) => {
+    // Save current form state before showing vehicle details
+    saveCurrentState({
+      selectedTerms,
+      bodyType,
+      engineCapacityRange,
+      searchTerm,
+      currentSliderEngineValues,
+      showMoreOptions,
+      expandedMakes: Array.from(expandedMakes),
+      minPrice: minPriceInputRef.current?.value || '',
+      maxPrice: maxPriceInputRef.current?.value || '',
+      location: locationSelectRef.current?.value || '',
+      fuelType: fuelTypeSelectRef.current?.value || '',
+      transmission: transmissionSelectRef.current?.value || '',
+      minYear: minYearSelectRef.current?.value || '',
+      maxYear: maxYearSelectRef.current?.value || '',
+      minMileage: minMileageInputRef.current?.value || '',
+      maxMileage: maxMileageInputRef.current?.value || '',
+      condition: conditionSelectRef.current?.value || ''
+    })
+    
+    // Save scroll position
+    saveCurrentScrollPosition()
+    
+    // Set selected vehicle
+    setSelectedVehicle(vehicle)
+    setIsSearchPage(false)
+  }
+
+  // Handle province selection with cache saving
+  const handleProvinceSelect = (province: string) => {
+    // Save current form state before showing location page
+    saveCurrentState({
+      selectedTerms,
+      bodyType,
+      engineCapacityRange,
+      searchTerm,
+      currentSliderEngineValues,
+      showMoreOptions,
+      expandedMakes: Array.from(expandedMakes)
+    })
+    
+    // Save scroll position
+    saveCurrentScrollPosition()
+    
+    // Set selected province
+    setSelectedProvince(province)
+    setIsSearchPage(false)
+  }
+
+  // Handle back from vehicle details or location page
+  const handleBackFromDetail = () => {
+    setSelectedVehicle(null)
+    setSelectedProvince(null)
+    setIsSearchPage(true)
+    
+    // Restore form state when coming back
+    const restored = restoreCurrentState()
+    if (restored) {
+      console.log("✅ [CarMarketplace] Restored form state after back navigation")
+    }
   }
 
   // Routing Logic
@@ -510,8 +726,8 @@ export default function CarMarketplace() {
         <div className="pt-16 md:pt-20">
           <LocationPage
             province={selectedProvince}
-            vehicles={allVehicles}
-            onBack={() => setSelectedProvince(null)}
+            vehicles={vehicleData?.vehicles || []}
+            onBack={handleBackFromDetail}
             user={user}
             {...navigationHandlers}
           />
@@ -527,7 +743,7 @@ export default function CarMarketplace() {
         <div className="pt-16 md:pt-20">
           <VehicleDetails
             vehicle={selectedVehicle}
-            onBack={() => setSelectedVehicle(null)}
+            onBack={handleBackFromDetail}
             user={user}
             savedCars={savedVehiclesData}
             onSaveCar={() => toggleSaveVehicle(selectedVehicle)}
@@ -537,7 +753,7 @@ export default function CarMarketplace() {
     )
   }
 
-  // UPDATED: Render hierarchical dropdown with visual indicators and make selection
+  // Render hierarchical dropdown with visual indicators and make selection
   const renderHierarchicalDropdown = () => {
     const makes = Object.keys(vehicleHierarchy).sort()
     
@@ -693,6 +909,7 @@ export default function CarMarketplace() {
               {/* Filters Row */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                 <input
+                  ref={minPriceInputRef}
                   id="min-price-input"
                   type="number"
                   placeholder="Min Price"
@@ -701,6 +918,7 @@ export default function CarMarketplace() {
                   step="1000"
                 />
                 <input
+                  ref={maxPriceInputRef}
                   id="max-price-input"
                   type="number"
                   placeholder="Max Price"
@@ -709,6 +927,7 @@ export default function CarMarketplace() {
                   step="1000"
                 />
                 <select
+                  ref={locationSelectRef}
                   id="location-select"
                   className="w-full px-4 py-3 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] appearance-none bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white"
                   defaultValue=""
@@ -778,6 +997,7 @@ export default function CarMarketplace() {
                         Min Year
                       </label>
                       <select
+                        ref={minYearSelectRef}
                         id="min-year-select"
                         className="px-4 py-3 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white"
                       >
@@ -797,6 +1017,7 @@ export default function CarMarketplace() {
                         Max Year
                       </label>
                       <select
+                        ref={maxYearSelectRef}
                         id="max-year-select"
                         className="px-4 py-3 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white"
                       >
@@ -817,6 +1038,7 @@ export default function CarMarketplace() {
                         Min Mileage
                       </label>
                       <input
+                        ref={minMileageInputRef}
                         id="min-mileage-input"
                         type="number"
                         placeholder="e.g., 10000"
@@ -833,6 +1055,7 @@ export default function CarMarketplace() {
                         Max Mileage
                       </label>
                       <input
+                        ref={maxMileageInputRef}
                         id="max-mileage-input"
                         type="number"
                         placeholder="e.g., 100000"
@@ -850,6 +1073,7 @@ export default function CarMarketplace() {
                         Fuel Type
                       </label>
                       <select
+                        ref={fuelTypeSelectRef}
                         id="fuel-type-select"
                         className="px-4 py-3 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white"
                       >
@@ -956,6 +1180,7 @@ export default function CarMarketplace() {
                         Transmission
                       </label>
                       <select
+                        ref={transmissionSelectRef}
                         id="transmission-select"
                         className="px-4 py-3 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white"
                       >
@@ -973,6 +1198,7 @@ export default function CarMarketplace() {
                         Condition
                       </label>
                       <select
+                        ref={conditionSelectRef}
                         id="condition-select"
                         className="px-4 py-3 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white"
                       >
@@ -1020,34 +1246,36 @@ export default function CarMarketplace() {
                 <div className="flex justify-center items-center py-12">
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#FF6700]"></div>
                 </div>
-              ) : (
+              ) : error ? (
+                <div className="text-center py-12">
+                  <p className="text-lg text-red-500">Error loading vehicles: {error}</p>
+                </div>
+              ) : vehicleData?.vehicles && vehicleData.vehicles.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {Array.isArray(allVehicles) && allVehicles.length > 0 ? (
-                    allVehicles
-                      .slice(0, 8)
-                      .map((vehicle) => (
-                        <VehicleCard
-                          key={vehicle.id}
-                          vehicle={vehicle}
-                          onViewDetails={() => setSelectedVehicle(vehicle)}
-                          isSaved={savedVehiclesData.some((saved) => saved.id === vehicle.id)}
-                          onToggleSave={() => toggleSaveVehicle(vehicle)}
-                          isLoggedIn={!!user}
-                        />
-                      ))
-                  ) : (
-                    <div className="col-span-full text-center py-12">
-                      <p className="text-lg text-[#6F7F69] dark:text-gray-300">
-                        {loading ? "Loading vehicles..." : "No vehicles available at the moment."}
-                      </p>
-                    </div>
-                  )}
+                  {vehicleData.vehicles
+                    .slice(0, 8)
+                    .map((vehicle) => (
+                      <VehicleCard
+                        key={vehicle.id}
+                        vehicle={vehicle}
+                        onViewDetails={() => handleVehicleSelect(vehicle)}
+                        isSaved={savedVehiclesData.some((saved) => saved.id === vehicle.id)}
+                        onToggleSave={() => toggleSaveVehicle(vehicle)}
+                        isLoggedIn={!!user}
+                      />
+                    ))}
+                </div>
+              ) : (
+                <div className="col-span-full text-center py-12">
+                  <p className="text-lg text-[#6F7F69] dark:text-gray-300">
+                    {loading ? "Loading vehicles..." : "No vehicles available at the moment."}
+                  </p>
                 </div>
               )}
 
               <div className="text-center mt-12">
                 <button
-                  onClick={() => router.push("/results")}
+                  onClick={() => navigationHandlers.onShowAllCars()}
                   className="bg-[#3E5641] dark:bg-[#4A4D45] text-white px-6 py-3 rounded-lg hover:bg-[#3E5641]/90 dark:hover:bg-[#4A4D45]/90 transition-colors font-medium"
                 >
                   View All Vehicles
@@ -1072,6 +1300,16 @@ export default function CarMarketplace() {
                         onClick={() => {
                           setIsSearchPage(true)
                           window.scrollTo(0, 0)
+                          // Save current state
+                          saveCurrentState({
+                            selectedTerms,
+                            bodyType,
+                            engineCapacityRange,
+                            searchTerm,
+                            currentSliderEngineValues,
+                            showMoreOptions,
+                            expandedMakes: Array.from(expandedMakes)
+                          })
                         }}
                         className="text-sm text-gray-300 hover:text-[#FF7D33] text-left"
                       >
@@ -1080,7 +1318,7 @@ export default function CarMarketplace() {
                     </li>
                     <li>
                       <button
-                        onClick={() => router.push("/upload-vehicle")}
+                        onClick={() => navigationHandlers.onGoToSellPage()}
                         className="text-sm text-gray-300 hover:text-[#FF7D33] text-left"
                       >
                         Sell a Car
