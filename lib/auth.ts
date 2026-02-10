@@ -49,18 +49,14 @@ async function signUp(
   try {
     console.log("🔐 Signing up user:", email, "with metadata:", metadata)
 
-    // Determine the correct redirect URL based on environment
-    const redirectUrl = typeof window !== 'undefined' 
-      ? `${window.location.origin}/api/auth/callback`
-      : `${process.env.NEXT_PUBLIC_SITE_URL || 'https://imotogtv7.vercel.app'}/api/auth/callback`
-
-    console.log("📧 Setting up email verification with redirect:", redirectUrl)
+    // Use the correct redirect URL for email confirmation
+    const emailRedirectTo = `${window.location.origin}/dashboard`
 
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: redirectUrl,
+        emailRedirectTo,
         data: {
           first_name: metadata?.firstName || "",
           last_name: metadata?.lastName || "",
@@ -78,8 +74,7 @@ async function signUp(
       return { user: null, error: new AuthError("Failed to create user", "SIGNUP_FAILED") }
     }
 
-    console.log("✅ User signed up successfully, verification email should be sent")
-    console.log("📧 Email confirmation required:", !data.user.email_confirmed_at)
+    console.log("✅ User signed up successfully, creating profile in database")
 
     await createUserProfile(data.user.id, email, metadata?.firstName, metadata?.lastName)
 
@@ -305,7 +300,6 @@ async function getUserProfile(userId: string): Promise<UserProfile | null> {
   }
 }
 
-
 async function createUserProfile(
   userId: string,
   email: string,
@@ -411,21 +405,41 @@ async function updateUserProfile(userId: string, updates: Partial<UserProfile>):
   }
 }
 
-
-async function resetPassword(email: string): Promise<{ error: AuthError | null }> {
+async function requestPasswordReset(email: string): Promise<{ error: AuthError | null }> {
   try {
     console.log("🔐 Requesting password reset for:", email)
 
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/reset-password`,
+      redirectTo: `${window.location.origin}/reset-password`,
     })
 
     if (error) {
-      console.error("❌ Password reset error:", error)
+      console.error("❌ Password reset request error:", error)
       return { error: new AuthError(error.message, error.name) }
     }
 
     console.log("✅ Password reset email sent")
+    return { error: null }
+  } catch (error: any) {
+    console.error("❌ Error in requestPasswordReset:", error)
+    return { error: new AuthError(error.message, "UNKNOWN_ERROR") }
+  }
+}
+
+async function resetPassword(newPassword: string): Promise<{ error: AuthError | null }> {
+  try {
+    console.log("🔐 Resetting password")
+
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword,
+    })
+
+    if (error) {
+      console.error("❌ Reset password error:", error)
+      return { error: new AuthError(error.message, error.name) }
+    }
+
+    console.log("✅ Password reset successfully")
     return { error: null }
   } catch (error: any) {
     console.error("❌ Error in resetPassword:", error)
@@ -458,17 +472,12 @@ async function resendVerificationEmail(email: string): Promise<void> {
   try {
     console.log("📧 Resending verification email to:", email)
 
-    // Determine the correct redirect URL based on environment
-    const redirectUrl = typeof window !== 'undefined' 
-      ? `${window.location.origin}/api/auth/callback`
-      : `${process.env.NEXT_PUBLIC_SITE_URL || 'https://imotogtv7.vercel.app'}/api/auth/callback`
-
     const { error } = await supabase.auth.resend({
       type: "signup",
       email: email,
       options: {
-        emailRedirectTo: redirectUrl,
-      },
+        emailRedirectTo: `${window.location.origin}/dashboard`,
+      }
     })
 
     if (error) {
@@ -550,6 +559,7 @@ export const authService = {
   getUserProfile,
   createUserProfile,
   updateUserProfile,
+  requestPasswordReset,
   resetPassword,
   updatePassword,
   resendVerificationEmail,
@@ -569,6 +579,7 @@ export {
   getUserProfile,
   createUserProfile,
   updateUserProfile,
+  requestPasswordReset,
   resetPassword,
   updatePassword,
   resendVerificationEmail,

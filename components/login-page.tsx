@@ -1,9 +1,9 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Eye, EyeOff, LogIn, UserPlus, Mail, CheckCircle, RefreshCw, AlertCircle, ArrowRight } from "lucide-react"
+import { Eye, EyeOff, LogIn, UserPlus, Mail, CheckCircle, RefreshCw, AlertCircle, ArrowRight, Key, Lock, HelpCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -18,48 +18,88 @@ interface LoginPageProps {
   loginContext?: "default" | "checkout" | "sell"
 }
 
+type ViewMode = "login" | "signup" | "forgot-password" | "reset-password" | "verification" | "existing-user"
+
 export default function LoginPage({
   onLoginSuccess,
   onSignUpSuccess,
   onCancel,
   loginContext = "default",
 }: LoginPageProps) {
-  const [isSignUp, setIsSignUp] = useState(false)
-  const [isForgotPassword, setIsForgotPassword] = useState(false)
+  const [viewMode, setViewMode] = useState<ViewMode>("login")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [firstName, setFirstName] = useState("")
   const [lastName, setLastName] = useState("")
+  const [newPassword, setNewPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
   const [error, setError] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
-  const [showVerificationMessage, setShowVerificationMessage] = useState(false)
-  const [showExistingUserMessage, setShowExistingUserMessage] = useState(false)
-  const [showPasswordResetSent, setShowPasswordResetSent] = useState(false)
+  const [showNewPassword, setShowNewPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [verificationEmail, setVerificationEmail] = useState("")
-  const [resetEmail, setResetEmail] = useState("")
   const [isResending, setIsResending] = useState(false)
   const [resendSuccess, setResendSuccess] = useState(false)
   const router = useRouter()
   const searchParams = useSearchParams()
   const redirectUrl = searchParams.get('redirect')
+  const resetToken = searchParams.get('token')
+  const recoveryType = searchParams.get('type')
+
+  // Check for reset token on mount
+  useEffect(() => {
+    if (resetToken && recoveryType === 'recovery') {
+      setViewMode("reset-password")
+    }
+  }, [resetToken, recoveryType])
+
+  const resetForm = () => {
+    setEmail("")
+    setPassword("")
+    setFirstName("")
+    setLastName("")
+    setNewPassword("")
+    setConfirmPassword("")
+    setError(null)
+    setSuccessMessage(null)
+    setShowPassword(false)
+    setShowNewPassword(false)
+    setShowConfirmPassword(false)
+    setVerificationEmail("")
+    setResendSuccess(false)
+  }
 
   const handleSignUp = async () => {
     if (password.length < 6) {
       setError("Password must be at least 6 characters long.")
       return
     }
+    
+    if (password.length > 72) {
+      setError("Password must be less than 72 characters.")
+      return
+    }
+    
     setIsLoading(true)
     setError(null)
+    setSuccessMessage(null)
+    
     try {
       console.log("📝 Signing up with:", { email, firstName, lastName })
 
-      const { user } = await authService.signUp(email, password, { firstName, lastName })
+      const { user, error: signUpError } = await authService.signUp(email, password, { firstName, lastName })
+
+      if (signUpError) {
+        throw signUpError
+      }
 
       if (user) {
         console.log("✅ Sign up successful, showing verification message")
         setVerificationEmail(email)
-        setShowVerificationMessage(true)
+        setViewMode("verification")
+        setSuccessMessage("We've sent a verification link to your email. Please check your inbox (and spam folder).")
       }
     } catch (e) {
       console.error("❌ Sign up error:", e)
@@ -69,7 +109,9 @@ export default function LoginPage({
           e.message.includes("already exists") ||
           e.message.includes("already been registered")
         ) {
-          setShowExistingUserMessage(true)
+          setViewMode("existing-user")
+        } else if (e.message.includes("email")) {
+          setError("Invalid email address. Please check and try again.")
         } else {
           setError(e.message)
         }
@@ -89,6 +131,7 @@ export default function LoginPage({
     try {
       await authService.resendVerificationEmail(verificationEmail)
       setResendSuccess(true)
+      setSuccessMessage("Verification email sent successfully!")
       setTimeout(() => setResendSuccess(false), 5000)
     } catch (e) {
       if (e instanceof AuthError) {
@@ -101,46 +144,24 @@ export default function LoginPage({
     }
   }
 
-  const handleForgotPassword = async () => {
-    if (!email) {
-      setError("Please enter your email address")
+  const handleSignIn = async () => {
+    if (!email || !password) {
+      setError("Please enter both email and password.")
       return
     }
-
+    
     setIsLoading(true)
     setError(null)
-
-    try {
-      console.log("🔑 Requesting password reset for:", email)
-      const { error } = await authService.resetPassword(email)
-
-      if (error) {
-        setError(error.message)
-        return
-      }
-
-      console.log("✅ Password reset email sent")
-      setResetEmail(email)
-      setShowPasswordResetSent(true)
-    } catch (e) {
-      if (e instanceof AuthError) {
-        setError(e.message)
-      } else {
-        setError("Failed to send password reset email. Please try again.")
-      }
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const handleSignIn = async () => {
-    setIsLoading(true)
-    setError(null)
+    setSuccessMessage(null)
 
     try {
       console.log("🔑 Attempting sign in for:", email)
 
-      const { user } = await authService.signIn(email, password)
+      const { user, error: signInError } = await authService.signIn(email, password)
+
+      if (signInError) {
+        throw signInError
+      }
 
       if (!user) {
         console.error("❌ No user returned from sign in")
@@ -154,6 +175,8 @@ export default function LoginPage({
       if (!user.email_confirmed_at) {
         console.warn("⚠️ Email not verified")
         setError("Please verify your email address before signing in. Check your inbox for a verification link.")
+        setVerificationEmail(email)
+        setViewMode("verification")
         return
       }
 
@@ -197,6 +220,10 @@ export default function LoginPage({
       if (e instanceof AuthError) {
         if (e.code === "email_not_confirmed") {
           setError("Please verify your email address before signing in. Check your inbox for a verification link.")
+          setVerificationEmail(email)
+          setViewMode("verification")
+        } else if (e.code === "invalid_credentials") {
+          setError("Invalid email or password. Please try again.")
         } else {
           setError(e.message)
         }
@@ -208,9 +235,101 @@ export default function LoginPage({
     }
   }
 
+  const handleForgotPassword = async () => {
+    if (!email) {
+      setError("Please enter your email address.")
+      return
+    }
+    
+    setIsLoading(true)
+    setError(null)
+    setSuccessMessage(null)
+
+    try {
+      console.log("🔐 Requesting password reset for:", email)
+      
+      const { error: resetError } = await authService.requestPasswordReset(email)
+      
+      if (resetError) {
+        throw resetError
+      }
+      
+      setSuccessMessage("Password reset instructions have been sent to your email. Please check your inbox (and spam folder).")
+      setViewMode("login")
+    } catch (e) {
+      console.error("❌ Forgot password error:", e)
+      if (e instanceof AuthError) {
+        setError(e.message)
+      } else {
+        setError("Failed to send reset email. Please try again.")
+      }
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleResetPassword = async () => {
+    if (!newPassword || !confirmPassword) {
+      setError("Please enter and confirm your new password.")
+      return
+    }
+    
+    if (newPassword.length < 6) {
+      setError("Password must be at least 6 characters long.")
+      return
+    }
+    
+    if (newPassword.length > 72) {
+      setError("Password must be less than 72 characters.")
+      return
+    }
+    
+    if (newPassword !== confirmPassword) {
+      setError("Passwords do not match. Please try again.")
+      return
+    }
+    
+    setIsLoading(true)
+    setError(null)
+    setSuccessMessage(null)
+
+    try {
+      console.log("🔐 Resetting password...")
+      
+      const { error: resetError } = await authService.resetPassword(newPassword)
+      
+      if (resetError) {
+        throw resetError
+      }
+      
+      setSuccessMessage("Password reset successfully! You can now sign in with your new password.")
+      
+      // Auto-redirect to login after 3 seconds
+      setTimeout(() => {
+        resetForm()
+        setViewMode("login")
+      }, 3000)
+    } catch (e) {
+      console.error("❌ Reset password error:", e)
+      if (e instanceof AuthError) {
+        if (e.message.includes("session") || e.message.includes("expired")) {
+          setError("Reset link has expired. Please request a new password reset.")
+          setViewMode("forgot-password")
+        } else {
+          setError(e.message)
+        }
+      } else {
+        setError("Failed to reset password. Please try again.")
+      }
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   const handleOAuthSignIn = async (provider: "google" | "facebook" | "apple") => {
     setIsLoading(true)
     setError(null)
+    setSuccessMessage(null)
     try {
       await authService.signInWithOAuth(provider)
     } catch (e) {
@@ -225,107 +344,34 @@ export default function LoginPage({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (isSignUp) {
+    if (viewMode === "signup") {
       handleSignUp()
-    } else {
+    } else if (viewMode === "login") {
       handleSignIn()
+    } else if (viewMode === "forgot-password") {
+      handleForgotPassword()
+    } else if (viewMode === "reset-password") {
+      handleResetPassword()
     }
   }
 
   const handleBackToSignUp = () => {
-    setShowVerificationMessage(false)
-    setShowExistingUserMessage(false)
-    setVerificationEmail("")
-    setEmail("")
-    setPassword("")
-    setFirstName("")
-    setLastName("")
-    setError(null)
-    setResendSuccess(false)
+    resetForm()
+    setViewMode("signup")
   }
 
-  const handleGoToSignIn = () => {
-    setShowExistingUserMessage(false)
-    setIsSignUp(false)
-    setError(null)
-    setResendSuccess(false)
+  const handleBackToLogin = () => {
+    resetForm()
+    setViewMode("login")
   }
 
-  if (showPasswordResetSent) {
-    return (
-      <>
-        <Header user={null} transparent={false} />
-        <main className="flex-1 flex items-center justify-center px-4 pt-20 md:pt-24">
-          <div className="w-full max-w-md">
-            <div className="text-center mb-8">
-              <div className="mx-auto w-16 h-16 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center mb-4">
-                <Mail className="h-8 w-8 text-green-600 dark:text-green-400" />
-              </div>
-              <h1 className="text-4xl font-bold text-[#3E5641] dark:text-white">Check Your Email</h1>
-              <p className="text-[#6F7F69] dark:text-gray-400 mt-2">
-                We've sent a password reset link to your email address.
-              </p>
-            </div>
-
-            <div className="bg-white dark:bg-[#2A352A] p-8 rounded-3xl shadow-lg border border-[#9FA791]/20 dark:border-[#4A4D45]/20">
-              <div className="text-center space-y-4">
-                <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                  <CheckCircle className="h-6 w-6 text-blue-600 dark:text-blue-400 mx-auto mb-2" />
-                  <p className="text-sm text-blue-800 dark:text-blue-200">
-                    <strong>Password reset email sent to:</strong>
-                  </p>
-                  <p className="text-sm font-medium text-blue-900 dark:text-blue-100 mt-1">{resetEmail}</p>
-                </div>
-
-                <div className="text-left space-y-2 text-sm text-[#6F7F69] dark:text-gray-400">
-                  <p>
-                    <strong>Next steps:</strong>
-                  </p>
-                  <ol className="list-decimal list-inside space-y-1 ml-2">
-                    <li>Check your email inbox (and spam folder)</li>
-                    <li>Click the password reset link in the email</li>
-                    <li>Create a new password</li>
-                    <li>Return here to sign in with your new password</li>
-                  </ol>
-                </div>
-
-                <div className="pt-4 space-y-3">
-                  <Button
-                    onClick={() => {
-                      setShowPasswordResetSent(false)
-                      setIsForgotPassword(false)
-                      setError(null)
-                    }}
-                    className="w-full bg-[#FF6700] text-white hover:bg-[#FF6700]/90 dark:bg-[#FF7D33] dark:hover:bg-[#FF7D33]/90"
-                  >
-                    <>
-                      Back to Sign In
-                      <LogIn className="ml-2 h-4 w-4" />
-                    </>
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-6 text-center">
-              <div className="text-xs text-[#6F7F69] dark:text-gray-400 space-y-2">
-                <p>
-                  <strong>Troubleshooting:</strong>
-                </p>
-                <ul className="text-left space-y-1 max-w-sm mx-auto">
-                  <li>Check your spam/junk folder</li>
-                  <li>Wait a few minutes for email delivery</li>
-                  <li>Make sure you entered the correct email</li>
-                </ul>
-              </div>
-            </div>
-          </div>
-        </main>
-      </>
-    )
+  const handleBackToForgotPassword = () => {
+    resetForm()
+    setViewMode("forgot-password")
   }
 
-  if (showExistingUserMessage) {
+  // Existing User View
+  if (viewMode === "existing-user") {
     return (
       <>
         <Header user={null} transparent={false} />
@@ -367,7 +413,7 @@ export default function LoginPage({
 
                 <div className="pt-4 space-y-3">
                   <Button
-                    onClick={handleGoToSignIn}
+                    onClick={handleBackToLogin}
                     className="w-full bg-[#FF6700] text-white hover:bg-[#FF6700]/90 dark:bg-[#FF7D33] dark:hover:bg-[#FF7D33]/90"
                   >
                     <>
@@ -376,7 +422,14 @@ export default function LoginPage({
                     </>
                   </Button>
 
-                  <Button variant="outline" onClick={handleBackToSignUp} className="w-full bg-transparent">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => {
+                      resetForm()
+                      setViewMode("signup")
+                    }} 
+                    className="w-full bg-transparent"
+                  >
                     Try Different Email
                   </Button>
                 </div>
@@ -394,7 +447,8 @@ export default function LoginPage({
     )
   }
 
-  if (showVerificationMessage) {
+  // Verification View
+  if (viewMode === "verification") {
     return (
       <>
         <Header user={null} transparent={false} />
@@ -447,12 +501,7 @@ export default function LoginPage({
 
                 <div className="pt-4 space-y-3">
                   <Button
-                    onClick={() => {
-                      setShowVerificationMessage(false)
-                      setIsSignUp(false)
-                      setError(null)
-                      setResendSuccess(false)
-                    }}
+                    onClick={handleBackToLogin}
                     className="w-full bg-[#FF6700] text-white hover:bg-[#FF6700]/90 dark:bg-[#FF7D33] dark:hover:bg-[#FF7D33]/90"
                   >
                     <>
@@ -503,30 +552,31 @@ export default function LoginPage({
     )
   }
 
-  // Forgot password form view
-  if (isForgotPassword) {
+  // Forgot Password View
+  if (viewMode === "forgot-password") {
     return (
       <>
         <Header user={null} transparent={false} />
         <main className="flex-1 flex items-center justify-center px-4 pt-20 md:pt-24">
           <div className="w-full max-w-md">
             <div className="text-center mb-8">
-              <h1 className="text-4xl font-bold text-[#3E5641] dark:text-white">
-                Reset Your Password
-              </h1>
+              <div className="mx-auto w-16 h-16 bg-orange-100 dark:bg-orange-900/20 rounded-full flex items-center justify-center mb-4">
+                <Key className="h-8 w-8 text-orange-600 dark:text-orange-400" />
+              </div>
+              <h1 className="text-4xl font-bold text-[#3E5641] dark:text-white">Reset Password</h1>
               <p className="text-[#6F7F69] dark:text-gray-400 mt-2">
-                Enter your email address and we'll send you a link to reset your password.
+                Enter your email address to receive password reset instructions.
               </p>
             </div>
 
             <div className="bg-white dark:bg-[#2A352A] p-8 rounded-3xl shadow-lg border border-[#9FA791]/20 dark:border-[#4A4D45]/20">
-              <form onSubmit={(e) => { e.preventDefault(); handleForgotPassword(); }} className="space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
-                  <Label htmlFor="reset-email" className="text-sm font-medium text-[#3E5641] dark:text-gray-300">
+                  <Label htmlFor="forgot-email" className="text-sm font-medium text-[#3E5641] dark:text-gray-300">
                     Email Address
                   </Label>
                   <Input
-                    id="reset-email"
+                    id="forgot-email"
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -542,30 +592,44 @@ export default function LoginPage({
                   </div>
                 )}
 
+                {successMessage && (
+                  <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800 text-sm text-green-800 dark:text-green-200">
+                    <CheckCircle className="h-4 w-4 inline mr-2" />
+                    {successMessage}
+                  </div>
+                )}
+
                 <Button
                   type="submit"
                   className="w-full bg-[#FF6700] text-white hover:bg-[#FF6700]/90 dark:bg-[#FF7D33] dark:hover:bg-[#FF7D33]/90"
                   disabled={isLoading}
                 >
                   <>
-                    {isLoading ? "Sending..." : "Send Reset Link"}
-                    <Mail className="ml-2 h-4 w-4" />
+                    {isLoading ? "Sending..." : "Send Reset Instructions"}
+                    {!isLoading && <Key className="ml-2 h-4 w-4" />}
                   </>
                 </Button>
+              </form>
 
+              <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
                 <Button
-                  type="button"
                   variant="outline"
-                  onClick={() => {
-                    setIsForgotPassword(false)
-                    setError(null)
-                  }}
+                  onClick={handleBackToLogin}
                   className="w-full bg-transparent"
-                  disabled={isLoading}
                 >
+                  <ArrowRight className="mr-2 h-4 w-4 rotate-180" />
                   Back to Sign In
                 </Button>
-              </form>
+              </div>
+            </div>
+
+            <div className="mt-6 text-center">
+              <div className="text-xs text-[#6F7F69] dark:text-gray-400 space-y-2">
+                <p>
+                  <strong>Note:</strong> Password reset links expire after 24 hours.
+                </p>
+                <p>If you don't receive an email within a few minutes, check your spam folder.</p>
+              </div>
             </div>
           </div>
         </main>
@@ -573,6 +637,132 @@ export default function LoginPage({
     )
   }
 
+  // Reset Password View
+  if (viewMode === "reset-password") {
+    return (
+      <>
+        <Header user={null} transparent={false} />
+        <main className="flex-1 flex items-center justify-center px-4 pt-20 md:pt-24">
+          <div className="w-full max-w-md">
+            <div className="text-center mb-8">
+              <div className="mx-auto w-16 h-16 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center mb-4">
+                <Lock className="h-8 w-8 text-green-600 dark:text-green-400" />
+              </div>
+              <h1 className="text-4xl font-bold text-[#3E5641] dark:text-white">Create New Password</h1>
+              <p className="text-[#6F7F69] dark:text-gray-400 mt-2">
+                Please enter and confirm your new password.
+              </p>
+            </div>
+
+            <div className="bg-white dark:bg-[#2A352A] p-8 rounded-3xl shadow-lg border border-[#9FA791]/20 dark:border-[#4A4D45]/20">
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div>
+                  <Label htmlFor="new-password" className="text-sm font-medium text-[#3E5641] dark:text-gray-300">
+                    New Password
+                  </Label>
+                  <div className="relative mt-1">
+                    <Input
+                      id="new-password"
+                      type={showNewPassword ? "text" : "password"}
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="••••••••"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPassword(!showNewPassword)}
+                      className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-500"
+                      aria-label={showNewPassword ? "Hide password" : "Show password"}
+                    >
+                      {showNewPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">Must be at least 6 characters</p>
+                </div>
+
+                <div>
+                  <Label htmlFor="confirm-password" className="text-sm font-medium text-[#3E5641] dark:text-gray-300">
+                    Confirm Password
+                  </Label>
+                  <div className="relative mt-1">
+                    <Input
+                      id="confirm-password"
+                      type={showConfirmPassword ? "text" : "password"}
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="••••••••"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-500"
+                      aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                    >
+                      {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    </button>
+                  </div>
+                </div>
+
+                {error && (
+                  <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800 text-sm text-red-800 dark:text-red-200">
+                    {error}
+                  </div>
+                )}
+
+                {successMessage && (
+                  <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800 text-sm text-green-800 dark:text-green-200">
+                    <CheckCircle className="h-4 w-4 inline mr-2" />
+                    {successMessage}
+                  </div>
+                )}
+
+                <Button
+                  type="submit"
+                  className="w-full bg-[#FF6700] text-white hover:bg-[#FF6700]/90 dark:bg-[#FF7D33] dark:hover:bg-[#FF7D33]/90"
+                  disabled={isLoading}
+                >
+                  <>
+                    {isLoading ? "Resetting..." : "Reset Password"}
+                    {!isLoading && <Lock className="ml-2 h-4 w-4" />}
+                  </>
+                </Button>
+              </form>
+
+              <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+                <Button
+                  variant="outline"
+                  onClick={handleBackToLogin}
+                  className="w-full bg-transparent"
+                >
+                  <ArrowRight className="mr-2 h-4 w-4 rotate-180" />
+                  Back to Sign In
+                </Button>
+              </div>
+            </div>
+
+            <div className="mt-6 text-center">
+              <div className="text-xs text-[#6F7F69] dark:text-gray-400 space-y-2">
+                <p>
+                  <strong>Password Tips:</strong>
+                </p>
+                <ul className="text-left space-y-1 max-w-sm mx-auto">
+                  <li>Use at least 6 characters</li>
+                  <li>Include numbers and special characters for stronger security</li>
+                  <li>Avoid common words or personal information</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </main>
+      </>
+    )
+  }
+
+  // Main Login/Signup View
+  const isSignUp = viewMode === "signup"
+  
   return (
     <>
       <Header user={null} transparent={false} />
@@ -638,20 +828,18 @@ export default function LoginPage({
               </div>
 
               <div>
-                <div className="flex items-center justify-between">
+                <div className="flex justify-between items-center">
                   <Label htmlFor="password" className="text-sm font-medium text-[#3E5641] dark:text-gray-300">
                     Password
                   </Label>
                   {!isSignUp && (
                     <button
                       type="button"
-                      onClick={() => {
-                        setIsForgotPassword(true)
-                        setError(null)
-                      }}
+                      onClick={() => setViewMode("forgot-password")}
                       className="text-xs text-[#FF6700] hover:underline dark:text-[#FF7D33]"
                     >
-                      Forgot Password?
+                      <HelpCircle className="h-3 w-3 inline mr-1" />
+                      Forgot password?
                     </button>
                   )}
                 </div>
@@ -673,11 +861,21 @@ export default function LoginPage({
                     {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                   </button>
                 </div>
+                {isSignUp && (
+                  <p className="text-xs text-gray-500 mt-1">Must be at least 6 characters</p>
+                )}
               </div>
 
               {error && (
                 <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800 text-sm text-red-800 dark:text-red-200">
                   {error}
+                </div>
+              )}
+
+              {successMessage && (
+                <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800 text-sm text-green-800 dark:text-green-200">
+                  <CheckCircle className="h-4 w-4 inline mr-2" />
+                  {successMessage}
                 </div>
               )}
 
@@ -741,7 +939,7 @@ export default function LoginPage({
                   <>
                     Already have an account?{" "}
                     <button
-                      onClick={() => setIsSignUp(false)}
+                      onClick={() => setViewMode("login")}
                       className="text-[#FF6700] hover:underline dark:text-[#FF7D33]"
                     >
                       Sign In
@@ -751,7 +949,7 @@ export default function LoginPage({
                   <>
                     Don't have an account?{" "}
                     <button
-                      onClick={() => setIsSignUp(true)}
+                      onClick={() => setViewMode("signup")}
                       className="text-[#FF6700] hover:underline dark:text-[#FF7D33]"
                     >
                       Sign Up
@@ -761,6 +959,18 @@ export default function LoginPage({
               </p>
             </div>
           </div>
+          
+          {onCancel && (
+            <div className="mt-6 text-center">
+              <Button
+                variant="outline"
+                onClick={onCancel}
+                className="bg-transparent"
+              >
+                Cancel
+              </Button>
+            </div>
+          )}
         </div>
       </main>
     </>
