@@ -1,6 +1,14 @@
 "use client"
 
-import React, { createContext, useContext, useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import React, { 
+  createContext, 
+  useContext, 
+  useEffect, 
+  useState, 
+  useCallback, 
+  useMemo, 
+  useRef 
+} from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { CacheManager } from '@/lib/cache-manager';
 import type { Vehicle } from '@/types/vehicle';
@@ -22,15 +30,10 @@ interface VehicleListResponse {
 }
 
 interface VehicleCache {
-  // Individual vehicles by ID
   byId: Record<string, Vehicle>;
-  // Lists by cache key (e.g., 'home', 'search:query')
   lists: Record<string, VehicleListResponse>;
-  // Timestamps for freshness checks
   timestamps: Record<string, number>;
-  // Last accessed timestamps for LRU eviction
   lastAccessed: Record<string, number>;
-  // Navigation history for back/forward buttons
   navigationHistory: {
     path: string;
     searchParams?: string;
@@ -41,7 +44,6 @@ interface VehicleCache {
 }
 
 interface VehicleContextType {
-  // === CACHE SYSTEM ===
   getVehicle: (id: string) => Promise<Vehicle | null>;
   getVehicleList: (cacheKey: string, fetchFn: () => Promise<VehicleListResponse>) => Promise<VehicleListResponse>;
   getCachedVehicle: (id: string) => Vehicle | null;
@@ -50,28 +52,23 @@ interface VehicleContextType {
   updateVehicleInCache: (vehicle: Vehicle) => void;
   clearCache: (key?: string) => void;
   preloadCache: (key: string, data: VehicleListResponse) => void;
-  
-  // === NAVIGATION CACHE ===
   savePageState: (data?: any) => void;
   restorePageState: () => any;
   getNavigationHistory: () => VehicleCache['navigationHistory'];
   clearNavigationHistory: () => void;
   saveScrollPosition: (position: number) => void;
   restoreScrollPosition: () => number | null;
-  
-  // === ROUTE-BASED CACHING ===
   getCurrentRouteKey: () => string;
   saveForCurrentRoute: (data: any, type?: 'list' | 'detail') => void;
   getForCurrentRoute: () => any;
   isCurrentRouteCached: () => boolean;
-  
-  // === LEGACY SUPPORT ===
   vehicles: Vehicle[];
   loadVehicles: () => Promise<void>;
   loading: boolean;
   getVehicleById: (id: string) => Promise<Vehicle | null>;
 }
 
+// Ensure the context is initialized with null and the correct type
 const VehicleContext = createContext<VehicleContextType | null>(null);
 
 const DEFAULT_STALE_TIME = 30 * 60 * 1000; 
@@ -87,13 +84,7 @@ export const VehicleProvider = ({ children }: { children: React.ReactNode }) => 
   
   const [cache, setCache] = useState<VehicleCache>(() => {
     if (typeof window === 'undefined') {
-      return { 
-        byId: {}, 
-        lists: {}, 
-        timestamps: {}, 
-        lastAccessed: {},
-        navigationHistory: []
-      };
+      return { byId: {}, lists: {}, timestamps: {}, lastAccessed: {}, navigationHistory: [] };
     }
     
     try {
@@ -121,8 +112,7 @@ export const VehicleProvider = ({ children }: { children: React.ReactNode }) => 
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const saveCache = () => CacheManager.set('vehicleCache', cache);
-    const timeoutId = setTimeout(saveCache, 1000);
+    const timeoutId = setTimeout(() => CacheManager.set('vehicleCache', cache), 1000);
     return () => clearTimeout(timeoutId);
   }, [cache]);
 
@@ -137,23 +127,22 @@ export const VehicleProvider = ({ children }: { children: React.ReactNode }) => 
     
     try {
       const response = await fetch(`/api/vehicles/${id}`);
-      if (!response.ok) throw new Error(`Failed to fetch vehicle: ${response.status}`);
+      if (!response.ok) throw new Error(`Fetch error: ${response.status}`);
       const vehicle: Vehicle = await response.json();
       
-      setCache(prev => {
-        const newCache = { ...prev };
-        newCache.byId[id] = vehicle;
-        newCache.timestamps[cacheKey] = Date.now();
-        newCache.lastAccessed[cacheKey] = Date.now();
-        return newCache;
-      });
+      setCache(prev => ({
+        ...prev,
+        byId: { ...prev.byId, [id]: vehicle },
+        timestamps: { ...prev.timestamps, [cacheKey]: Date.now() },
+        lastAccessed: { ...prev.lastAccessed, [cacheKey]: Date.now() }
+      }));
       return vehicle;
     } catch (error) {
       return cachedVehicle || null;
     }
   }, [cache]);
 
-  const getVehicleList = useCallback(async (cacheKey: string, fetchFn: () => Promise<VehicleListResponse>): Promise<VehicleListResponse> => {
+  const getVehicleList = useCallback(async (cacheKey: string, fetchFn: () => Promise<VehicleListResponse>) => {
     const cachedList = cache.lists[cacheKey];
     const cachedTimestamp = cache.timestamps[cacheKey];
     
@@ -161,39 +150,28 @@ export const VehicleProvider = ({ children }: { children: React.ReactNode }) => 
       return cachedList;
     }
     
-    try {
-      const response = await fetchFn();
-      setCache(prev => {
-        const newCache = { ...prev };
-        newCache.lists[cacheKey] = response;
-        newCache.timestamps[cacheKey] = Date.now();
-        if (response.vehicles) {
-          response.vehicles.forEach(v => {
-            newCache.byId[v.id] = v;
-            newCache.timestamps[`vehicle:${v.id}`] = Date.now();
-          });
-        }
-        return newCache;
-      });
-      return response;
-    } catch (error) {
-      if (cachedList) return cachedList;
-      throw error;
-    }
-  }, [cache]);
-
-  const getCachedVehicle = useCallback((id: string) => cache.byId[id] || null, [cache]);
-  const getCachedList = useCallback((key: string) => cache.lists[key] || null, [cache]);
-  const isFresh = useCallback((key: string, maxAge: number = DEFAULT_STALE_TIME) => {
-    const ts = cache.timestamps[key];
-    return ts ? (Date.now() - ts) < maxAge : false;
-  }, [cache.timestamps]);
-
-  const updateVehicleInCache = useCallback((vehicle: Vehicle) => {
+    const response = await fetchFn();
     setCache(prev => ({
       ...prev,
-      byId: { ...prev.byId, [vehicle.id]: vehicle },
-      timestamps: { ...prev.timestamps, [`vehicle:${vehicle.id}`]: Date.now() }
+      lists: { ...prev.lists, [cacheKey]: response },
+      timestamps: { ...prev.timestamps, [cacheKey]: Date.now() },
+      lastAccessed: { ...prev.lastAccessed, [cacheKey]: Date.now() }
+    }));
+    return response;
+  }, [cache]);
+
+  const getCachedVehicle = useCallback((id: string) => cache.byId[id] || null, [cache.byId]);
+  const getCachedList = useCallback((key: string) => cache.lists[key] || null, [cache.lists]);
+  const isFresh = useCallback((key: string, maxAge = DEFAULT_STALE_TIME) => {
+    const ts = cache.timestamps[key];
+    return ts ? (Date.now() - ts < maxAge) : false;
+  }, [cache.timestamps]);
+
+  const updateVehicleInCache = useCallback((v: Vehicle) => {
+    setCache(prev => ({
+      ...prev,
+      byId: { ...prev.byId, [v.id]: v },
+      timestamps: { ...prev.timestamps, [`vehicle:${v.id}`]: Date.now() }
     }));
   }, []);
 
@@ -208,10 +186,10 @@ export const VehicleProvider = ({ children }: { children: React.ReactNode }) => 
   const clearCache = useCallback((key?: string) => {
     if (key) {
       setCache(prev => {
-        const newCache = { ...prev };
-        delete newCache.lists[key];
-        delete newCache.timestamps[key];
-        return newCache;
+        const next = { ...prev };
+        delete next.lists[key];
+        delete next.timestamps[key];
+        return next;
       });
     } else {
       setCache({ byId: {}, lists: {}, timestamps: {}, lastAccessed: {}, navigationHistory: [] });
@@ -219,89 +197,65 @@ export const VehicleProvider = ({ children }: { children: React.ReactNode }) => 
   }, []);
 
   const savePageState = useCallback((data?: any) => {
-    const routeKey = currentRouteKeyRef.current;
-    if (!routeKey) return;
-    setCache(prev => {
-      const newHistory = (prev.navigationHistory || []).filter(e => e.path !== routeKey);
-      newHistory.unshift({ path: routeKey, searchParams: searchParams.toString(), data: data || getForCurrentRoute(), timestamp: Date.now() });
-      return { ...prev, navigationHistory: newHistory.slice(0, MAX_NAVIGATION_HISTORY) };
-    });
-  }, [searchParams]);
+    const key = currentRouteKeyRef.current;
+    if (!key) return;
+    setCache(prev => ({
+      ...prev,
+      navigationHistory: [{ path: key, data: data || prev.lists[key], timestamp: Date.now() }, ...prev.navigationHistory].slice(0, MAX_NAVIGATION_HISTORY)
+    }));
+  }, []);
 
   const restorePageState = useCallback(() => {
-    const routeKey = currentRouteKeyRef.current;
-    const entry = cache.navigationHistory.find(e => e.path === routeKey);
-    return entry ? entry.data : getForCurrentRoute();
-  }, [cache.navigationHistory]);
+    const key = currentRouteKeyRef.current;
+    return cache.navigationHistory.find(e => e.path === key)?.data || cache.lists[key] || null;
+  }, [cache]);
 
-  const getNavigationHistory = useCallback(() => cache.navigationHistory || [], [cache.navigationHistory]);
-  const clearNavigationHistory = useCallback(() => setCache(prev => ({ ...prev, navigationHistory: [] })), []);
-  
   const saveScrollPosition = useCallback((pos: number) => {
-    const routeKey = currentRouteKeyRef.current;
+    const key = currentRouteKeyRef.current;
     setCache(prev => {
-      const newHistory = [...(prev.navigationHistory || [])];
-      const idx = newHistory.findIndex(e => e.path === routeKey);
-      if (idx !== -1) newHistory[idx].scrollPosition = pos;
-      return { ...prev, navigationHistory: newHistory };
+      const history = [...prev.navigationHistory];
+      const idx = history.findIndex(e => e.path === key);
+      if (idx !== -1) history[idx].scrollPosition = pos;
+      return { ...prev, navigationHistory: history };
     });
   }, []);
 
   const restoreScrollPosition = useCallback(() => {
-    const entry = cache.navigationHistory.find(e => e.path === currentRouteKeyRef.current);
-    return entry?.scrollPosition || null;
+    return cache.navigationHistory.find(e => e.path === currentRouteKeyRef.current)?.scrollPosition || null;
   }, [cache.navigationHistory]);
 
-  const getCurrentRouteKey = useCallback(() => currentRouteKeyRef.current, []);
-  
   const saveForCurrentRoute = useCallback((data: any, type: 'list' | 'detail' = 'list') => {
-    const routeKey = currentRouteKeyRef.current;
+    const key = currentRouteKeyRef.current;
     setCache(prev => {
-      const newCache = { ...prev };
-      if (type === 'list') newCache.lists[routeKey] = data;
-      else if (type === 'detail' && data.id) newCache.byId[data.id] = data;
-      newCache.timestamps[routeKey] = Date.now();
-      return newCache;
+      const next = { ...prev };
+      if (type === 'list') next.lists[key] = data;
+      else if (data.id) next.byId[data.id] = data;
+      next.timestamps[key] = Date.now();
+      return next;
     });
   }, []);
 
   const getForCurrentRoute = useCallback(() => {
-    const routeKey = currentRouteKeyRef.current;
-    if (cache.lists[routeKey]) return cache.lists[routeKey];
-    const match = routeKey.match(/\/vehicle\/([^\/?]+)/);
+    const key = currentRouteKeyRef.current;
+    if (cache.lists[key]) return cache.lists[key];
+    const match = key.match(/\/vehicle\/([^\/?]+)/);
     return match ? cache.byId[match[1]] : null;
-  }, [cache.lists, cache.byId]);
+  }, [cache]);
 
   const isCurrentRouteCached = useCallback(() => !!getForCurrentRoute(), [getForCurrentRoute]);
 
-  const [legacyVehicles, setLegacyVehicles] = useState<Vehicle[]>([]);
-  const [legacyLoading, setLegacyLoading] = useState(false);
-
-  const loadVehicles = useCallback(async () => {
-    setLegacyLoading(true);
-    try {
-      const response = await fetch('/api/vehicles');
-      const data = await response.json();
-      setLegacyVehicles(Array.isArray(data) ? data : data.vehicles || []);
-    } finally {
-      setLegacyLoading(false);
-    }
-  }, []);
-
-  const getVehicleById = useCallback((id: string) => getVehicle(id), [getVehicle]);
-
   const contextValue = useMemo(() => ({
     getVehicle, getVehicleList, getCachedVehicle, getCachedList, isFresh, updateVehicleInCache, preloadCache, clearCache,
-    savePageState, restorePageState, getNavigationHistory, clearNavigationHistory, saveScrollPosition, restoreScrollPosition,
-    getCurrentRouteKey, saveForCurrentRoute, getForCurrentRoute, isCurrentRouteCached,
-    vehicles: legacyVehicles, loadVehicles, loading: legacyLoading, getVehicleById
-  }), [
-    getVehicle, getVehicleList, getCachedVehicle, getCachedList, isFresh, updateVehicleInCache, preloadCache, clearCache,
-    savePageState, restorePageState, getNavigationHistory, clearNavigationHistory, saveScrollPosition, restoreScrollPosition,
-    getCurrentRouteKey, saveForCurrentRoute, getForCurrentRoute, isCurrentRouteCached, legacyVehicles, loadVehicles, legacyLoading, getVehicleById
-  ]);
+    savePageState, restorePageState, getNavigationHistory: () => cache.navigationHistory, clearNavigationHistory: () => setCache(p => ({ ...p, navigationHistory: [] })),
+    saveScrollPosition, restoreScrollPosition, getCurrentRouteKey: () => currentRouteKeyRef.current, saveForCurrentRoute, getForCurrentRoute, isCurrentRouteCached,
+    vehicles: [], loadVehicles: async () => {}, loading: false, getVehicleById: getVehicle
+  }), [getVehicle, getVehicleList, getCachedVehicle, getCachedList, isFresh, updateVehicleInCache, preloadCache, clearCache, savePageState, restorePageState, cache.navigationHistory, saveScrollPosition, restoreScrollPosition, saveForCurrentRoute, getForCurrentRoute, isCurrentRouteCached]);
 
-  return <VehicleContext.Provider value={contextValue}>{children}</VehicleContext.Provider>;
+  return (
+    <VehicleContext.Provider value={contextValue}>
+      {children}
+    </VehicleContext.Provider>
+  );
 };
 
 export const useVehicleContext = () => {
@@ -313,59 +267,48 @@ export const useVehicleContext = () => {
 export const useVehicleList = (cacheKey: string, fetchFn: () => Promise<VehicleListResponse>, options?: { enabled?: boolean; forceRefresh?: boolean; maxAge?: number; }) => {
   const [data, setData] = useState<VehicleListResponse | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const { getVehicleList, getCachedList, isFresh, saveForCurrentRoute } = useVehicleContext();
 
   useEffect(() => {
-    if (options?.enabled === false) { setLoading(false); return; }
-    const loadList = async () => {
-      try {
-        setLoading(true);
-        const cached = getCachedList(cacheKey);
-        if (cached && (isFresh(cacheKey, options?.maxAge) && !options?.forceRefresh)) {
-          setData(cached);
-          saveForCurrentRoute(cached, 'list');
-          setLoading(false);
-          return;
-        }
-        const response = await getVehicleList(cacheKey, fetchFn);
-        setData(response);
-        saveForCurrentRoute(response, 'list');
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load');
-      } finally { setLoading(false); }
+    if (options?.enabled === false) return;
+    const load = async () => {
+      setLoading(true);
+      const cached = getCachedList(cacheKey);
+      if (cached && isFresh(cacheKey, options?.maxAge) && !options?.forceRefresh) {
+        setData(cached);
+        setLoading(false);
+        return;
+      }
+      const resp = await getVehicleList(cacheKey, fetchFn);
+      setData(resp);
+      setLoading(false);
     };
-    loadList();
-  }, [cacheKey, fetchFn, options?.enabled, options?.forceRefresh, options?.maxAge, getVehicleList, getCachedList, isFresh, saveForCurrentRoute]);
+    load();
+  }, [cacheKey, options?.enabled, options?.forceRefresh]);
 
-  return { data, loading, error };
+  return { data, loading };
 };
 
 export const useVehicle = (id?: string) => {
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const { getVehicle, getCachedVehicle, saveForCurrentRoute } = useVehicleContext();
+  const { getVehicle, getCachedVehicle } = useVehicleContext();
 
   useEffect(() => {
-    if (!id) { setVehicle(null); setLoading(false); return; }
-    const loadVehicle = async () => {
-      try {
-        setLoading(true);
-        const cached = getCachedVehicle(id);
-        if (cached) { setVehicle(cached); saveForCurrentRoute(cached, 'detail'); setLoading(false); }
-        const fetched = await getVehicle(id);
-        if (fetched) { setVehicle(fetched); saveForCurrentRoute(fetched, 'detail'); }
-      } catch (err) { setError(err instanceof Error ? err.message : 'Failed to load'); }
-      finally { setLoading(false); }
+    if (!id) return;
+    const load = async () => {
+      setLoading(true);
+      const cached = getCachedVehicle(id);
+      if (cached) {
+        setVehicle(cached);
+        setLoading(false);
+      }
+      const fresh = await getVehicle(id);
+      setVehicle(fresh);
+      setLoading(false);
     };
-    loadVehicle();
-  }, [id, getVehicle, getCachedVehicle, saveForCurrentRoute]);
+    load();
+  }, [id, getVehicle, getCachedVehicle]);
 
-  return { vehicle, loading, error };
-};
-
-export const useNavigationCache = () => {
-  const { savePageState, restorePageState, saveScrollPosition, restoreScrollPosition, getNavigationHistory, clearNavigationHistory } = useVehicleContext();
-  return { savePageState, restorePageState, saveScrollPosition, restoreScrollPosition, getNavigationHistory, clearNavigationHistory };
+  return { vehicle, loading };
 };
