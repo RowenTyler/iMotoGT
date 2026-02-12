@@ -1,7 +1,7 @@
 "use client"
 
 import { notFound, useRouter } from "next/navigation"
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef, useState, useMemo } from "react"   // ✅ useMemo added
 import { Header } from "@/components/ui/header"
 import { useUser } from "@/components/UserContext"
 import VehicleDetails from "@/components/vehicle-details"
