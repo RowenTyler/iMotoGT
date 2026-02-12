@@ -1,11 +1,11 @@
 "use client"
 
 import { notFound, useRouter } from "next/navigation"
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Header } from "@/components/ui/header"
 import { useUser } from "@/components/UserContext"
 import VehicleDetails from "@/components/vehicle-details"
-import { useVehicle, useVehicleContext, useVehicleList } from "@/components/VehicleProvider"
+import { useVehicleContext, useVehicleList } from "@/components/VehicleProvider"
 import { useNavigationCache } from "@/components/NavigationCacheHandler"
 import { Skeleton } from "@/components/ui/skeleton"
 
@@ -22,45 +22,82 @@ export default function VehicleDetailsPage({ params }: VehicleDetailsPageProps) 
   const router = useRouter()
   const { user, toggleSaveVehicle, savedVehicles: savedVehiclesData } = useUser()
   
-  // Use the navigation cache for state management
-  const { 
-    saveCurrentState, 
-    restoreCurrentState, 
-    saveCurrentScrollPosition, 
-    restoreCurrentScrollPosition,
-    hasCachedData,
-    getCachedData
-  } = useNavigationCache()
+  // Stabilized navigation cache – only these two methods are available
+  const { savePageState, restorePageState } = useNavigationCache()
   
-  // Use the vehicle context for cache management
+  // Vehicle context for per‑vehicle and route caching
   const { 
     getCachedVehicle, 
     saveForCurrentRoute,
     getCurrentRouteKey,
-    addToCache,
-    getFromCache
+    addToCache
   } = useVehicleContext()
   
-  // Use the new useVehicle hook with caching
-  const { vehicle, loading, error } = useVehicle(params.id)
-  
-  // Ref to track if we've restored scroll position
-  const scrollRestoredRef = useRef(false)
-  // Ref to track initial mount
+  // Local state for the vehicle
+  const [vehicle, setVehicle] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  // Ref to track initial mount for state restoration
   const isInitialMountRef = useRef(true)
 
-  // Check for cached vehicle data on mount
+  // --- Fetch vehicle data (replaces broken useVehicle) ---
+  useEffect(() => {
+    let isMounted = true
+    const controller = new AbortController()
+
+    const fetchVehicle = async () => {
+      // 1. Try cache first
+      const cached = getCachedVehicle(params.id)
+      if (cached) {
+        console.log(`✅ [VehicleDetailsPage] Using cached vehicle: ${cached.make} ${cached.model}`)
+        if (isMounted) {
+          setVehicle(cached)
+          setLoading(false)
+          setError(null)
+        }
+        return
+      }
+
+      // 2. Fetch from API
+      try {
+        console.log(`🔍 [VehicleDetailsPage] Fetching vehicle ${params.id} from API...`)
+        const res = await fetch(`/api/vehicles/${params.id}`, { signal: controller.signal })
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        const data = await res.json()
+        
+        if (isMounted) {
+          setVehicle(data)
+          setLoading(false)
+          setError(null)
+          
+          // Save to cache
+          addToCache(params.id, data, 'vehicleDetails')
+          saveForCurrentRoute(data, 'detail')
+        }
+      } catch (err: any) {
+        if (err.name !== 'AbortError' && isMounted) {
+          console.error(`❌ [VehicleDetailsPage] Failed to fetch vehicle:`, err)
+          setError(err.message || 'Failed to load vehicle')
+          setLoading(false)
+        }
+      }
+    }
+
+    fetchVehicle()
+
+    return () => {
+      isMounted = false
+      controller.abort()
+    }
+  }, [params.id, getCachedVehicle, addToCache, saveForCurrentRoute])
+
+  // --- Restore page state from navigation cache ---
   useEffect(() => {
     console.log(`🔍 [VehicleDetailsPage] Mounted for vehicle ID: ${params.id}`)
     
-    // Check if we have cached vehicle data
-    const cachedVehicle = getCachedVehicle(params.id)
-    if (cachedVehicle) {
-      console.log(`✅ [VehicleDetailsPage] Found cached vehicle: ${cachedVehicle.make} ${cachedVehicle.model}`)
-    }
-    
-    // Check navigation cache for any saved state
-    const cachedState = restoreCurrentState()
+    // Restore any saved form/page state
+    const cachedState = restorePageState()
     if (cachedState) {
       console.log(`✅ [VehicleDetailsPage] Restored cached state for route`)
     }
@@ -72,75 +109,28 @@ export default function VehicleDetailsPage({ params }: VehicleDetailsPageProps) 
     return () => {
       console.log(`👋 [VehicleDetailsPage] Unmounting vehicle: ${params.id}`)
     }
-  }, [params.id, getCachedVehicle, restoreCurrentState, getCurrentRouteKey])
+  }, [params.id, restorePageState, getCurrentRouteKey])
 
-  // Save vehicle data to cache when loaded
+  // --- Save vehicle data to caches when loaded ---
   useEffect(() => {
     if (vehicle && !loading) {
       console.log(`💾 [VehicleDetailsPage] Saving vehicle to cache: ${vehicle.id}`)
-      
-      // Save to vehicle cache
       addToCache(params.id, vehicle, 'vehicleDetails')
-      
-      // Save to route cache for navigation
       saveForCurrentRoute(vehicle, 'detail')
-      
-      // Save to navigation cache for back/forward
-      saveCurrentState({
+      savePageState({
         vehicleId: vehicle.id,
         vehicle: vehicle,
-        timestamp: Date.now(),
-        scrollPosition: window.scrollY
+        timestamp: Date.now()
       })
     }
-  }, [vehicle, loading, params.id, addToCache, saveForCurrentRoute, saveCurrentState])
-
-  // Save scroll position on scroll
-  useEffect(() => {
-    const handleScroll = () => {
-      saveCurrentScrollPosition()
-    }
-    
-    // Throttle scroll events to prevent excessive saves
-    let scrollTimeout: NodeJS.Timeout
-    const throttledScroll = () => {
-      if (scrollTimeout) clearTimeout(scrollTimeout)
-      scrollTimeout = setTimeout(handleScroll, 500)
-    }
-    
-    window.addEventListener('scroll', throttledScroll)
-    
-    return () => {
-      window.removeEventListener('scroll', throttledScroll)
-      if (scrollTimeout) clearTimeout(scrollTimeout)
-    }
-  }, [saveCurrentScrollPosition])
-
-  // Restore scroll position on mount (after initial load)
-  useEffect(() => {
-    if (!isInitialMountRef.current || loading) return
-    
-    const timer = setTimeout(() => {
-      const scrollPosition = restoreCurrentScrollPosition()
-      if (scrollPosition !== null && !scrollRestoredRef.current) {
-        console.log(`📐 [VehicleDetailsPage] Restoring scroll position: ${scrollPosition}px`)
-        window.scrollTo({
-          top: scrollPosition,
-          behavior: 'auto'
-        })
-        scrollRestoredRef.current = true
-      }
-    }, 100)
-    
-    return () => clearTimeout(timer)
-  }, [loading, restoreCurrentScrollPosition])
+  }, [vehicle, loading, params.id, addToCache, saveForCurrentRoute, savePageState])
 
   // Mark initial mount as complete after first render
   useEffect(() => {
     isInitialMountRef.current = false
   }, [])
 
-  // Fetch similar vehicles for the "More like this" section
+  // --- Fetch similar vehicles (unchanged) ---
   const fetchSimilarVehicles = async () => {
     if (!vehicle) return { vehicles: [], totalCount: 0, timestamp: Date.now() }
     
@@ -162,7 +152,6 @@ export default function VehicleDetailsPage({ params }: VehicleDetailsPageProps) 
     }
   }
 
-  // Use vehicle list hook for similar vehicles
   const { 
     data: similarVehiclesData, 
     loading: similarLoading 
@@ -171,36 +160,30 @@ export default function VehicleDetailsPage({ params }: VehicleDetailsPageProps) 
     fetchSimilarVehicles,
     {
       enabled: !!vehicle,
-      maxAge: 10 * 60 * 1000, // 10 minutes cache for similar vehicles
+      maxAge: 10 * 60 * 1000,
     }
   )
 
-  // Handle back button with cache preservation
+  // --- Back navigation with state preservation ---
   const handleBack = () => {
     console.log(`⏪ [VehicleDetailsPage] Back button clicked, saving current state`)
-    
-    // Save final state before navigating back
-    saveCurrentState({
-      vehicleId: params.id,
-      vehicle: vehicle,
-      timestamp: Date.now(),
-      scrollPosition: window.scrollY
-    })
-    
-    // Save scroll position
-    saveCurrentScrollPosition()
-    
-    // Use router.back() to go back to previous page with cache
+    if (vehicle) {
+      savePageState({
+        vehicleId: params.id,
+        vehicle: vehicle,
+        timestamp: Date.now()
+      })
+    }
     router.back()
   }
 
-  // Handle not found state
+  // --- Not found / error handling ---
   if (!loading && !vehicle && error) {
     console.error("❌ [VehicleDetailsPage] Vehicle not found or error:", error)
     return notFound()
   }
 
-  // Handle loading state with better UI
+  // --- Loading skeleton (identical to original) ---
   if (loading && !vehicle) {
     return (
       <div className="min-h-screen bg-[var(--light-bg)] dark:bg-[var(--dark-bg)]">
@@ -213,22 +196,16 @@ export default function VehicleDetailsPage({ params }: VehicleDetailsPageProps) 
           onShowAllCars={() => router.push("/results")}
           onGoToSellPage={() => router.push("/upload-vehicle")}
           onSignOut={() => {
-            // Save state before logout
-            saveCurrentState({
-              vehicleId: params.id,
-              timestamp: Date.now()
-            })
+            savePageState({ vehicleId: params.id, timestamp: Date.now() })
             router.push("/login")
           }}
         />
         <div className="pt-16 md:pt-20 container mx-auto px-4">
-          {/* Back button skeleton */}
           <div className="mb-6">
             <Skeleton className="h-8 w-24" />
           </div>
           
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Image skeleton */}
             <div>
               <Skeleton className="h-[400px] w-full rounded-lg mb-4" />
               <div className="flex gap-2">
@@ -238,20 +215,17 @@ export default function VehicleDetailsPage({ params }: VehicleDetailsPageProps) 
               </div>
             </div>
             
-            {/* Details skeleton */}
             <div className="space-y-4">
               <Skeleton className="h-8 w-3/4" />
               <Skeleton className="h-4 w-1/2" />
               <Skeleton className="h-6 w-1/3" />
               
-              {/* Specs grid skeleton */}
               <div className="grid grid-cols-2 gap-4 mt-6">
                 {[1, 2, 3, 4, 5, 6].map((i) => (
                   <Skeleton key={i} className="h-16 rounded-lg" />
                 ))}
               </div>
               
-              {/* Description skeleton */}
               <div className="space-y-2 mt-6">
                 <Skeleton className="h-4 w-1/4" />
                 <Skeleton className="h-4 w-full" />
@@ -259,7 +233,6 @@ export default function VehicleDetailsPage({ params }: VehicleDetailsPageProps) 
                 <Skeleton className="h-4 w-2/3" />
               </div>
               
-              {/* Button skeletons */}
               <div className="flex gap-4 mt-6">
                 <Skeleton className="h-12 flex-1 rounded-lg" />
                 <Skeleton className="h-12 flex-1 rounded-lg" />
@@ -267,7 +240,6 @@ export default function VehicleDetailsPage({ params }: VehicleDetailsPageProps) 
             </div>
           </div>
           
-          {/* Similar vehicles skeleton */}
           <div className="mt-12">
             <Skeleton className="h-6 w-1/4 mb-6" />
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -285,55 +257,50 @@ export default function VehicleDetailsPage({ params }: VehicleDetailsPageProps) 
     return notFound()
   }
 
-  // Navigation handlers with cache support
+  // --- Navigation handlers with cache support (using savePageState) ---
   const navigationHandlers = {
     onLoginClick: () => {
-      saveCurrentState({
+      savePageState({
         vehicleId: params.id,
         vehicle: vehicle,
-        timestamp: Date.now(),
-        scrollPosition: window.scrollY
+        timestamp: Date.now()
       })
       router.push("/login")
     },
     onDashboardClick: () => {
-      saveCurrentState({
+      savePageState({
         vehicleId: params.id,
         vehicle: vehicle,
-        timestamp: Date.now(),
-        scrollPosition: window.scrollY
+        timestamp: Date.now()
       })
       router.push("/dashboard")
     },
     onGoHome: () => {
-      saveCurrentState({
+      savePageState({
         vehicleId: params.id,
         vehicle: vehicle,
-        timestamp: Date.now(),
-        scrollPosition: window.scrollY
+        timestamp: Date.now()
       })
       router.push("/home")
     },
     onShowAllCars: () => {
-      saveCurrentState({
+      savePageState({
         vehicleId: params.id,
         vehicle: vehicle,
-        timestamp: Date.now(),
-        scrollPosition: window.scrollY
+        timestamp: Date.now()
       })
       router.push("/results")
     },
     onGoToSellPage: () => {
-      saveCurrentState({
+      savePageState({
         vehicleId: params.id,
         vehicle: vehicle,
-        timestamp: Date.now(),
-        scrollPosition: window.scrollY
+        timestamp: Date.now()
       })
       router.push("/upload-vehicle")
     },
     onSignOut: () => {
-      saveCurrentState({
+      savePageState({
         vehicleId: params.id,
         timestamp: Date.now()
       })
@@ -356,32 +323,27 @@ export default function VehicleDetailsPage({ params }: VehicleDetailsPageProps) 
           savedCars={savedVehiclesData}
           onSaveCar={() => {
             toggleSaveVehicle(vehicle)
-            // Save to cache after saving
             addToCache(params.id, vehicle, 'vehicleDetails')
           }}
           similarVehicles={similarVehiclesData?.vehicles || []}
           similarVehiclesLoading={similarLoading}
           onViewSimilarVehicle={(similarVehicle) => {
-            // Save current state before navigating to similar vehicle
-            saveCurrentState({
+            savePageState({
               vehicleId: params.id,
               vehicle: vehicle,
-              timestamp: Date.now(),
-              scrollPosition: window.scrollY
+              timestamp: Date.now()
             })
-            // Navigate to the similar vehicle
             router.push(`/vehicle/${similarVehicle.id}`)
           }}
         />
       </div>
       
-      {/* Cache status indicator (for debugging) */}
+      {/* Minimal dev cache indicator – scroll restored removed */}
       {process.env.NODE_ENV === 'development' && (
         <div className="fixed bottom-4 left-4 z-50">
           <div className="bg-gray-900/80 text-white p-2 rounded-lg text-xs">
             <div>Vehicle Cache: {vehicle ? '✅ Loaded' : '⏳ Loading'}</div>
             <div>Similar Vehicles: {similarVehiclesData?.vehicles?.length || 0}</div>
-            <div>Scroll Restored: {scrollRestoredRef.current ? '✅' : '❌'}</div>
           </div>
         </div>
       )}
