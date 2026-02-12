@@ -78,14 +78,8 @@ export default function CarMarketplace() {
   // Use the vehicle context for cache management
   const { getCachedList, saveForCurrentRoute } = useVehicleContext()
   
-  // Use navigation cache for form state
-  const { 
-    saveCurrentState, 
-    restoreCurrentState, 
-    hasCachedData, 
-    getCachedData,
-    saveCurrentScrollPosition 
-  } = useNavigationCache()
+  // Use navigation cache for form state - STABILIZED CONTEXT
+  const { savePageState, restorePageState } = useNavigationCache()
   
   const [search, setSearch] = useState("")
   const [showMoreOptions, setShowMoreOptions] = useState(false)
@@ -245,7 +239,7 @@ export default function CarMarketplace() {
   useEffect(() => {
     console.log("🔄 [CarMarketplace] Attempting to restore cached form state")
     
-    const restored = restoreCurrentState()
+    const restored = restorePageState()
     if (restored) {
       console.log("✅ [CarMarketplace] Restored cached form state:", restored)
       
@@ -273,7 +267,7 @@ export default function CarMarketplace() {
       if (restored.maxMileage && maxMileageInputRef.current) maxMileageInputRef.current.value = restored.maxMileage
       if (restored.condition && conditionSelectRef.current) conditionSelectRef.current.value = restored.condition
     }
-  }, [restoreCurrentState])
+  }, [restorePageState])
 
   // Save form state to cache when it changes
   useEffect(() => {
@@ -301,7 +295,7 @@ export default function CarMarketplace() {
     }
     
     console.log("💾 [CarMarketplace] Saving form state to cache")
-    saveCurrentState(formState)
+    savePageState(formState)
   }, [
     selectedTerms,
     bodyType,
@@ -311,39 +305,20 @@ export default function CarMarketplace() {
     showMoreOptions,
     expandedMakes,
     isSearchPage,
-    saveCurrentState
+    savePageState
   ])
 
-  // Save vehicle data to route cache
+  // Save vehicle data to route cache using the stabilized navigation cache
   useEffect(() => {
     if (vehicleData && vehicleData.vehicles && vehicleData.vehicles.length > 0) {
       console.log("💾 [CarMarketplace] Saving vehicle data to route cache")
-      saveForCurrentRoute(vehicleData, 'list')
+      savePageState({
+        vehicles: vehicleData.vehicles,
+        hierarchy: vehicleData.hierarchy,
+        lastUpdated: Date.now()
+      })
     }
-  }, [vehicleData, saveForCurrentRoute])
-
-  // Save scroll position on scroll
-  useEffect(() => {
-    const handleScroll = () => {
-      if (isSearchPage) {
-        saveCurrentScrollPosition()
-      }
-    }
-    
-    // Throttle scroll events
-    let scrollTimeout: NodeJS.Timeout
-    const throttledScroll = () => {
-      if (scrollTimeout) clearTimeout(scrollTimeout)
-      scrollTimeout = setTimeout(handleScroll, 500)
-    }
-    
-    window.addEventListener('scroll', throttledScroll)
-    
-    return () => {
-      window.removeEventListener('scroll', throttledScroll)
-      if (scrollTimeout) clearTimeout(scrollTimeout)
-    }
-  }, [isSearchPage, saveCurrentScrollPosition])
+  }, [vehicleData, vehicleData?.hierarchy, savePageState])
 
   // Handle click outside for dropdowns
   useEffect(() => {
@@ -511,7 +486,7 @@ export default function CarMarketplace() {
   const handleSearch = () => {
     // Save current state before navigation
     console.log("💾 [CarMarketplace] Saving state before search navigation")
-    saveCurrentState({
+    savePageState({
       selectedTerms,
       bodyType,
       engineCapacityRange,
@@ -614,7 +589,7 @@ export default function CarMarketplace() {
       setSelectedVehicle(null)
       setSelectedProvince(null)
       // Save state when going home
-      saveCurrentState({
+      savePageState({
         selectedTerms,
         bodyType,
         engineCapacityRange,
@@ -626,7 +601,7 @@ export default function CarMarketplace() {
     },
     onShowAllCars: () => {
       // Save current form state before navigating
-      saveCurrentState({
+      savePageState({
         selectedTerms,
         bodyType,
         engineCapacityRange,
@@ -639,7 +614,7 @@ export default function CarMarketplace() {
     },
     onGoToSellPage: () => {
       // Save state before navigating to sell page
-      saveCurrentState({
+      savePageState({
         selectedTerms,
         bodyType,
         engineCapacityRange,
@@ -651,12 +626,12 @@ export default function CarMarketplace() {
       router.push("/upload-vehicle")
     },
     onSignOut: handleSignOut,
-  }), [router, selectedTerms, bodyType, engineCapacityRange, searchTerm, currentSliderEngineValues, showMoreOptions, expandedMakes, saveCurrentState])
+  }), [router, selectedTerms, bodyType, engineCapacityRange, searchTerm, currentSliderEngineValues, showMoreOptions, expandedMakes, savePageState])
 
   // Handle vehicle selection with cache saving
   const handleVehicleSelect = (vehicle: Vehicle) => {
     // Save current form state before showing vehicle details
-    saveCurrentState({
+    savePageState({
       selectedTerms,
       bodyType,
       engineCapacityRange,
@@ -676,9 +651,6 @@ export default function CarMarketplace() {
       condition: conditionSelectRef.current?.value || ''
     })
     
-    // Save scroll position
-    saveCurrentScrollPosition()
-    
     // Set selected vehicle
     setSelectedVehicle(vehicle)
     setIsSearchPage(false)
@@ -687,7 +659,7 @@ export default function CarMarketplace() {
   // Handle province selection with cache saving
   const handleProvinceSelect = (province: string) => {
     // Save current form state before showing location page
-    saveCurrentState({
+    savePageState({
       selectedTerms,
       bodyType,
       engineCapacityRange,
@@ -696,9 +668,6 @@ export default function CarMarketplace() {
       showMoreOptions,
       expandedMakes: Array.from(expandedMakes)
     })
-    
-    // Save scroll position
-    saveCurrentScrollPosition()
     
     // Set selected province
     setSelectedProvince(province)
@@ -712,7 +681,7 @@ export default function CarMarketplace() {
     setIsSearchPage(true)
     
     // Restore form state when coming back
-    const restored = restoreCurrentState()
+    const restored = restorePageState()
     if (restored) {
       console.log("✅ [CarMarketplace] Restored form state after back navigation")
     }
@@ -1301,7 +1270,7 @@ export default function CarMarketplace() {
                           setIsSearchPage(true)
                           window.scrollTo(0, 0)
                           // Save current state
-                          saveCurrentState({
+                          savePageState({
                             selectedTerms,
                             bodyType,
                             engineCapacityRange,
