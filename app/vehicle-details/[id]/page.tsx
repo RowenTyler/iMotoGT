@@ -20,12 +20,12 @@ interface VehicleDetailsPageProps {
 
 export default function VehicleDetailsPage({ params }: VehicleDetailsPageProps) {
   const router = useRouter()
-  const { user, toggleSaveVehicle, savedVehicles: savedVehiclesData } = useUser()
+  const { user, toggleSaveVehicle, savedVehicles: savedVehiclesSet } = useUser()
   
-  // Stabilized navigation cache – only these two methods are available
+  // Stabilized navigation cache
   const { savePageState, restorePageState } = useNavigationCache()
   
-  // Vehicle context for per‑vehicle and route caching
+  // Vehicle context
   const { 
     getCachedVehicle, 
     saveForCurrentRoute,
@@ -33,22 +33,23 @@ export default function VehicleDetailsPage({ params }: VehicleDetailsPageProps) 
     addToCache
   } = useVehicleContext()
   
-  // Local state for the vehicle
+  // Local state
   const [vehicle, setVehicle] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Ref to track initial mount for state restoration
   const isInitialMountRef = useRef(true)
 
-  // --- Fetch vehicle data (replaces broken useVehicle) ---
+  // ------------------------------------------------------------------
+  // 1. Fetch vehicle data (replaces broken useVehicle)
+  // ------------------------------------------------------------------
   useEffect(() => {
     let isMounted = true
     const controller = new AbortController()
 
     const fetchVehicle = async () => {
-      // 1. Try cache first
-      const cached = getCachedVehicle(params.id)
+      // Try cache first
+      const cached = getCachedVehicle?.(params.id)
       if (cached) {
         console.log(`✅ [VehicleDetailsPage] Using cached vehicle: ${cached.make} ${cached.model}`)
         if (isMounted) {
@@ -59,7 +60,7 @@ export default function VehicleDetailsPage({ params }: VehicleDetailsPageProps) 
         return
       }
 
-      // 2. Fetch from API
+      // Fetch from API
       try {
         console.log(`🔍 [VehicleDetailsPage] Fetching vehicle ${params.id} from API...`)
         const res = await fetch(`/api/vehicles/${params.id}`, { signal: controller.signal })
@@ -71,9 +72,13 @@ export default function VehicleDetailsPage({ params }: VehicleDetailsPageProps) 
           setLoading(false)
           setError(null)
           
-          // Save to cache
-          addToCache(params.id, data, 'vehicleDetails')
-          saveForCurrentRoute(data, 'detail')
+          // Safe calls – context may not provide these functions
+          if (typeof addToCache === 'function') {
+            addToCache(params.id, data, 'vehicleDetails')
+          }
+          if (typeof saveForCurrentRoute === 'function') {
+            saveForCurrentRoute(data, 'detail')
+          }
         }
       } catch (err: any) {
         if (err.name !== 'AbortError' && isMounted) {
@@ -92,18 +97,18 @@ export default function VehicleDetailsPage({ params }: VehicleDetailsPageProps) 
     }
   }, [params.id, getCachedVehicle, addToCache, saveForCurrentRoute])
 
-  // --- Restore page state from navigation cache ---
+  // ------------------------------------------------------------------
+  // 2. Restore page state from navigation cache
+  // ------------------------------------------------------------------
   useEffect(() => {
     console.log(`🔍 [VehicleDetailsPage] Mounted for vehicle ID: ${params.id}`)
     
-    // Restore any saved form/page state
-    const cachedState = restorePageState()
+    const cachedState = restorePageState?.()
     if (cachedState) {
       console.log(`✅ [VehicleDetailsPage] Restored cached state for route`)
     }
     
-    // Save current route for back navigation
-    const routeKey = getCurrentRouteKey()
+    const routeKey = getCurrentRouteKey?.()
     console.log(`📍 [VehicleDetailsPage] Current route key: ${routeKey}`)
     
     return () => {
@@ -111,26 +116,39 @@ export default function VehicleDetailsPage({ params }: VehicleDetailsPageProps) 
     }
   }, [params.id, restorePageState, getCurrentRouteKey])
 
-  // --- Save vehicle data to caches when loaded ---
+  // ------------------------------------------------------------------
+  // 3. Save vehicle to caches when loaded
+  // ------------------------------------------------------------------
   useEffect(() => {
     if (vehicle && !loading) {
       console.log(`💾 [VehicleDetailsPage] Saving vehicle to cache: ${vehicle.id}`)
-      addToCache(params.id, vehicle, 'vehicleDetails')
-      saveForCurrentRoute(vehicle, 'detail')
-      savePageState({
-        vehicleId: vehicle.id,
-        vehicle: vehicle,
-        timestamp: Date.now()
-      })
+      
+      if (typeof addToCache === 'function') {
+        addToCache(params.id, vehicle, 'vehicleDetails')
+      }
+      if (typeof saveForCurrentRoute === 'function') {
+        saveForCurrentRoute(vehicle, 'detail')
+      }
+      if (typeof savePageState === 'function') {
+        savePageState({
+          vehicleId: vehicle.id,
+          vehicle: vehicle,
+          timestamp: Date.now()
+        })
+      }
     }
   }, [vehicle, loading, params.id, addToCache, saveForCurrentRoute, savePageState])
 
-  // Mark initial mount as complete after first render
+  // ------------------------------------------------------------------
+  // 4. Mark initial mount as done
+  // ------------------------------------------------------------------
   useEffect(() => {
     isInitialMountRef.current = false
   }, [])
 
-  // --- Fetch similar vehicles (unchanged) ---
+  // ------------------------------------------------------------------
+  // 5. Fetch similar vehicles (unchanged)
+  // ------------------------------------------------------------------
   const fetchSimilarVehicles = async () => {
     if (!vehicle) return { vehicles: [], totalCount: 0, timestamp: Date.now() }
     
@@ -164,10 +182,12 @@ export default function VehicleDetailsPage({ params }: VehicleDetailsPageProps) 
     }
   )
 
-  // --- Back navigation with state preservation ---
+  // ------------------------------------------------------------------
+  // 6. Back navigation with state preservation
+  // ------------------------------------------------------------------
   const handleBack = () => {
     console.log(`⏪ [VehicleDetailsPage] Back button clicked, saving current state`)
-    if (vehicle) {
+    if (vehicle && typeof savePageState === 'function') {
       savePageState({
         vehicleId: params.id,
         vehicle: vehicle,
@@ -177,13 +197,28 @@ export default function VehicleDetailsPage({ params }: VehicleDetailsPageProps) 
     router.back()
   }
 
-  // --- Not found / error handling ---
+  // ------------------------------------------------------------------
+  // 7. Prepare savedCars array for VehicleDetails
+  //    (VehicleDetails expects an array of vehicles, but our context gives a Set of IDs)
+  // ------------------------------------------------------------------
+  const savedCarsArray = useMemo(() => {
+    if (!vehicle) return []
+    // savedVehiclesSet is a Set of vehicle IDs (from UserContext)
+    const isSaved = savedVehiclesSet?.has?.(vehicle.id) || false
+    return isSaved ? [vehicle] : []
+  }, [vehicle, savedVehiclesSet])
+
+  // ------------------------------------------------------------------
+  // 8. Not found / error handling
+  // ------------------------------------------------------------------
   if (!loading && !vehicle && error) {
     console.error("❌ [VehicleDetailsPage] Vehicle not found or error:", error)
     return notFound()
   }
 
-  // --- Loading skeleton (identical to original) ---
+  // ------------------------------------------------------------------
+  // 9. Loading skeleton (identical to original)
+  // ------------------------------------------------------------------
   if (loading && !vehicle) {
     return (
       <div className="min-h-screen bg-[var(--light-bg)] dark:bg-[var(--dark-bg)]">
@@ -196,7 +231,9 @@ export default function VehicleDetailsPage({ params }: VehicleDetailsPageProps) 
           onShowAllCars={() => router.push("/results")}
           onGoToSellPage={() => router.push("/upload-vehicle")}
           onSignOut={() => {
-            savePageState({ vehicleId: params.id, timestamp: Date.now() })
+            if (typeof savePageState === 'function') {
+              savePageState({ vehicleId: params.id, timestamp: Date.now() })
+            }
             router.push("/login")
           }}
         />
@@ -257,53 +294,67 @@ export default function VehicleDetailsPage({ params }: VehicleDetailsPageProps) 
     return notFound()
   }
 
-  // --- Navigation handlers with cache support (using savePageState) ---
+  // ------------------------------------------------------------------
+  // 10. Navigation handlers with safe cache calls
+  // ------------------------------------------------------------------
   const navigationHandlers = {
     onLoginClick: () => {
-      savePageState({
-        vehicleId: params.id,
-        vehicle: vehicle,
-        timestamp: Date.now()
-      })
+      if (typeof savePageState === 'function') {
+        savePageState({
+          vehicleId: params.id,
+          vehicle: vehicle,
+          timestamp: Date.now()
+        })
+      }
       router.push("/login")
     },
     onDashboardClick: () => {
-      savePageState({
-        vehicleId: params.id,
-        vehicle: vehicle,
-        timestamp: Date.now()
-      })
+      if (typeof savePageState === 'function') {
+        savePageState({
+          vehicleId: params.id,
+          vehicle: vehicle,
+          timestamp: Date.now()
+        })
+      }
       router.push("/dashboard")
     },
     onGoHome: () => {
-      savePageState({
-        vehicleId: params.id,
-        vehicle: vehicle,
-        timestamp: Date.now()
-      })
+      if (typeof savePageState === 'function') {
+        savePageState({
+          vehicleId: params.id,
+          vehicle: vehicle,
+          timestamp: Date.now()
+        })
+      }
       router.push("/home")
     },
     onShowAllCars: () => {
-      savePageState({
-        vehicleId: params.id,
-        vehicle: vehicle,
-        timestamp: Date.now()
-      })
+      if (typeof savePageState === 'function') {
+        savePageState({
+          vehicleId: params.id,
+          vehicle: vehicle,
+          timestamp: Date.now()
+        })
+      }
       router.push("/results")
     },
     onGoToSellPage: () => {
-      savePageState({
-        vehicleId: params.id,
-        vehicle: vehicle,
-        timestamp: Date.now()
-      })
+      if (typeof savePageState === 'function') {
+        savePageState({
+          vehicleId: params.id,
+          vehicle: vehicle,
+          timestamp: Date.now()
+        })
+      }
       router.push("/upload-vehicle")
     },
     onSignOut: () => {
-      savePageState({
-        vehicleId: params.id,
-        timestamp: Date.now()
-      })
+      if (typeof savePageState === 'function') {
+        savePageState({
+          vehicleId: params.id,
+          timestamp: Date.now()
+        })
+      }
       router.push("/login")
     }
   }
@@ -320,25 +371,29 @@ export default function VehicleDetailsPage({ params }: VehicleDetailsPageProps) 
           vehicle={vehicle}
           onBack={handleBack}
           user={user}
-          savedCars={savedVehiclesData}
+          savedCars={savedCarsArray}        // ✅ now an array, .some works
           onSaveCar={() => {
             toggleSaveVehicle(vehicle)
-            addToCache(params.id, vehicle, 'vehicleDetails')
+            if (typeof addToCache === 'function') {
+              addToCache(params.id, vehicle, 'vehicleDetails')
+            }
           }}
           similarVehicles={similarVehiclesData?.vehicles || []}
           similarVehiclesLoading={similarLoading}
           onViewSimilarVehicle={(similarVehicle) => {
-            savePageState({
-              vehicleId: params.id,
-              vehicle: vehicle,
-              timestamp: Date.now()
-            })
+            if (typeof savePageState === 'function') {
+              savePageState({
+                vehicleId: params.id,
+                vehicle: vehicle,
+                timestamp: Date.now()
+              })
+            }
             router.push(`/vehicle/${similarVehicle.id}`)
           }}
         />
       </div>
       
-      {/* Minimal dev cache indicator – scroll restored removed */}
+      {/* Minimal dev cache indicator */}
       {process.env.NODE_ENV === 'development' && (
         <div className="fixed bottom-4 left-4 z-50">
           <div className="bg-gray-900/80 text-white p-2 rounded-lg text-xs">
