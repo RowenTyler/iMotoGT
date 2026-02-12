@@ -40,6 +40,7 @@ export default function LoginPage({
   const [showNewPassword, setShowNewPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [verificationEmail, setVerificationEmail] = useState("")
+  const [verificationType, setVerificationType] = useState<"signup" | "reset">("signup")
   const [isResending, setIsResending] = useState(false)
   const [resendSuccess, setResendSuccess] = useState(false)
   const router = useRouter()
@@ -68,6 +69,7 @@ export default function LoginPage({
     setShowNewPassword(false)
     setShowConfirmPassword(false)
     setVerificationEmail("")
+    setVerificationType("signup")
     setResendSuccess(false)
   }
 
@@ -98,6 +100,7 @@ export default function LoginPage({
       if (user) {
         console.log("✅ Sign up successful, showing verification message")
         setVerificationEmail(email)
+        setVerificationType("signup")
         setViewMode("verification")
         setSuccessMessage("We've sent a verification link to your email. Please check your inbox (and spam folder).")
       }
@@ -176,6 +179,7 @@ export default function LoginPage({
         console.warn("⚠️ Email not verified")
         setError("Please verify your email address before signing in. Check your inbox for a verification link.")
         setVerificationEmail(email)
+        setVerificationType("signup")
         setViewMode("verification")
         return
       }
@@ -221,6 +225,7 @@ export default function LoginPage({
         if (e.code === "email_not_confirmed") {
           setError("Please verify your email address before signing in. Check your inbox for a verification link.")
           setVerificationEmail(email)
+          setVerificationType("signup")
           setViewMode("verification")
         } else if (e.code === "invalid_credentials") {
           setError("Invalid email or password. Please try again.")
@@ -254,8 +259,11 @@ export default function LoginPage({
         throw resetError
       }
       
+      // 🔁 Redirect to the verification view with reset context
+      setVerificationEmail(email)
+      setVerificationType("reset")
+      setViewMode("verification")
       setSuccessMessage("Password reset instructions have been sent to your email. Please check your inbox (and spam folder).")
-      setViewMode("login")
     } catch (e) {
       console.error("❌ Forgot password error:", e)
       if (e instanceof AuthError) {
@@ -447,8 +455,10 @@ export default function LoginPage({
     )
   }
 
-  // Verification View
+  // Verification View – now handles both sign‑up email verification and password reset confirmation
   if (viewMode === "verification") {
+    const isReset = verificationType === "reset"
+    
     return (
       <>
         <Header user={null} transparent={false} />
@@ -458,9 +468,13 @@ export default function LoginPage({
               <div className="mx-auto w-16 h-16 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center mb-4">
                 <Mail className="h-8 w-8 text-green-600 dark:text-green-400" />
               </div>
-              <h1 className="text-4xl font-bold text-[#3E5641] dark:text-white">Check Your Email</h1>
+              <h1 className="text-4xl font-bold text-[#3E5641] dark:text-white">
+                Check Your Email
+              </h1>
               <p className="text-[#6F7F69] dark:text-gray-400 mt-2">
-                We've sent a verification link to your email address.
+                {isReset
+                  ? "We've sent password reset instructions to your email address."
+                  : "We've sent a verification link to your email address."}
               </p>
             </div>
 
@@ -469,12 +483,12 @@ export default function LoginPage({
                 <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
                   <CheckCircle className="h-6 w-6 text-blue-600 dark:text-blue-400 mx-auto mb-2" />
                   <p className="text-sm text-blue-800 dark:text-blue-200">
-                    <strong>Verification email sent to:</strong>
+                    <strong>{isReset ? "Reset email sent to:" : "Verification email sent to:"}</strong>
                   </p>
                   <p className="text-sm font-medium text-blue-900 dark:text-blue-100 mt-1">{verificationEmail}</p>
                 </div>
 
-                {resendSuccess && (
+                {resendSuccess && !isReset && (
                   <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
                     <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400 mx-auto mb-1" />
                     <p className="text-sm text-green-800 dark:text-green-200">Verification email sent successfully!</p>
@@ -493,9 +507,19 @@ export default function LoginPage({
                     <strong>Next steps:</strong>
                   </p>
                   <ol className="list-decimal list-inside space-y-1 ml-2">
-                    <li>Check your email inbox (and spam folder)</li>
-                    <li>Click the verification link in the email</li>
-                    <li>Return here to sign in to your account</li>
+                    {isReset ? (
+                      <>
+                        <li>Check your email inbox (and spam folder)</li>
+                        <li>Click the password reset link in the email</li>
+                        <li>Create a new password and sign in</li>
+                      </>
+                    ) : (
+                      <>
+                        <li>Check your email inbox (and spam folder)</li>
+                        <li>Click the verification link in the email</li>
+                        <li>Return here to sign in to your account</li>
+                      </>
+                    )}
                   </ol>
                 </div>
 
@@ -510,21 +534,29 @@ export default function LoginPage({
                     </>
                   </Button>
 
-                  <Button variant="outline" onClick={handleResendVerification} disabled={isResending} className="w-full bg-transparent">
-                    <>
-                      {isResending ? (
-                        <>
-                          <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-                          Sending...
-                        </>
-                      ) : (
-                        <>
-                          <Mail className="mr-2 h-4 w-4" />
-                          Resend Verification Email
-                        </>
-                      )}
-                    </>
-                  </Button>
+                  {/* Only show resend button for sign‑up verification */}
+                  {!isReset && (
+                    <Button
+                      variant="outline"
+                      onClick={handleResendVerification}
+                      disabled={isResending}
+                      className="w-full bg-transparent"
+                    >
+                      <>
+                        {isResending ? (
+                          <>
+                            <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                            Sending...
+                          </>
+                        ) : (
+                          <>
+                            <Mail className="mr-2 h-4 w-4" />
+                            Resend Verification Email
+                          </>
+                        )}
+                      </>
+                    </Button>
+                  )}
 
                   <Button variant="outline" onClick={handleBackToSignUp} className="w-full bg-transparent">
                     Back to Sign Up
@@ -542,7 +574,7 @@ export default function LoginPage({
                   <li>Check your spam/junk folder</li>
                   <li>Wait a few minutes for email delivery</li>
                   <li>Make sure you entered the correct email</li>
-                  <li>Try using the "Resend" button above</li>
+                  {!isReset && <li>Try using the "Resend" button above</li>}
                 </ul>
               </div>
             </div>
