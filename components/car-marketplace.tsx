@@ -340,38 +340,6 @@ export default function CarMarketplace() {
     }
   }, [showEngineCapacitySlider, currentSliderEngineValues])
 
-  // Helper function to format raw price string to "R X XXX.XX" for display
-  const formatPriceForDisplay = (rawValue: string | number | undefined | null): string => {
-    if (rawValue === undefined || rawValue === null || String(rawValue).trim() === "") {
-      return "R 0.00"
-    }
-
-    let numericString = String(rawValue).replace(/[^\d.]/g, "")
-
-    if (numericString.startsWith(".")) {
-      numericString = "0" + numericString
-    }
-
-    const parts = numericString.split(".")
-    let integerPart = parts[0]
-    let decimalPart = parts.length > 1 ? parts[1] : ""
-
-    if (integerPart === "" && decimalPart !== "") {
-      integerPart = "0"
-    }
-
-    const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, " ")
-
-    if (decimalPart.length === 0) {
-      decimalPart = "00"
-    } else if (decimalPart.length === 1) {
-      decimalPart += "0"
-    } else if (decimalPart.length > 2) {
-      decimalPart = decimalPart.substring(0, 2)
-    }
-    return `R ${formattedInteger || "0"}.${decimalPart}`
-  }
-
   // Check if a make is selected
   const isMakeSelected = (make: string): boolean => {
     return selectedTerms.includes(make)
@@ -810,19 +778,31 @@ export default function CarMarketplace() {
       {isSearchPage ? (
         // Search Page View
         <div className="flex flex-col">
-          {/* Hero Search Section */}
-          <div className="min-h-screen flex flex-col items-center justify-center px-4 py-20 bg-gradient-to-b from-white dark:from-[#182218] to-[var(--light-bg)] dark:to-[var(--dark-bg)]">
-            <div className="text-center mb-8">
-              <h1 className="text-4xl md:text-5xl font-bold mb-4 text-[#3E5641] dark:text-white">
+          {/* Hero Search Section with Background Image */}
+          <div className="min-h-screen flex flex-col items-center justify-center px-4 py-20 relative">
+            {/* Background Image with Rounded Bottom */}
+            <div className="absolute inset-0 overflow-hidden rounded-b-[50px]">
+              <img 
+                src="/home-page.png" 
+                alt="Car marketplace hero" 
+                className="w-full h-full object-cover"
+              />
+              {/* Overlay for better text readability */}
+              <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/40 to-black/60"></div>
+            </div>
+
+            {/* Content - Now positioned above the image */}
+            <div className="relative z-10 text-center mb-8">
+              <h1 className="text-4xl md:text-5xl font-bold mb-4 text-white drop-shadow-lg">
                 Find Your Perfect Car
               </h1>
-              <p className="text-xl opacity-80 text-[#6F7F69] dark:text-gray-300">
+              <p className="text-xl opacity-90 text-white drop-shadow-md">
                 Search from thousands of vehicles across South Africa
               </p>
             </div>
 
             {/* Search Card */}
-            <div className="bg-white dark:bg-[#1F2B20] p-6 md:p-8 rounded-2xl shadow-xl max-w-3xl w-full border border-[#9FA791]/20 dark:border-[#4A4D45]/20">
+            <div className="relative z-10 bg-white dark:bg-[#1F2B20] p-6 md:p-8 rounded-2xl shadow-xl max-w-3xl w-full border border-[#9FA791]/20 dark:border-[#4A4D45]/20">
               {/* Search Input with Hierarchical Dropdown */}
               <div className="mb-4 relative" ref={searchRef}>
                 <label htmlFor="search-input" className="sr-only">
