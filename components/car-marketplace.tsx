@@ -778,7 +778,7 @@ export default function CarMarketplace() {
       {isSearchPage ? (
         // Search Page View
         <div className="flex flex-col">
-          {/* Hero Search Section with Background Image & Glass Card */}
+          {/* Hero Search Section with Background Image & Transparent Card */}
           <div className="min-h-screen flex flex-col items-center justify-center px-4 py-20 relative">
             {/* Background Image with Rounded Bottom */}
             <div className="absolute inset-0 overflow-hidden rounded-b-[50px]">
@@ -801,18 +801,18 @@ export default function CarMarketplace() {
               </p>
             </div>
 
-            {/* Search Card with Glass Effect */}
-            <div className="relative z-10 bg-white/80 dark:bg-[#1F2B20]/80 backdrop-blur-sm p-6 md:p-8 rounded-2xl shadow-xl max-w-3xl w-full border border-[#9FA791]/20 dark:border-[#4A4D45]/20">
+            {/* Search Card - Fully Transparent with Backdrop Blur */}
+            <div className="relative z-10 bg-transparent backdrop-blur-sm p-6 md:p-8 rounded-2xl shadow-xl max-w-3xl w-full border border-white/20 dark:border-[#4A4D45]/40">
               {/* Search Input with Hierarchical Dropdown */}
               <div className="mb-4 relative" ref={searchRef}>
                 <label htmlFor="search-input" className="sr-only">
                   Search Make, Model and Variant
                 </label>
-                <div className="flex flex-wrap items-center gap-2 p-3 border border-[#9FA791] dark:border-[#4A4D45] rounded-lg focus-within:border-[#FF6700] dark:focus-within:border-[#FF7D33] mb-2 bg-white dark:bg-[#2A352A]">
+                <div className="flex flex-wrap items-center gap-2 p-3 border border-white/30 dark:border-[#4A4D45]/60 rounded-lg focus-within:border-[#FF6700] dark:focus-within:border-[#FF7D33] mb-2 bg-white/10 dark:bg-[#2A352A]/30 backdrop-blur-sm">
                   {selectedTerms.map((term, index) => (
                     <div
                       key={index}
-                      className="flex items-center bg-[#FFF8E0] dark:bg-[#3E5641] px-3 py-1.5 rounded-full text-sm text-[#3E5641] dark:text-white"
+                      className="flex items-center bg-[#FFF8E0]/90 dark:bg-[#3E5641]/90 px-3 py-1.5 rounded-full text-sm text-[#3E5641] dark:text-white"
                     >
                       <span>{term}</span>
                       <button
@@ -831,7 +831,7 @@ export default function CarMarketplace() {
                     value={searchTerm}
                     onChange={handleSearchInputChange}
                     onFocus={() => setShowSuggestions(true)}
-                    className="flex-1 min-w-[150px] px-2 py-1 focus:outline-none bg-transparent text-[#3E5641] dark:text-white placeholder-[#6F7F69] dark:placeholder-gray-400"
+                    className="flex-1 min-w-[150px] px-2 py-1 focus:outline-none bg-transparent text-white placeholder-white/70 dark:text-white dark:placeholder-gray-300"
                   />
                 </div>
 
@@ -857,11 +857,11 @@ export default function CarMarketplace() {
 
               {/* Filters & Buttons - Responsive Layout */}
               <div className="flex flex-col">
-                {/* Button Row (always visible, order controlled for desktop) */}
-                <div className="flex flex-col sm:flex-row gap-4 mb-6 order-1 sm:order-2">
+                {/* Button Row - Now side by side on all screens */}
+                <div className="flex flex-row gap-4 mb-6 order-1 sm:order-2">
                   <button
                     onClick={() => setShowMoreOptions(!showMoreOptions)}
-                    className="border border-[#FF6700] text-[#FF6700] dark:border-[#FF7D33] dark:text-[#FF7D33] px-4 py-3 rounded-lg w-full sm:w-auto sm:flex-1 hover:bg-[#FFF8E0] dark:hover:bg-[#2A352A] transition-colors font-medium"
+                    className="w-1/2 sm:w-auto sm:flex-1 border border-[#FF6700] text-[#FF6700] dark:border-[#FF7D33] dark:text-[#FF7D33] px-4 py-3 rounded-lg hover:bg-[#FFF8E0]/20 dark:hover:bg-[#2A352A]/50 transition-colors font-medium backdrop-blur-sm"
                     aria-controls="more-options-section"
                     aria-expanded={showMoreOptions}
                   >
@@ -869,7 +869,7 @@ export default function CarMarketplace() {
                   </button>
                   <button
                     onClick={handleSearch}
-                    className="bg-[#FF6700] text-white dark:bg-[#FF7D33] px-4 py-3 rounded-lg w-full sm:w-auto sm:flex-[2] hover:bg-[#FF6700]/90 dark:hover:bg-[#FF7D33]/90 transition-colors flex items-center justify-center font-medium"
+                    className="w-1/2 sm:w-auto sm:flex-[2] bg-[#FF6700] text-white dark:bg-[#FF7D33] px-4 py-3 rounded-lg hover:bg-[#FF6700]/90 dark:hover:bg-[#FF7D33]/90 transition-colors flex items-center justify-center font-medium backdrop-blur-sm"
                   >
                     <Search className="w-5 h-5 mr-2" />
                     Search Cars
@@ -889,7 +889,7 @@ export default function CarMarketplace() {
                     id="min-price-input"
                     type="number"
                     placeholder="Min Price"
-                    className="px-4 py-3 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white text-sm"
+                    className="px-4 py-3 rounded-lg border border-white/30 dark:border-[#4A4D45]/60 focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] bg-white/10 dark:bg-[#2A352A]/30 backdrop-blur-sm text-white placeholder-white/70 dark:text-white dark:placeholder-gray-300"
                     min="0"
                     step="1000"
                   />
@@ -898,32 +898,32 @@ export default function CarMarketplace() {
                     id="max-price-input"
                     type="number"
                     placeholder="Max Price"
-                    className="px-4 py-3 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white text-sm"
+                    className="px-4 py-3 rounded-lg border border-white/30 dark:border-[#4A4D45]/60 focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] bg-white/10 dark:bg-[#2A352A]/30 backdrop-blur-sm text-white placeholder-white/70 dark:text-white dark:placeholder-gray-300"
                     min="0"
                     step="1000"
                   />
                   <select
                     ref={locationSelectRef}
                     id="location-select"
-                    className="w-full px-4 py-3 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] appearance-none bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white"
+                    className="w-full px-4 py-3 rounded-lg border border-white/30 dark:border-[#4A4D45]/60 focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] appearance-none bg-white/10 dark:bg-[#2A352A]/30 backdrop-blur-sm text-white dark:text-white"
                     defaultValue=""
                   >
-                    <option value="">Location (All)</option>
-                    <option value="Western Cape">Western Cape</option>
-                    <option value="Gauteng">Gauteng</option>
-                    <option value="KwaZulu-Natal">KwaZulu-Natal</option>
-                    <option value="Eastern Cape">Eastern Cape</option>
-                    <option value="Free State">Free State</option>
-                    <option value="Mpumalanga">Mpumalanga</option>
-                    <option value="North West">North West</option>
-                    <option value="Northern Cape">Northern Cape</option>
-                    <option value="Limpopo">Limpopo</option>
+                    <option value="" className="text-gray-800 dark:text-gray-200">Location (All)</option>
+                    <option value="Western Cape" className="text-gray-800 dark:text-gray-200">Western Cape</option>
+                    <option value="Gauteng" className="text-gray-800 dark:text-gray-200">Gauteng</option>
+                    <option value="KwaZulu-Natal" className="text-gray-800 dark:text-gray-200">KwaZulu-Natal</option>
+                    <option value="Eastern Cape" className="text-gray-800 dark:text-gray-200">Eastern Cape</option>
+                    <option value="Free State" className="text-gray-800 dark:text-gray-200">Free State</option>
+                    <option value="Mpumalanga" className="text-gray-800 dark:text-gray-200">Mpumalanga</option>
+                    <option value="North West" className="text-gray-800 dark:text-gray-200">North West</option>
+                    <option value="Northern Cape" className="text-gray-800 dark:text-gray-200">Northern Cape</option>
+                    <option value="Limpopo" className="text-gray-800 dark:text-gray-200">Limpopo</option>
                   </select>
                   {/* Body Type Dropdown */}
                   <div className="relative">
                     <button
                       onClick={() => setShowBodyTypes(!showBodyTypes)}
-                      className="w-full px-4 py-3 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] text-left flex justify-between items-center bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white"
+                      className="w-full px-4 py-3 rounded-lg border border-white/30 dark:border-[#4A4D45]/60 focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] text-left flex justify-between items-center bg-white/10 dark:bg-[#2A352A]/30 backdrop-blur-sm text-white dark:text-white"
                       aria-haspopup="listbox"
                       aria-expanded={showBodyTypes}
                     >
@@ -961,25 +961,25 @@ export default function CarMarketplace() {
                 {showMoreOptions && (
                   <div
                     id="more-options-section"
-                    className="border-t border-[#9FA791]/20 dark:border-[#4A4D45]/20 pt-6 order-3"
+                    className="border-t border-white/20 dark:border-[#4A4D45]/40 pt-6 order-3"
                   >
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                       {/* Min/Max Year */}
                       <div className="flex flex-col">
                         <label
                           htmlFor="min-year-select"
-                          className="mb-1 font-medium text-sm text-[#6F7F69] dark:text-gray-300"
+                          className="mb-1 font-medium text-sm text-white/80 dark:text-gray-300"
                         >
                           Min Year
                         </label>
                         <select
                           ref={minYearSelectRef}
                           id="min-year-select"
-                          className="px-4 py-3 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white"
+                          className="px-4 py-3 rounded-lg border border-white/30 dark:border-[#4A4D45]/60 focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] bg-white/10 dark:bg-[#2A352A]/30 backdrop-blur-sm text-white dark:text-white"
                         >
-                          <option value="">Any</option>
+                          <option value="" className="text-gray-800 dark:text-gray-200">Any</option>
                           {Array.from({ length: 30 }, (_, i) => new Date().getFullYear() - i).map((year) => (
-                            <option key={year} value={year}>
+                            <option key={year} value={year} className="text-gray-800 dark:text-gray-200">
                               {year}
                             </option>
                           ))}
@@ -988,18 +988,18 @@ export default function CarMarketplace() {
                       <div className="flex flex-col">
                         <label
                           htmlFor="max-year-select"
-                          className="mb-1 font-medium text-sm text-[#6F7F69] dark:text-gray-300"
+                          className="mb-1 font-medium text-sm text-white/80 dark:text-gray-300"
                         >
                           Max Year
                         </label>
                         <select
                           ref={maxYearSelectRef}
                           id="max-year-select"
-                          className="px-4 py-3 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white"
+                          className="px-4 py-3 rounded-lg border border-white/30 dark:border-[#4A4D45]/60 focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] bg-white/10 dark:bg-[#2A352A]/30 backdrop-blur-sm text-white dark:text-white"
                         >
-                          <option value="">Any</option>
+                          <option value="" className="text-gray-800 dark:text-gray-200">Any</option>
                           {Array.from({ length: 30 }, (_, i) => new Date().getFullYear() - i).map((year) => (
-                            <option key={year} value={year}>
+                            <option key={year} value={year} className="text-gray-800 dark:text-gray-200">
                               {year}
                             </option>
                           ))}
@@ -1009,7 +1009,7 @@ export default function CarMarketplace() {
                       <div className="flex flex-col">
                         <label
                           htmlFor="min-mileage-input"
-                          className="mb-1 font-medium text-sm text-[#6F7F69] dark:text-gray-300"
+                          className="mb-1 font-medium text-sm text-white/80 dark:text-gray-300"
                         >
                           Min Mileage
                         </label>
@@ -1020,13 +1020,13 @@ export default function CarMarketplace() {
                           placeholder="e.g., 10000"
                           min="0"
                           step="1000"
-                          className="px-4 py-3 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white placeholder-[#6F7F69] dark:placeholder-gray-400"
+                          className="px-4 py-3 rounded-lg border border-white/30 dark:border-[#4A4D45]/60 focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] bg-white/10 dark:bg-[#2A352A]/30 backdrop-blur-sm text-white placeholder-white/70 dark:text-white dark:placeholder-gray-300"
                         />
                       </div>
                       <div className="flex flex-col">
                         <label
                           htmlFor="max-mileage-input"
-                          className="mb-1 font-medium text-sm text-[#6F7F69] dark:text-gray-300"
+                          className="mb-1 font-medium text-sm text-white/80 dark:text-gray-300"
                         >
                           Max Mileage
                         </label>
@@ -1037,32 +1037,32 @@ export default function CarMarketplace() {
                           placeholder="e.g., 100000"
                           min="0"
                           step="1000"
-                          className="px-4 py-3 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white placeholder-[#6F7F69] dark:placeholder-gray-400"
+                          className="px-4 py-3 rounded-lg border border-white/30 dark:border-[#4A4D45]/60 focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] bg-white/10 dark:bg-[#2A352A]/30 backdrop-blur-sm text-white placeholder-white/70 dark:text-white dark:placeholder-gray-300"
                         />
                       </div>
                       {/* Fuel Type */}
                       <div className="flex flex-col">
                         <label
                           htmlFor="fuel-type-select"
-                          className="mb-1 font-medium text-sm text-[#6F7F69] dark:text-gray-300"
+                          className="mb-1 font-medium text-sm text-white/80 dark:text-gray-300"
                         >
                           Fuel Type
                         </label>
                         <select
                           ref={fuelTypeSelectRef}
                           id="fuel-type-select"
-                          className="px-4 py-3 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white"
+                          className="px-4 py-3 rounded-lg border border-white/30 dark:border-[#4A4D45]/60 focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] bg-white/10 dark:bg-[#2A352A]/30 backdrop-blur-sm text-white dark:text-white"
                         >
-                          <option value="All">All</option>
-                          <option value="Petrol">Petrol</option>
-                          <option value="Diesel">Diesel</option>
-                          <option value="Electric">Electric</option>
-                          <option value="Hybrid">Hybrid</option>
+                          <option value="All" className="text-gray-800 dark:text-gray-200">All</option>
+                          <option value="Petrol" className="text-gray-800 dark:text-gray-200">Petrol</option>
+                          <option value="Diesel" className="text-gray-800 dark:text-gray-200">Diesel</option>
+                          <option value="Electric" className="text-gray-800 dark:text-gray-200">Electric</option>
+                          <option value="Hybrid" className="text-gray-800 dark:text-gray-200">Hybrid</option>
                         </select>
                       </div>
                       {/* Engine Capacity Slider */}
                       <div className="relative flex flex-col" ref={engineCapacityRef}>
-                        <label className="mb-1 font-medium text-sm text-[#6F7F69] dark:text-gray-300">
+                        <label className="mb-1 font-medium text-sm text-white/80 dark:text-gray-300">
                           Engine Capacity
                         </label>
                         <button
@@ -1070,7 +1070,7 @@ export default function CarMarketplace() {
                             setCurrentSliderEngineValues(engineCapacityRange)
                             setShowEngineCapacitySlider(!showEngineCapacitySlider)
                           }}
-                          className="w-full px-4 py-3 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] text-left flex justify-between items-center bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white"
+                          className="w-full px-4 py-3 rounded-lg border border-white/30 dark:border-[#4A4D45]/60 focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] text-left flex justify-between items-center bg-white/10 dark:bg-[#2A352A]/30 backdrop-blur-sm text-white dark:text-white"
                           aria-haspopup="true"
                           aria-expanded={showEngineCapacitySlider}
                         >
@@ -1151,36 +1151,36 @@ export default function CarMarketplace() {
                       <div className="flex flex-col">
                         <label
                           htmlFor="transmission-select"
-                          className="mb-1 font-medium text-sm text-[#6F7F69] dark:text-gray-300"
+                          className="mb-1 font-medium text-sm text-white/80 dark:text-gray-300"
                         >
                           Transmission
                         </label>
                         <select
                           ref={transmissionSelectRef}
                           id="transmission-select"
-                          className="px-4 py-3 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white"
+                          className="px-4 py-3 rounded-lg border border-white/30 dark:border-[#4A4D45]/60 focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] bg-white/10 dark:bg-[#2A352A]/30 backdrop-blur-sm text-white dark:text-white"
                         >
-                          <option value="All">All</option>
-                          <option value="Manual">Manual</option>
-                          <option value="Automatic">Automatic</option>
+                          <option value="All" className="text-gray-800 dark:text-gray-200">All</option>
+                          <option value="Manual" className="text-gray-800 dark:text-gray-200">Manual</option>
+                          <option value="Automatic" className="text-gray-800 dark:text-gray-200">Automatic</option>
                         </select>
                       </div>
                       {/* Condition */}
                       <div className="flex flex-col">
                         <label
                           htmlFor="condition-select"
-                          className="mb-1 font-medium text-sm text-[#6F7F69] dark:text-gray-300"
+                          className="mb-1 font-medium text-sm text-white/80 dark:text-gray-300"
                         >
                           Condition
                         </label>
                         <select
                           ref={conditionSelectRef}
                           id="condition-select"
-                          className="px-4 py-3 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white"
+                          className="px-4 py-3 rounded-lg border border-white/30 dark:border-[#4A4D45]/60 focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] bg-white/10 dark:bg-[#2A352A]/30 backdrop-blur-sm text-white dark:text-white"
                         >
-                          <option value="All">All</option>
-                          <option value="New">New</option>
-                          <option value="Used">Used</option>
+                          <option value="All" className="text-gray-800 dark:text-gray-200">All</option>
+                          <option value="New" className="text-gray-800 dark:text-gray-200">New</option>
+                          <option value="Used" className="text-gray-800 dark:text-gray-200">Used</option>
                         </select>
                       </div>
                     </div>
