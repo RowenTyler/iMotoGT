@@ -778,7 +778,7 @@ export default function CarMarketplace() {
       {isSearchPage ? (
         // Search Page View
         <div className="flex flex-col">
-          {/* Hero Search Section with Background Image */}
+          {/* Hero Search Section with Background Image & Glass Card */}
           <div className="min-h-screen flex flex-col items-center justify-center px-4 py-20 relative">
             {/* Background Image with Rounded Bottom */}
             <div className="absolute inset-0 overflow-hidden rounded-b-[50px]">
@@ -801,8 +801,8 @@ export default function CarMarketplace() {
               </p>
             </div>
 
-            {/* Search Card */}
-            <div className="relative z-10 bg-white dark:bg-[#1F2B20] p-6 md:p-8 rounded-2xl shadow-xl max-w-3xl w-full border border-[#9FA791]/20 dark:border-[#4A4D45]/20">
+            {/* Search Card with Glass Effect */}
+            <div className="relative z-10 bg-white/80 dark:bg-[#1F2B20]/80 backdrop-blur-sm p-6 md:p-8 rounded-2xl shadow-xl max-w-3xl w-full border border-[#9FA791]/20 dark:border-[#4A4D45]/20">
               {/* Search Input with Hierarchical Dropdown */}
               <div className="mb-4 relative" ref={searchRef}>
                 <label htmlFor="search-input" className="sr-only">
@@ -855,328 +855,337 @@ export default function CarMarketplace() {
                 )}
               </div>
 
-              {/* Filters Row */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                <input
-                  ref={minPriceInputRef}
-                  id="min-price-input"
-                  type="number"
-                  placeholder="Min Price"
-                  className="px-4 py-3 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white text-sm focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33]"
-                  min="0"
-                  step="1000"
-                />
-                <input
-                  ref={maxPriceInputRef}
-                  id="max-price-input"
-                  type="number"
-                  placeholder="Max Price"
-                  className="px-4 py-3 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white text-sm focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33]"
-                  min="0"
-                  step="1000"
-                />
-                <select
-                  ref={locationSelectRef}
-                  id="location-select"
-                  className="w-full px-4 py-3 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] appearance-none bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white"
-                  defaultValue=""
-                >
-                  <option value="">Location (All)</option>
-                  <option value="Western Cape">Western Cape</option>
-                  <option value="Gauteng">Gauteng</option>
-                  <option value="KwaZulu-Natal">KwaZulu-Natal</option>
-                  <option value="Eastern Cape">Eastern Cape</option>
-                  <option value="Free State">Free State</option>
-                  <option value="Mpumalanga">Mpumalanga</option>
-                  <option value="North West">North West</option>
-                  <option value="Northern Cape">Northern Cape</option>
-                  <option value="Limpopo">Limpopo</option>
-                </select>
-                {/* Body Type Dropdown */}
-                <div className="relative">
+              {/* Filters & Buttons - Responsive Layout */}
+              <div className="flex flex-col">
+                {/* Button Row (always visible, order controlled for desktop) */}
+                <div className="flex flex-col sm:flex-row gap-4 mb-6 order-1 sm:order-2">
                   <button
-                    onClick={() => setShowBodyTypes(!showBodyTypes)}
-                    className="w-full px-4 py-3 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] text-left flex justify-between items-center bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white"
-                    aria-haspopup="listbox"
-                    aria-expanded={showBodyTypes}
+                    onClick={() => setShowMoreOptions(!showMoreOptions)}
+                    className="border border-[#FF6700] text-[#FF6700] dark:border-[#FF7D33] dark:text-[#FF7D33] px-4 py-3 rounded-lg w-full sm:w-auto sm:flex-1 hover:bg-[#FFF8E0] dark:hover:bg-[#2A352A] transition-colors font-medium"
+                    aria-controls="more-options-section"
+                    aria-expanded={showMoreOptions}
                   >
-                    {bodyType || "All body types"}
-                    <ChevronDown className={`w-4 h-4 transition-transform ${showBodyTypes ? "rotate-180" : ""}`} />
+                    {showMoreOptions ? "Fewer Options" : "More Options"}
                   </button>
-
-                  {showBodyTypes && (
-                    <div
-                      className="absolute z-20 w-full bg-white dark:bg-[#1F2B20] border border-[#9FA791] dark:border-[#4A4D45] rounded-md shadow-lg mt-1 max-h-60 overflow-y-auto"
-                      role="listbox"
-                    >
-                      {bodyTypes.map((type, index) => (
-                        <div
-                          key={index}
-                          className="px-4 py-3 hover:bg-[#FFF8E0] dark:hover:bg-[#2A352A] cursor-pointer flex items-center text-[#3E5641] dark:text-white"
-                          onClick={() => {
-                            setBodyType(type.name === "All body types" ? "" : type.name)
-                            setShowBodyTypes(false)
-                          }}
-                          role="option"
-                          aria-selected={bodyType === type.name}
-                          onMouseDown={(e) => e.preventDefault()}
-                        >
-                          <type.icon className="w-4 h-4 mr-2 opacity-70" />
-                          {type.name}
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                  <button
+                    onClick={handleSearch}
+                    className="bg-[#FF6700] text-white dark:bg-[#FF7D33] px-4 py-3 rounded-lg w-full sm:w-auto sm:flex-[2] hover:bg-[#FF6700]/90 dark:hover:bg-[#FF7D33]/90 transition-colors flex items-center justify-center font-medium"
+                  >
+                    <Search className="w-5 h-5 mr-2" />
+                    Search Cars
+                  </button>
                 </div>
-              </div>
 
-              {/* More Options Section */}
-              {showMoreOptions && (
-                <div
-                  id="more-options-section"
-                  className="mt-6 border-t border-[#9FA791]/20 dark:border-[#4A4D45]/20 pt-6"
+                {/* Filters Grid (hidden on mobile unless showMoreOptions is true) */}
+                <div 
+                  className={`
+                    grid grid-cols-1 md:grid-cols-4 gap-4 mb-6
+                    ${showMoreOptions ? 'block' : 'hidden'} 
+                    sm:grid order-2 sm:order-1
+                  `}
                 >
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-                    {/* Min/Max Year */}
-                    <div className="flex flex-col">
-                      <label
-                        htmlFor="min-year-select"
-                        className="mb-1 font-medium text-sm text-[#6F7F69] dark:text-gray-300"
-                      >
-                        Min Year
-                      </label>
-                      <select
-                        ref={minYearSelectRef}
-                        id="min-year-select"
-                        className="px-4 py-3 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white"
-                      >
-                        <option value="">Any</option>
-                        {Array.from({ length: 30 }, (_, i) => new Date().getFullYear() - i).map((year) => (
-                          <option key={year} value={year}>
-                            {year}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="flex flex-col">
-                      <label
-                        htmlFor="max-year-select"
-                        className="mb-1 font-medium text-sm text-[#6F7F69] dark:text-gray-300"
-                      >
-                        Max Year
-                      </label>
-                      <select
-                        ref={maxYearSelectRef}
-                        id="max-year-select"
-                        className="px-4 py-3 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white"
-                      >
-                        <option value="">Any</option>
-                        {Array.from({ length: 30 }, (_, i) => new Date().getFullYear() - i).map((year) => (
-                          <option key={year} value={year}>
-                            {year}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    {/* Min/Max Mileage */}
-                    <div className="flex flex-col">
-                      <label
-                        htmlFor="min-mileage-input"
-                        className="mb-1 font-medium text-sm text-[#6F7F69] dark:text-gray-300"
-                      >
-                        Min Mileage
-                      </label>
-                      <input
-                        ref={minMileageInputRef}
-                        id="min-mileage-input"
-                        type="number"
-                        placeholder="e.g., 10000"
-                        min="0"
-                        step="1000"
-                        className="px-4 py-3 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white placeholder-[#6F7F69] dark:placeholder-gray-400"
-                      />
-                    </div>
-                    <div className="flex flex-col">
-                      <label
-                        htmlFor="max-mileage-input"
-                        className="mb-1 font-medium text-sm text-[#6F7F69] dark:text-gray-300"
-                      >
-                        Max Mileage
-                      </label>
-                      <input
-                        ref={maxMileageInputRef}
-                        id="max-mileage-input"
-                        type="number"
-                        placeholder="e.g., 100000"
-                        min="0"
-                        step="1000"
-                        className="px-4 py-3 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white placeholder-[#6F7F69] dark:placeholder-gray-400"
-                      />
-                    </div>
-                    {/* Fuel Type */}
-                    <div className="flex flex-col">
-                      <label
-                        htmlFor="fuel-type-select"
-                        className="mb-1 font-medium text-sm text-[#6F7F69] dark:text-gray-300"
-                      >
-                        Fuel Type
-                      </label>
-                      <select
-                        ref={fuelTypeSelectRef}
-                        id="fuel-type-select"
-                        className="px-4 py-3 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white"
-                      >
-                        <option value="All">All</option>
-                        <option value="Petrol">Petrol</option>
-                        <option value="Diesel">Diesel</option>
-                        <option value="Electric">Electric</option>
-                        <option value="Hybrid">Hybrid</option>
-                      </select>
-                    </div>
-                    {/* Engine Capacity Slider */}
-                    <div className="relative flex flex-col" ref={engineCapacityRef}>
-                      <label className="mb-1 font-medium text-sm text-[#6F7F69] dark:text-gray-300">
-                        Engine Capacity
-                      </label>
-                      <button
-                        onClick={() => {
-                          setCurrentSliderEngineValues(engineCapacityRange)
-                          setShowEngineCapacitySlider(!showEngineCapacitySlider)
-                        }}
-                        className="w-full px-4 py-3 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] text-left flex justify-between items-center bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white"
-                        aria-haspopup="true"
-                        aria-expanded={showEngineCapacitySlider}
-                      >
-                        {formatEngineCapacityDisplay(engineCapacityRange)}
-                        <ChevronDown
-                          className={`w-4 h-4 transition-transform ${showEngineCapacitySlider ? "rotate-180" : ""}`}
-                        />
-                      </button>
+                  <input
+                    ref={minPriceInputRef}
+                    id="min-price-input"
+                    type="number"
+                    placeholder="Min Price"
+                    className="px-4 py-3 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white text-sm"
+                    min="0"
+                    step="1000"
+                  />
+                  <input
+                    ref={maxPriceInputRef}
+                    id="max-price-input"
+                    type="number"
+                    placeholder="Max Price"
+                    className="px-4 py-3 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white text-sm"
+                    min="0"
+                    step="1000"
+                  />
+                  <select
+                    ref={locationSelectRef}
+                    id="location-select"
+                    className="w-full px-4 py-3 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] appearance-none bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white"
+                    defaultValue=""
+                  >
+                    <option value="">Location (All)</option>
+                    <option value="Western Cape">Western Cape</option>
+                    <option value="Gauteng">Gauteng</option>
+                    <option value="KwaZulu-Natal">KwaZulu-Natal</option>
+                    <option value="Eastern Cape">Eastern Cape</option>
+                    <option value="Free State">Free State</option>
+                    <option value="Mpumalanga">Mpumalanga</option>
+                    <option value="North West">North West</option>
+                    <option value="Northern Cape">Northern Cape</option>
+                    <option value="Limpopo">Limpopo</option>
+                  </select>
+                  {/* Body Type Dropdown */}
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowBodyTypes(!showBodyTypes)}
+                      className="w-full px-4 py-3 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] text-left flex justify-between items-center bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white"
+                      aria-haspopup="listbox"
+                      aria-expanded={showBodyTypes}
+                    >
+                      {bodyType || "All body types"}
+                      <ChevronDown className={`w-4 h-4 transition-transform ${showBodyTypes ? "rotate-180" : ""}`} />
+                    </button>
 
-                      {showEngineCapacitySlider && (
-                        <div className="absolute z-30 mt-1 w-full md:w-[320px] bg-white dark:bg-[#1F2B20] border border-[#9FA791] dark:border-[#4A4D45] rounded-lg shadow-xl p-5 top-full right-0 md:left-0 md:right-auto">
-                          <div className="mb-4 text-center">
-                            <span className="font-bold text-xl text-[#3E5641] dark:text-white">
-                              {currentSliderEngineValues[0].toFixed(1)}L
-                            </span>
-                            <span className="text-xl text-[#6F7F69] dark:text-gray-400"> - </span>
-                            <span className="font-bold text-xl text-[#3E5641] dark:text-white">
-                              {currentSliderEngineValues[1].toFixed(1)}L
-                            </span>
-                          </div>
-
-                          <SliderPrimitive.Root
-                            value={currentSliderEngineValues}
-                            onValueChange={handleSliderValueChange}
-                            min={1.0}
-                            max={8.0}
-                            step={0.1}
-                            minStepsBetweenThumbs={0}
-                            className="relative flex w-full touch-none select-none items-center h-10"
+                    {showBodyTypes && (
+                      <div
+                        className="absolute z-20 w-full bg-white dark:bg-[#1F2B20] border border-[#9FA791] dark:border-[#4A4D45] rounded-md shadow-lg mt-1 max-h-60 overflow-y-auto"
+                        role="listbox"
+                      >
+                        {bodyTypes.map((type, index) => (
+                          <div
+                            key={index}
+                            className="px-4 py-3 hover:bg-[#FFF8E0] dark:hover:bg-[#2A352A] cursor-pointer flex items-center text-[#3E5641] dark:text-white"
+                            onClick={() => {
+                              setBodyType(type.name === "All body types" ? "" : type.name)
+                              setShowBodyTypes(false)
+                            }}
+                            role="option"
+                            aria-selected={bodyType === type.name}
+                            onMouseDown={(e) => e.preventDefault()}
                           >
-                            <SliderPrimitive.Track className="relative h-2 w-full grow overflow-hidden rounded-full bg-[#9FA791]/40 dark:bg-[#4A4D45]/60">
-                              <SliderPrimitive.Range className="absolute h-full bg-[#FF6700] dark:bg-[#FF7D33]" />
-                            </SliderPrimitive.Track>
-                            {[0, 1].map((thumbIndex) => (
-                              <SliderPrimitive.Thumb
-                                key={thumbIndex}
-                                aria-label={thumbIndex === 0 ? "Minimum engine capacity" : "Maximum engine capacity"}
-                                className="block h-6 w-6 rounded-full border-2 border-[#FF6700] dark:border-[#FF7D33] bg-white ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6700]/50 dark:focus-visible:ring-[#FF7D33]/50 focus-visible:ring-offset-2 cursor-grab active:cursor-grabbing"
-                              />
-                            ))}
-                          </SliderPrimitive.Root>
-
-                          <div className="mt-5 flex gap-4">
-                            <input
-                              id="min-engine-input"
-                              type="number"
-                              value={currentSliderEngineValues[0].toFixed(1)}
-                              onChange={handleMinEngineInputChange}
-                              min="1.0"
-                              max="8.0"
-                              step="0.1"
-                              className="w-full px-3 py-2 rounded-md border border-[#9FA791] dark:border-[#4A4D45] bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white text-sm focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33]"
-                              placeholder="Min L"
-                            />
-                            <input
-                              id="max-engine-input"
-                              type="number"
-                              value={currentSliderEngineValues[1].toFixed(1)}
-                              onChange={handleMaxEngineInputChange}
-                              min="1.0"
-                              max="8.0"
-                              step="0.1"
-                              className="w-full px-3 py-2 rounded-md border border-[#9FA791] dark:border-[#4A4D45] bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white text-sm focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33]"
-                              placeholder="Max L"
-                            />
+                            <type.icon className="w-4 h-4 mr-2 opacity-70" />
+                            {type.name}
                           </div>
-
-                          <button
-                            onClick={handleApplyEngineCapacity}
-                            className="mt-5 w-full bg-[#FF6700] text-white dark:bg-[#FF7D33] px-4 py-2.5 rounded-lg hover:bg-[#FF6700]/90 dark:hover:bg-[#FF7D33]/90 transition-colors font-medium text-sm"
-                          >
-                            Apply Range
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                    {/* Transmission */}
-                    <div className="flex flex-col">
-                      <label
-                        htmlFor="transmission-select"
-                        className="mb-1 font-medium text-sm text-[#6F7F69] dark:text-gray-300"
-                      >
-                        Transmission
-                      </label>
-                      <select
-                        ref={transmissionSelectRef}
-                        id="transmission-select"
-                        className="px-4 py-3 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white"
-                      >
-                        <option value="All">All</option>
-                        <option value="Manual">Manual</option>
-                        <option value="Automatic">Automatic</option>
-                      </select>
-                    </div>
-                    {/* Condition */}
-                    <div className="flex flex-col">
-                      <label
-                        htmlFor="condition-select"
-                        className="mb-1 font-medium text-sm text-[#6F7F69] dark:text-gray-300"
-                      >
-                        Condition
-                      </label>
-                      <select
-                        ref={conditionSelectRef}
-                        id="condition-select"
-                        className="px-4 py-3 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white"
-                      >
-                        <option value="All">All</option>
-                        <option value="New">New</option>
-                        <option value="Used">Used</option>
-                      </select>
-                    </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
-              )}
 
-              {/* Action Buttons */}
-              <div className="flex flex-col sm:flex-row gap-4 mt-6">
-                <button
-                  onClick={() => setShowMoreOptions(!showMoreOptions)}
-                  className="border border-[#FF6700] text-[#FF6700] dark:border-[#FF7D33] dark:text-[#FF7D33] px-4 py-3 rounded-lg w-full sm:w-auto sm:flex-1 hover:bg-[#FFF8E0] dark:hover:bg-[#2A352A] transition-colors font-medium"
-                  aria-controls="more-options-section"
-                  aria-expanded={showMoreOptions}
-                >
-                  {showMoreOptions ? "Fewer Options" : "More Options"}
-                </button>
-                <button
-                  onClick={handleSearch}
-                  className="bg-[#FF6700] text-white dark:bg-[#FF7D33] px-4 py-3 rounded-lg w-full sm:w-auto sm:flex-[2] hover:bg-[#FF6700]/90 dark:hover:bg-[#FF7D33]/90 transition-colors flex items-center justify-center font-medium"
-                >
-                  <Search className="w-5 h-5 mr-2" />
-                  Search Cars
-                </button>
+                {/* More Options Section (advanced filters) */}
+                {showMoreOptions && (
+                  <div
+                    id="more-options-section"
+                    className="border-t border-[#9FA791]/20 dark:border-[#4A4D45]/20 pt-6 order-3"
+                  >
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                      {/* Min/Max Year */}
+                      <div className="flex flex-col">
+                        <label
+                          htmlFor="min-year-select"
+                          className="mb-1 font-medium text-sm text-[#6F7F69] dark:text-gray-300"
+                        >
+                          Min Year
+                        </label>
+                        <select
+                          ref={minYearSelectRef}
+                          id="min-year-select"
+                          className="px-4 py-3 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white"
+                        >
+                          <option value="">Any</option>
+                          {Array.from({ length: 30 }, (_, i) => new Date().getFullYear() - i).map((year) => (
+                            <option key={year} value={year}>
+                              {year}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="flex flex-col">
+                        <label
+                          htmlFor="max-year-select"
+                          className="mb-1 font-medium text-sm text-[#6F7F69] dark:text-gray-300"
+                        >
+                          Max Year
+                        </label>
+                        <select
+                          ref={maxYearSelectRef}
+                          id="max-year-select"
+                          className="px-4 py-3 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white"
+                        >
+                          <option value="">Any</option>
+                          {Array.from({ length: 30 }, (_, i) => new Date().getFullYear() - i).map((year) => (
+                            <option key={year} value={year}>
+                              {year}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      {/* Min/Max Mileage */}
+                      <div className="flex flex-col">
+                        <label
+                          htmlFor="min-mileage-input"
+                          className="mb-1 font-medium text-sm text-[#6F7F69] dark:text-gray-300"
+                        >
+                          Min Mileage
+                        </label>
+                        <input
+                          ref={minMileageInputRef}
+                          id="min-mileage-input"
+                          type="number"
+                          placeholder="e.g., 10000"
+                          min="0"
+                          step="1000"
+                          className="px-4 py-3 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white placeholder-[#6F7F69] dark:placeholder-gray-400"
+                        />
+                      </div>
+                      <div className="flex flex-col">
+                        <label
+                          htmlFor="max-mileage-input"
+                          className="mb-1 font-medium text-sm text-[#6F7F69] dark:text-gray-300"
+                        >
+                          Max Mileage
+                        </label>
+                        <input
+                          ref={maxMileageInputRef}
+                          id="max-mileage-input"
+                          type="number"
+                          placeholder="e.g., 100000"
+                          min="0"
+                          step="1000"
+                          className="px-4 py-3 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white placeholder-[#6F7F69] dark:placeholder-gray-400"
+                        />
+                      </div>
+                      {/* Fuel Type */}
+                      <div className="flex flex-col">
+                        <label
+                          htmlFor="fuel-type-select"
+                          className="mb-1 font-medium text-sm text-[#6F7F69] dark:text-gray-300"
+                        >
+                          Fuel Type
+                        </label>
+                        <select
+                          ref={fuelTypeSelectRef}
+                          id="fuel-type-select"
+                          className="px-4 py-3 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white"
+                        >
+                          <option value="All">All</option>
+                          <option value="Petrol">Petrol</option>
+                          <option value="Diesel">Diesel</option>
+                          <option value="Electric">Electric</option>
+                          <option value="Hybrid">Hybrid</option>
+                        </select>
+                      </div>
+                      {/* Engine Capacity Slider */}
+                      <div className="relative flex flex-col" ref={engineCapacityRef}>
+                        <label className="mb-1 font-medium text-sm text-[#6F7F69] dark:text-gray-300">
+                          Engine Capacity
+                        </label>
+                        <button
+                          onClick={() => {
+                            setCurrentSliderEngineValues(engineCapacityRange)
+                            setShowEngineCapacitySlider(!showEngineCapacitySlider)
+                          }}
+                          className="w-full px-4 py-3 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] text-left flex justify-between items-center bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white"
+                          aria-haspopup="true"
+                          aria-expanded={showEngineCapacitySlider}
+                        >
+                          {formatEngineCapacityDisplay(engineCapacityRange)}
+                          <ChevronDown
+                            className={`w-4 h-4 transition-transform ${showEngineCapacitySlider ? "rotate-180" : ""}`}
+                          />
+                        </button>
+
+                        {showEngineCapacitySlider && (
+                          <div className="absolute z-30 mt-1 w-full md:w-[320px] bg-white dark:bg-[#1F2B20] border border-[#9FA791] dark:border-[#4A4D45] rounded-lg shadow-xl p-5 top-full right-0 md:left-0 md:right-auto">
+                            <div className="mb-4 text-center">
+                              <span className="font-bold text-xl text-[#3E5641] dark:text-white">
+                                {currentSliderEngineValues[0].toFixed(1)}L
+                              </span>
+                              <span className="text-xl text-[#6F7F69] dark:text-gray-400"> - </span>
+                              <span className="font-bold text-xl text-[#3E5641] dark:text-white">
+                                {currentSliderEngineValues[1].toFixed(1)}L
+                              </span>
+                            </div>
+
+                            <SliderPrimitive.Root
+                              value={currentSliderEngineValues}
+                              onValueChange={handleSliderValueChange}
+                              min={1.0}
+                              max={8.0}
+                              step={0.1}
+                              minStepsBetweenThumbs={0}
+                              className="relative flex w-full touch-none select-none items-center h-10"
+                            >
+                              <SliderPrimitive.Track className="relative h-2 w-full grow overflow-hidden rounded-full bg-[#9FA791]/40 dark:bg-[#4A4D45]/60">
+                                <SliderPrimitive.Range className="absolute h-full bg-[#FF6700] dark:bg-[#FF7D33]" />
+                              </SliderPrimitive.Track>
+                              {[0, 1].map((thumbIndex) => (
+                                <SliderPrimitive.Thumb
+                                  key={thumbIndex}
+                                  aria-label={thumbIndex === 0 ? "Minimum engine capacity" : "Maximum engine capacity"}
+                                  className="block h-6 w-6 rounded-full border-2 border-[#FF6700] dark:border-[#FF7D33] bg-white ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FF6700]/50 dark:focus-visible:ring-[#FF7D33]/50 focus-visible:ring-offset-2 cursor-grab active:cursor-grabbing"
+                                />
+                              ))}
+                            </SliderPrimitive.Root>
+
+                            <div className="mt-5 flex gap-4">
+                              <input
+                                id="min-engine-input"
+                                type="number"
+                                value={currentSliderEngineValues[0].toFixed(1)}
+                                onChange={handleMinEngineInputChange}
+                                min="1.0"
+                                max="8.0"
+                                step="0.1"
+                                className="w-full px-3 py-2 rounded-md border border-[#9FA791] dark:border-[#4A4D45] bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white text-sm focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33]"
+                                placeholder="Min L"
+                              />
+                              <input
+                                id="max-engine-input"
+                                type="number"
+                                value={currentSliderEngineValues[1].toFixed(1)}
+                                onChange={handleMaxEngineInputChange}
+                                min="1.0"
+                                max="8.0"
+                                step="0.1"
+                                className="w-full px-3 py-2 rounded-md border border-[#9FA791] dark:border-[#4A4D45] bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white text-sm focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33]"
+                                placeholder="Max L"
+                              />
+                            </div>
+
+                            <button
+                              onClick={handleApplyEngineCapacity}
+                              className="mt-5 w-full bg-[#FF6700] text-white dark:bg-[#FF7D33] px-4 py-2.5 rounded-lg hover:bg-[#FF6700]/90 dark:hover:bg-[#FF7D33]/90 transition-colors font-medium text-sm"
+                            >
+                              Apply Range
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      {/* Transmission */}
+                      <div className="flex flex-col">
+                        <label
+                          htmlFor="transmission-select"
+                          className="mb-1 font-medium text-sm text-[#6F7F69] dark:text-gray-300"
+                        >
+                          Transmission
+                        </label>
+                        <select
+                          ref={transmissionSelectRef}
+                          id="transmission-select"
+                          className="px-4 py-3 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white"
+                        >
+                          <option value="All">All</option>
+                          <option value="Manual">Manual</option>
+                          <option value="Automatic">Automatic</option>
+                        </select>
+                      </div>
+                      {/* Condition */}
+                      <div className="flex flex-col">
+                        <label
+                          htmlFor="condition-select"
+                          className="mb-1 font-medium text-sm text-[#6F7F69] dark:text-gray-300"
+                        >
+                          Condition
+                        </label>
+                        <select
+                          ref={conditionSelectRef}
+                          id="condition-select"
+                          className="px-4 py-3 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white"
+                        >
+                          <option value="All">All</option>
+                          <option value="New">New</option>
+                          <option value="Used">Used</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
