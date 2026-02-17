@@ -1,7 +1,7 @@
 "use client"
 
 import { useRouter, usePathname } from "next/navigation"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Menu, X, User, Shield } from "lucide-react"
 import { useUser } from "@/components/UserContext"
 import { useMobile } from "@/hooks/use-mobile"
@@ -33,33 +33,47 @@ export function Header({
   transparent = true,
 }: HeaderProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  const [isScrolled, setIsScrolled] = useState(false)
   const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false)
   const router = useRouter()
   const pathname = usePathname()
   const { user: contextUser, authUser, isEmailVerified, logout } = useUser()
   const isMobile = useMobile()
 
+  const lastScrollY = useRef(0)
+  const ticking = useRef(false)
+
   useEffect(() => {
-    if (isMobile) return
+    const scrollThreshold = 50
 
     const handleScroll = () => {
-      const scrollY = window.scrollY
-      const scrollThreshold = 50
+      const currentY = window.scrollY
 
-      if (scrollY > scrollThreshold && !isScrolled) {
-        setIsScrolled(true)
-        setIsHeaderCollapsed(true)
+      if (!ticking.current) {
+        window.requestAnimationFrame(() => {
+          const delta = currentY - lastScrollY.current
+
+          if (delta > 5 && currentY > scrollThreshold) {
+            // scrolling down
+            setIsHeaderCollapsed(true)
+          } else if (delta < -5) {
+            // scrolling up
+            setIsHeaderCollapsed(false)
+          }
+
+          lastScrollY.current = currentY
+          ticking.current = false
+        })
+
+        ticking.current = true
       }
     }
 
     window.addEventListener("scroll", handleScroll, { passive: true })
     return () => window.removeEventListener("scroll", handleScroll)
-  }, [isMobile, isScrolled])
+  }, [])
 
   const handleExpandHeader = () => {
     setIsHeaderCollapsed(false)
-    setIsScrolled(false)
   }
 
   const currentUser = contextUser || propUser
@@ -191,7 +205,11 @@ export function Header({
   if (isMobile) {
     return (
       <>
-        <header className="fixed top-2 left-1/2 transform -translate-x-1/2 z-50">
+        <header
+          className={`fixed top-2 left-1/2 transform -translate-x-1/2 z-50 transition-transform duration-300 ease-in-out ${
+            isHeaderCollapsed ? "-translate-y-full opacity-0 pointer-events-none" : "translate-y-0 opacity-100"
+          }`}
+        >
           <div className="relative w-[320px] h-[50px] bg-black/20 border border-white/50 backdrop-blur-sm rounded-full">
             <div className="relative flex items-center justify-between w-full h-full px-6">
               <div className="flex-1 flex justify-center">
@@ -337,8 +355,8 @@ export function Header({
 
       {/* Updated: Changed animation from -translate-x-full to translate-x-full */}
       <header
-        className={`fixed top-0 left-0 right-0 z-50 p-4 transition-all duration-500 ease-in-out ${
-          isHeaderCollapsed ? "opacity-0 translate-x-full pointer-events-none" : "opacity-100 translate-x-0"
+        className={`fixed top-0 left-0 right-0 z-50 p-4 transition-transform duration-500 ease-in-out ${
+          isHeaderCollapsed ? "-translate-y-full opacity-0 pointer-events-none" : "translate-y-0 opacity-100"
         }`}
       >
         <nav className="mx-auto max-w-4xl w-[95%] flex items-center justify-between">
