@@ -95,7 +95,7 @@ async function fetchUserCount(supabaseUrl: string, supabaseKey: string): Promise
     const timeoutId = setTimeout(() => controller.abort(), 5000);
 
     const response = await fetch(
-      `${supabaseUrl}/rest/v1/profiles?select=count`,
+      `${supabaseUrl}/rest/v1/users?select=count`,  // ✅ Changed from 'profiles' to 'users'
       {
         headers: {
           'apikey': supabaseKey,
@@ -111,6 +111,7 @@ async function fetchUserCount(supabaseUrl: string, supabaseKey: string): Promise
     clearTimeout(timeoutId);
 
     if (!response.ok) {
+      console.error('Failed to fetch user count, status:', response.status);
       throw new Error('Failed to fetch user count');
     }
 
@@ -118,13 +119,15 @@ async function fetchUserCount(supabaseUrl: string, supabaseKey: string): Promise
     if (count) {
       const match = count.match(/\/(\d+)$/);
       if (match) {
+        console.log('✅ User count:', match[1]);
         return parseInt(match[1], 10);
       }
     }
 
+    console.warn('⚠️ No count found in response headers');
     return 0;
   } catch (error) {
-    console.error('Error fetching user count:', error);
+    console.error('❌ Error fetching user count:', error);
     return 0;
   }
 }
