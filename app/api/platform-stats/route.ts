@@ -1,37 +1,23 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/utils/supabase/server';
 import * as cheerio from 'cheerio';
+
+// Use environment variables directly to create Supabase client
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 export async function GET() {
   try {
-    // Initialize Supabase client
-    const supabase = await createClient();
-
-    // Fetch vehicle count from database
-    const { count: vehicleCount, error: vehicleError } = await supabase
-      .from('vehicles')
-      .select('*', { count: 'exact', head: true });
-
-    if (vehicleError) {
-      console.error('Error fetching vehicle count:', vehicleError);
-    }
-
-    // Fetch user count from database
-    const { count: userCount, error: userError } = await supabase
-      .from('profiles')
-      .select('*', { count: 'exact', head: true });
-
-    if (userError) {
-      console.error('Error fetching user count:', userError);
-    }
-
-    // Fetch BackaBuddy campaign data
-    const backaBuddyData = await scrapeBackaBuddy();
+    // Fetch data from Supabase using direct fetch API
+    const [vehicleCount, userCount, backaBuddyData] = await Promise.all([
+      fetchVehicleCount(),
+      fetchUserCount(),
+      scrapeBackaBuddy(),
+    ]);
 
     // Return combined stats
     return NextResponse.json({
-      vehicles: vehicleCount || 0,
-      users: userCount || 0,
+      vehicles: vehicleCount,
+      users: userCount,
       revenue: backaBuddyData.raised,
       revenueGoal: backaBuddyData.goal,
       revenuePercentage: backaBuddyData.percentage,
@@ -53,6 +39,76 @@ export async function GET() {
   }
 }
 
+async function fetchVehicleCount(): Promise<number> {
+  try {
+    const response = await fetch(
+      `${supabaseUrl}/rest/v1/vehicles?select=count`,
+      {
+        headers: {
+          'apikey': supabaseKey,
+          'Authorization': `Bearer ${supabaseKey}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'count=exact',
+        },
+        next: { revalidate: 300 } // Cache for 5 minutes
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch vehicle count');
+    }
+
+    // Get count from response header
+    const count = response.headers.get('content-range');
+    if (count) {
+      const match = count.match(/\/(\d+)$/);
+      if (match) {
+        return parseInt(match[1], 10);
+      }
+    }
+
+    return 0;
+  } catch (error) {
+    console.error('Error fetching vehicle count:', error);
+    return 0;
+  }
+}
+
+async function fetchUserCount(): Promise<number> {
+  try {
+    const response = await fetch(
+      `${supabaseUrl}/rest/v1/profiles?select=count`,
+      {
+        headers: {
+          'apikey': supabaseKey,
+          'Authorization': `Bearer ${supabaseKey}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'count=exact',
+        },
+        next: { revalidate: 300 } // Cache for 5 minutes
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch user count');
+    }
+
+    // Get count from response header
+    const count = response.headers.get('content-range');
+    if (count) {
+      const match = count.match(/\/(\d+)$/);
+      if (match) {
+        return parseInt(match[1], 10);
+      }
+    }
+
+    return 0;
+  } catch (error) {
+    console.error('Error fetching user count:', error);
+    return 0;
+  }
+}
+
 async function scrapeBackaBuddy(): Promise<{
   raised: number;
   goal: number;
@@ -61,13 +117,9 @@ async function scrapeBackaBuddy(): Promise<{
   try {
     const url = 'https://www.backabuddy.co.za/campaign/imoto-gt-a-privacy-first-vehicle-marketplace';
     
-    // Fetch the page with proper headers to avoid blocking
     const response = await fetch(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.5',
-        'Cache-Control': 'no-cache',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
       },
       next: { revalidate: 300 } // Cache for 5 minutes
     });
@@ -88,40 +140,22 @@ async function scrapeBackaBuddy(): Promise<{
     }
 
     // Extract goal amount
-    let goal = 10000; // Default
+    let goal = 10000;
     const goalText = $('.campaign-target').text().trim();
     const goalMatch = goalText.match(/R\s*([0-9,\s]+)/);
     if (goalMatch) {
       goal = parseFloat(goalMatch[1].replace(/[,\s]/g, ''));
     }
 
-    // Extract percentage from progress bar
-    let percentage = 0;
-    const progressBar = $('.progress-bar');
-    const percentageText = progressBar.text().trim();
-    const percentageMatch = percentageText.match(/([0-9.]+)%/);
-    if (percentageMatch) {
-      percentage = parseFloat(percentageMatch[1]);
-    } else {
-      // Calculate if not found
-      percentage = goal > 0 ? Math.round((raised / goal) * 100) : 0;
-    }
+    // Calculate percentage
+    const percentage = goal > 0 ? Math.min(Math.round((raised / goal) * 100), 100) : 0;
 
-    return {
-      raised,
-      goal,
-      percentage: Math.min(percentage, 100), // Cap at 100%
-    };
+    return { raised, goal, percentage };
   } catch (error) {
     console.error('Error scraping BackaBuddy:', error);
-    // Return default values on error
-    return {
-      raised: 0,
-      goal: 10000,
-      percentage: 0,
-    };
+    return { raised: 0, goal: 10000, percentage: 0 };
   }
 }
 
-// Optional: Add caching mechanism
-export const revalidate = 300; // Revalidate every 5 minutes
+// Enable caching
+export const revalidate = 300; // 5 minutes
