@@ -1,5 +1,6 @@
 "use client"
 
+import React from "react"
 import { notFound, useRouter } from "next/navigation"
 import { useEffect, useRef, useState, useMemo } from "react"   // ✅ useMemo added
 import { Header } from "@/components/ui/header"
@@ -7,6 +8,7 @@ import { useUser } from "@/components/UserContext"
 import VehicleDetails from "@/components/vehicle-details"
 import { useVehicleContext, useVehicleList } from "@/components/VehicleProvider"
 import { useNavigationCache } from "@/components/NavigationCacheHandler"
+import { vehicleService } from "@/lib/vehicle-service"
 import { Skeleton } from "@/components/ui/skeleton"
 
 interface VehicleDetailsPageProps {
@@ -19,6 +21,9 @@ interface VehicleDetailsPageProps {
 }
 
 export default function VehicleDetailsPage({ params }: VehicleDetailsPageProps) {
+  // `params` can be a Promise in Client Components; unwrap with React.use() when available
+  const resolvedParams = (React as any).use ? (React as any).use(params) : params
+
   const router = useRouter()
   const { user, toggleSaveVehicle, savedVehicles: savedVehiclesSet } = useUser()
   
@@ -49,7 +54,7 @@ export default function VehicleDetailsPage({ params }: VehicleDetailsPageProps) 
 
     const fetchVehicle = async () => {
       // Try cache first
-      const cached = getCachedVehicle?.(params.id)
+      const cached = getCachedVehicle?.(resolvedParams.id)
       if (cached) {
         console.log(`✅ [VehicleDetailsPage] Using cached vehicle: ${cached.make} ${cached.model}`)
         if (isMounted) {
@@ -62,9 +67,29 @@ export default function VehicleDetailsPage({ params }: VehicleDetailsPageProps) 
 
       // Fetch from API
       try {
-        console.log(`🔍 [VehicleDetailsPage] Fetching vehicle ${params.id} from API...`)
-        const res = await fetch(`/api/vehicles/${params.id}`, { signal: controller.signal })
-        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        console.log(`🔍 [VehicleDetailsPage] Fetching vehicle ${resolvedParams.id} from API...`)
+        const res = await fetch(`/api/vehicles/${resolvedParams.id}`, { signal: controller.signal })
+
+        if (!res.ok) {
+          // Attempt client-side cache-aware fallback for 404s
+          if (res.status === 404) {
+            console.warn(`⚠️ [VehicleDetailsPage] API returned 404, trying client cache fallback for ${resolvedParams.id}`)
+            try {
+              const fallback = await vehicleService.getVehicleById(resolvedParams.id)
+              if (fallback) {
+                if (isMounted) {
+                  setVehicle(fallback)
+                  setLoading(false)
+                  setError(null)
+                }
+                return
+              }
+            } catch (fbErr) {
+              console.error("❌ Fallback vehicleService failed:", fbErr)
+            }
+          }
+          throw new Error(`HTTP ${res.status}`)
+        }
         const data = await res.json()
         
         if (isMounted) {
@@ -74,7 +99,7 @@ export default function VehicleDetailsPage({ params }: VehicleDetailsPageProps) 
           
           // Safe calls – context may not provide these functions
           if (typeof addToCache === 'function') {
-            addToCache(params.id, data, 'vehicleDetails')
+            addToCache(resolvedParams.id, data, 'vehicleDetails')
           }
           if (typeof saveForCurrentRoute === 'function') {
             saveForCurrentRoute(data, 'detail')
@@ -95,13 +120,13 @@ export default function VehicleDetailsPage({ params }: VehicleDetailsPageProps) 
       isMounted = false
       controller.abort()
     }
-  }, [params.id, getCachedVehicle, addToCache, saveForCurrentRoute])
+  }, [resolvedParams.id, getCachedVehicle, addToCache, saveForCurrentRoute])
 
   // ------------------------------------------------------------------
   // 2. Restore page state from navigation cache
   // ------------------------------------------------------------------
   useEffect(() => {
-    console.log(`🔍 [VehicleDetailsPage] Mounted for vehicle ID: ${params.id}`)
+    console.log(`🔍 [VehicleDetailsPage] Mounted for vehicle ID: ${resolvedParams.id}`)
     
     const cachedState = restorePageState?.()
     if (cachedState) {
@@ -112,9 +137,9 @@ export default function VehicleDetailsPage({ params }: VehicleDetailsPageProps) 
     console.log(`📍 [VehicleDetailsPage] Current route key: ${routeKey}`)
     
     return () => {
-      console.log(`👋 [VehicleDetailsPage] Unmounting vehicle: ${params.id}`)
+      console.log(`👋 [VehicleDetailsPage] Unmounting vehicle: ${resolvedParams.id}`)
     }
-  }, [params.id, restorePageState, getCurrentRouteKey])
+  }, [resolvedParams.id, restorePageState, getCurrentRouteKey])
 
   // ------------------------------------------------------------------
   // 3. Save vehicle to caches when loaded
@@ -124,7 +149,7 @@ export default function VehicleDetailsPage({ params }: VehicleDetailsPageProps) 
       console.log(`💾 [VehicleDetailsPage] Saving vehicle to cache: ${vehicle.id}`)
       
       if (typeof addToCache === 'function') {
-        addToCache(params.id, vehicle, 'vehicleDetails')
+        addToCache(resolvedParams.id, vehicle, 'vehicleDetails')
       }
       if (typeof saveForCurrentRoute === 'function') {
         saveForCurrentRoute(vehicle, 'detail')
@@ -137,7 +162,7 @@ export default function VehicleDetailsPage({ params }: VehicleDetailsPageProps) 
         })
       }
     }
-  }, [vehicle, loading, params.id, addToCache, saveForCurrentRoute, savePageState])
+  }, [vehicle, loading, resolvedParams.id, addToCache, saveForCurrentRoute, savePageState])
 
   // ------------------------------------------------------------------
   // 4. Mark initial mount as done
@@ -174,7 +199,7 @@ export default function VehicleDetailsPage({ params }: VehicleDetailsPageProps) 
     data: similarVehiclesData, 
     loading: similarLoading 
   } = useVehicleList(
-    `similar:${params.id}`,
+    `similar:${resolvedParams.id}`,
     fetchSimilarVehicles,
     {
       enabled: !!vehicle,
@@ -189,7 +214,7 @@ export default function VehicleDetailsPage({ params }: VehicleDetailsPageProps) 
     console.log(`⏪ [VehicleDetailsPage] Back button clicked, saving current state`)
     if (vehicle && typeof savePageState === 'function') {
       savePageState({
-        vehicleId: params.id,
+        vehicleId: resolvedParams.id,
         vehicle: vehicle,
         timestamp: Date.now()
       })
@@ -232,7 +257,7 @@ export default function VehicleDetailsPage({ params }: VehicleDetailsPageProps) 
           onGoToSellPage={() => router.push("/upload-vehicle")}
           onSignOut={() => {
             if (typeof savePageState === 'function') {
-              savePageState({ vehicleId: params.id, timestamp: Date.now() })
+              savePageState({ vehicleId: resolvedParams.id, timestamp: Date.now() })
             }
             router.push("/login")
           }}
@@ -301,7 +326,7 @@ export default function VehicleDetailsPage({ params }: VehicleDetailsPageProps) 
     onLoginClick: () => {
       if (typeof savePageState === 'function') {
         savePageState({
-          vehicleId: params.id,
+          vehicleId: resolvedParams.id,
           vehicle: vehicle,
           timestamp: Date.now()
         })
@@ -311,7 +336,7 @@ export default function VehicleDetailsPage({ params }: VehicleDetailsPageProps) 
     onDashboardClick: () => {
       if (typeof savePageState === 'function') {
         savePageState({
-          vehicleId: params.id,
+          vehicleId: resolvedParams.id,
           vehicle: vehicle,
           timestamp: Date.now()
         })
@@ -321,7 +346,7 @@ export default function VehicleDetailsPage({ params }: VehicleDetailsPageProps) 
     onGoHome: () => {
       if (typeof savePageState === 'function') {
         savePageState({
-          vehicleId: params.id,
+          vehicleId: resolvedParams.id,
           vehicle: vehicle,
           timestamp: Date.now()
         })
@@ -331,7 +356,7 @@ export default function VehicleDetailsPage({ params }: VehicleDetailsPageProps) 
     onShowAllCars: () => {
       if (typeof savePageState === 'function') {
         savePageState({
-          vehicleId: params.id,
+          vehicleId: resolvedParams.id,
           vehicle: vehicle,
           timestamp: Date.now()
         })
@@ -341,7 +366,7 @@ export default function VehicleDetailsPage({ params }: VehicleDetailsPageProps) 
     onGoToSellPage: () => {
       if (typeof savePageState === 'function') {
         savePageState({
-          vehicleId: params.id,
+          vehicleId: resolvedParams.id,
           vehicle: vehicle,
           timestamp: Date.now()
         })
@@ -351,7 +376,7 @@ export default function VehicleDetailsPage({ params }: VehicleDetailsPageProps) 
     onSignOut: () => {
       if (typeof savePageState === 'function') {
         savePageState({
-          vehicleId: params.id,
+          vehicleId: resolvedParams.id,
           timestamp: Date.now()
         })
       }
@@ -372,10 +397,10 @@ export default function VehicleDetailsPage({ params }: VehicleDetailsPageProps) 
           onBack={handleBack}
           user={user}
           savedCars={savedCarsArray}        // ✅ now an array, .some works
-          onSaveCar={() => {
+            onSaveCar={() => {
             toggleSaveVehicle(vehicle)
             if (typeof addToCache === 'function') {
-              addToCache(params.id, vehicle, 'vehicleDetails')
+              addToCache(resolvedParams.id, vehicle, 'vehicleDetails')
             }
           }}
           similarVehicles={similarVehiclesData?.vehicles || []}
@@ -383,7 +408,7 @@ export default function VehicleDetailsPage({ params }: VehicleDetailsPageProps) 
           onViewSimilarVehicle={(similarVehicle) => {
             if (typeof savePageState === 'function') {
               savePageState({
-                vehicleId: params.id,
+                vehicleId: resolvedParams.id,
                 vehicle: vehicle,
                 timestamp: Date.now()
               })
