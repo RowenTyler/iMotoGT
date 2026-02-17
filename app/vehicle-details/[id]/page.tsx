@@ -388,7 +388,7 @@ export default function VehicleDetailsPage({ params }: VehicleDetailsPageProps) 
                 timestamp: Date.now()
               })
             }
-            router.push(`/vehicle/${similarVehicle.id}`)
+            router.push(`/vehicle-details/${similarVehicle.id}`)
           }}
         />
       </div>
