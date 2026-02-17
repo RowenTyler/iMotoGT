@@ -1,6 +1,21 @@
 import { NextResponse } from 'next/server';
 import * as cheerio from 'cheerio';
 
+/**
+ * Sticky in-memory cache for last successful stats. This helps serving
+ * sensible values when the external data source or Supabase is temporarily
+ * unavailable on the hosted platform (Vercel). Module-scoped state persists
+ * while the function runs on the same warm instance.
+ */
+let lastSuccessfulStats: {
+  vehicles: number;
+  users: number;
+  revenue: number;
+  revenueGoal: number;
+  revenuePercentage: number;
+  lastUpdated: string;
+} | null = null;
+
 export async function GET() {
   try {
     // Validate environment variables
@@ -26,25 +41,36 @@ export async function GET() {
       scrapeBackaBuddy(),
     ]);
 
-    return NextResponse.json({
+    const result = {
       vehicles: vehicleCount,
       users: userCount,
       revenue: backaBuddyData.raised,
       revenueGoal: backaBuddyData.goal,
       revenuePercentage: backaBuddyData.percentage,
       lastUpdated: new Date().toISOString(),
-    });
+    }
+
+    // Update sticky cache on successful fetch
+    lastSuccessfulStats = result
+
+    return NextResponse.json(result)
   } catch (error) {
     console.error('Error in platform-stats API:', error);
+    // If we have previously fetched successful stats, return them instead
+    if (lastSuccessfulStats) {
+      console.warn('⚠️ Returning last successful platform stats from sticky cache')
+      return NextResponse.json(lastSuccessfulStats)
+    }
+
     return NextResponse.json(
-      { 
+      {
         vehicles: 0,
         users: 0,
         revenue: 0,
         revenueGoal: 10000,
         revenuePercentage: 0,
       },
-      { status: 200 } // Return 200 instead of 500 to not break the build
+      { status: 200 }
     );
   }
 }

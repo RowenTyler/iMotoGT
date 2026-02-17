@@ -19,6 +19,7 @@ export default function PlatformStats() {
     revenuePercentage: 0,
   });
   const [isLoading, setIsLoading] = useState(true);
+  const [isStale, setIsStale] = useState(false);
 
   useEffect(() => {
     fetchStats();
@@ -29,6 +30,24 @@ export default function PlatformStats() {
       setIsLoading(true);
       const response = await fetch('/api/platform-stats');
       const data = await response.json();
+      
+      // If API returned an obviously empty payload (common when env not set),
+      // attempt to use locally cached stats as a fallback to avoid showing zeros.
+      const isEmptyPayload = !data || ((data.vehicles === 0) && (data.users === 0) && (data.revenue === 0));
+      if (isEmptyPayload) {
+        const cached = localStorage.getItem('imoto_platform_stats_cache')
+        if (cached) {
+          try {
+            const parsed = JSON.parse(cached)
+            setStats(parsed)
+            setIsStale(true)
+            setIsLoading(false)
+            return
+          } catch (err) {
+            console.warn('Failed to parse cached platform stats:', err)
+          }
+        }
+      }
       
       // Animate counters
       animateValue(0, data.vehicles, 2000, (val) => 
@@ -46,6 +65,21 @@ export default function PlatformStats() {
         revenueGoal: data.revenueGoal,
         revenuePercentage: data.revenuePercentage,
       }));
+
+      // Store successful stats locally for future fallback
+      try {
+        localStorage.setItem('imoto_platform_stats_cache', JSON.stringify({
+          vehicles: Math.round(data.vehicles || 0),
+          users: Math.round(data.users || 0),
+          revenue: Math.round(data.revenue || 0),
+          revenueGoal: data.revenueGoal || 10000,
+          revenuePercentage: data.revenuePercentage || 0,
+          lastUpdated: data.lastUpdated || new Date().toISOString(),
+        }))
+        setIsStale(false)
+      } catch (err) {
+        console.warn('Failed to persist platform stats to localStorage:', err)
+      }
       
       setIsLoading(false);
     } catch (error) {
@@ -113,6 +147,9 @@ export default function PlatformStats() {
                   </>
                 )}
               </div>
+              {isStale && (
+                <div className="text-xs text-white/70 mt-2">Showing cached data (may be stale)</div>
+              )}
               <div className="text-lg text-white/80 font-medium">
                 Vehicles Listed
               </div>
@@ -135,6 +172,9 @@ export default function PlatformStats() {
                   </>
                 )}
               </div>
+                {isStale && (
+                  <div className="text-xs text-[#6F7F69] mt-2">Showing cached data (may be stale)</div>
+                )}
               <div className="text-lg text-[#6F7F69] dark:text-white/80 font-medium">
                 Active Users
               </div>
@@ -154,6 +194,9 @@ export default function PlatformStats() {
                   `R ${stats.revenue.toLocaleString()}`
                 )}
               </div>
+              {isStale && (
+                <div className="text-xs text-white/80 mt-2">Showing cached data (may be stale)</div>
+              )}
               <div className="text-base text-white/90 font-medium mb-6">
                 Raised
               </div>
