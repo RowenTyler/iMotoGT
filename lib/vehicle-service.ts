@@ -41,15 +41,16 @@ export class VehicleError extends Error {
  * Strips Base64 images from the dataset before caching to keep size < 100KB.
  */
 const pruneForCache = (vehicles: Vehicle[]): Vehicle[] => {
-  return vehicles.map(v => ({
+  return vehicles.map((v) => ({
     ...v,
-    // Keep only the first image and ensure it's not a massive Base64 string
-    // If it's Base64 (>1000 chars), we replace it with a placeholder for the list view
-    images: v.images?.slice(0, 1).map(img => 
-      img.length > 1000 ? "/images/placeholder-car.jpg" : img
-    ) || []
-  }));
-};
+    // Keep only the first image to reduce cache size but preserve the original
+    // image data (URL or data URI). Avoid replacing with hardcoded placeholder
+    // paths which break rendering after reload. If storage becomes a problem
+    // we can fallback to compressing or truncating but for now keep the real
+    // image so the UI can show original images after reloading.
+    images: v.images?.slice(0, 1) || [],
+  }))
+}
 
 /**
  * Wrapped getVehicles to handle pruning and cache safety
