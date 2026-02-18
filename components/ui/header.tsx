@@ -214,7 +214,7 @@ export function Header({
             <div className="relative flex items-center justify-between w-full h-full px-6">
               <div className="flex-1 flex justify-center">
                 <Image
-                  src="\imoto-icon-new.png"
+                  src="/imoto-new-header.png"
                   alt="MOTO GT Logo"
                   width={200}
                   height={60}
@@ -226,8 +226,14 @@ export function Header({
               </div>
 
               <div className="flex items-center space-x-2">
-                <button onClick={() => setIsMobileMenuOpen(true)} className="text-black hover:text-gray-700 p-1">
-                  <Menu size={20} />
+                <button onClick={() => setIsMobileMenuOpen(true)} className="p-1">
+                  <Image
+                    src="/imoto-icon.png"
+                    alt="Menu"
+                    width={20}
+                    height={20}
+                    className="object-contain"
+                  />
                 </button>
               </div>
             </div>
@@ -252,7 +258,7 @@ export function Header({
               <div className="flex flex-col h-full">
                 <div className="flex justify-between items-center p-6 border-b border-white/10">
                   <Image
-                    src="\imoto-icon-new.png"
+                    src="/imoto-new-header.png"
                     alt="MOTO GT Logo"
                     width={160}
                     height={48}
@@ -386,7 +392,7 @@ export function Header({
           <div className="flex items-center justify-center flex-grow">
             <div className="flex items-center cursor-pointer" onClick={() => handleNavigation("home")}>
               <Image
-                src="/imoto-icon-new.png"
+                src="/imoto-new-header.png"
                 alt="MOTO GT Logo"
                 width={280}
                 height={84}
