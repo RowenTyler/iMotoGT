@@ -222,6 +222,26 @@ export function Header({
           />
         </header>
 
+        <div
+          className={`fixed top-4 right-4 z-50 cursor-pointer transition-all duration-500 ease-in-out ${
+            isHeaderCollapsed
+              ? "opacity-100 scale-100 translate-x-0"
+              : "opacity-0 scale-75 translate-x-full pointer-events-none"
+          }`}
+          onClick={() => setIsMobileMenuOpen(true)}
+        >
+          <div>
+            <Image
+              src="/imoto-icon.png"
+              alt="IMOTO GT Logo"
+              width={120}
+              height={36}
+              className="object-contain"
+              priority
+            />
+          </div>
+        </div>
+
         {isMobileMenuOpen && (
           <div className="fixed inset-0 z-[100]">
             <div className="absolute inset-0 -z-10">
