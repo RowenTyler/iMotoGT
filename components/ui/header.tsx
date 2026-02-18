@@ -210,18 +210,16 @@ export function Header({
             isHeaderCollapsed ? "-translate-y-full opacity-0 pointer-events-none" : "translate-y-0 opacity-100"
           }`}
         >
-          <div className="relative flex items-center justify-center w-full h-full px-6">
-            <Image
-              src="/imoto-new-header.png"
-              alt="MOTO GT Logo"
-              width={200}
-              height={60}
-              className="object-contain cursor-pointer"
-              style={{ filter: "none" }}
-              priority
-              onClick={() => handleNavigation("home")}
-            />
-          </div>
+          <Image
+            src="/imoto-new-header.png"
+            alt="MOTO GT Logo"
+            width={200}
+            height={60}
+            className="object-contain cursor-pointer"
+            style={{ filter: "none" }}
+            priority
+            onClick={() => handleNavigation("home")}
+          />
         </header>
 
         {isMobileMenuOpen && (
@@ -335,8 +333,8 @@ export function Header({
           <Image
             src="/imoto-icon.png"
             alt="IMOTO GT Logo"
-            width={120}
-            height={36}
+            width={150}
+            height={45}
             className="object-contain"
             priority
           />
