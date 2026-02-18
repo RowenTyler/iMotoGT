@@ -210,33 +210,17 @@ export function Header({
             isHeaderCollapsed ? "-translate-y-full opacity-0 pointer-events-none" : "translate-y-0 opacity-100"
           }`}
         >
-          <div className="relative w-[320px] h-[50px] bg-black/20 border border-white/50 backdrop-blur-sm rounded-full">
-            <div className="relative flex items-center justify-between w-full h-full px-6">
-              <div className="flex-1 flex justify-center">
-                <Image
-                  src="/imoto-new-header.png"
-                  alt="MOTO GT Logo"
-                  width={200}
-                  height={60}
-                  className="object-contain cursor-pointer"
-                  style={{ filter: "none" }}
-                  priority
-                  onClick={() => handleNavigation("home")}
-                />
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <button onClick={() => setIsMobileMenuOpen(true)} className="p-1">
-                  <Image
-                    src="/imoto-icon.png"
-                    alt="Menu"
-                    width={20}
-                    height={20}
-                    className="object-contain"
-                  />
-                </button>
-              </div>
-            </div>
+          <div className="relative flex items-center justify-center w-full h-full px-6">
+            <Image
+              src="/imoto-new-header.png"
+              alt="MOTO GT Logo"
+              width={200}
+              height={60}
+              className="object-contain cursor-pointer"
+              style={{ filter: "none" }}
+              priority
+              onClick={() => handleNavigation("home")}
+            />
           </div>
         </header>
 
@@ -345,14 +329,14 @@ export function Header({
             ? "opacity-100 scale-100 translate-x-0"
             : "opacity-0 scale-75 translate-x-full pointer-events-none"
         }`}
-        onClick={handleExpandHeader}
+        onClick={isMobile ? () => setIsMobileMenuOpen(true) : handleExpandHeader}
       >
         <div>
           <Image
             src="/imoto-icon.png"
             alt="IMOTO GT Logo"
-            width={100}
-            height={30}
+            width={120}
+            height={36}
             className="object-contain"
             priority
           />
