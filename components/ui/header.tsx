@@ -333,8 +333,8 @@ export function Header({
           <Image
             src="/imoto-icon.png"
             alt="IMOTO GT Logo"
-            width={150}
-            height={45}
+            width={200}
+            height={60}
             className="object-contain"
             priority
           />
