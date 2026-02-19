@@ -260,7 +260,7 @@ export function Header({
               <div className="flex flex-col h-full">
                 <div className="flex justify-between items-center p-6 border-b border-white/10">
                   <Image
-                    src="/imoto-new-header.png"
+                    src="/imoto-icon-new.png"
                     alt="MOTO GT Logo"
                     width={160}
                     height={48}
@@ -394,7 +394,7 @@ export function Header({
           <div className="flex items-center justify-center flex-grow">
             <div className="flex items-center cursor-pointer" onClick={() => handleNavigation("home")}>
               <Image
-                src="/imoto-new-header.png"
+                src="/imoto-icon-new.png"
                 alt="MOTO GT Logo"
                 width={280}
                 height={84}
