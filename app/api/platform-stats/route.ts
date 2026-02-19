@@ -34,7 +34,7 @@ export async function GET() {
         .select('*', { count: 'exact', head: true }),
 
       supabase
-        .from('profiles')           // ← your users/profiles table name
+        .from('users')           // ← your users/profiles table name
         .select('*', { count: 'exact', head: true }),
     ]);
 
