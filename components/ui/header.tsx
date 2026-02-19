@@ -211,7 +211,7 @@ export function Header({
           }`}
         >
           <Image
-            src="/imoto-new-header.png"
+            src="/imoto-icon-new.png"
             alt="MOTO GT Logo"
             width={200}
             height={60}
