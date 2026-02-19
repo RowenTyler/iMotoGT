@@ -1,63 +1,70 @@
-import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
 
-// ─── Environment variable guard ───────────────────────────────────────────────
-// Fail fast with a clear error if env vars are missing, rather than silently
-// returning zeros. Check Vercel → Settings → Environment Variables if this fires.
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-// Cache the response for 5 minutes at the edge (Vercel CDN)
 export const revalidate = 300;
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
-  // ── Guard: missing env vars ──────────────────────────────────────────────
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey =
+    process.env.SUPABASE_SERVICE_ROLE_KEY ??
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
   if (!supabaseUrl || !supabaseKey) {
+    const missing = [
+      !supabaseUrl && 'NEXT_PUBLIC_SUPABASE_URL',
+      !supabaseKey && 'SUPABASE_SERVICE_ROLE_KEY (or NEXT_PUBLIC_SUPABASE_ANON_KEY)',
+    ].filter(Boolean);
+
     console.error(
-      '[platform-stats] Missing Supabase environment variables.\n' +
-      'Required: NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (or NEXT_PUBLIC_SUPABASE_ANON_KEY).\n' +
-      'Check your Vercel project → Settings → Environment Variables.'
+      `[platform-stats] ❌ Missing env vars: ${missing.join(', ')}\n` +
+      'Go to Vercel → Project → Settings → Environment Variables and add them for Production.'
     );
+
     return NextResponse.json(
-      { error: 'Server configuration error' },
+      { error: 'Server misconfiguration', detail: `Missing: ${missing.join(', ')}` },
       { status: 500 }
     );
   }
 
-  const supabase = createClient(supabaseUrl, supabaseKey);
+  let supabase;
+  try {
+    supabase = createClient(supabaseUrl, supabaseKey, {
+      auth: { persistSession: false },
+    });
+  } catch (err) {
+    console.error('[platform-stats] ❌ Failed to create Supabase client:', err);
+    return NextResponse.json({ error: 'Failed to initialize database client' }, { status: 500 });
+  }
 
   try {
-    // Run all three queries in parallel for speed
     const [vehiclesResult, usersResult] = await Promise.all([
       supabase
-        .from('vehicles')           // ← your vehicles table name
+        .from('vehicles')
         .select('*', { count: 'exact', head: true }),
 
       supabase
-        .from('users')           // ← your users/profiles table name
+        .from('users')   // ✅ correct table name
         .select('*', { count: 'exact', head: true }),
     ]);
 
-    // ── Error handling per query ─────────────────────────────────────────
     if (vehiclesResult.error) {
-      console.error('[platform-stats] vehicles query error:', vehiclesResult.error);
+      console.error('[platform-stats] vehicles query error:', JSON.stringify(vehiclesResult.error));
     }
     if (usersResult.error) {
-      console.error('[platform-stats] users query error:', usersResult.error);
+      console.error('[platform-stats] users query error:', JSON.stringify(usersResult.error));
     }
 
     const vehicles = vehiclesResult.count ?? 0;
     const users = usersResult.count ?? 0;
 
-    // ── Crowdfunding ─────────────────────────────────────────────────────
-    // Currently hardcoded. To make this dynamic, either:
-    // (a) Store it in a Supabase table (e.g. `crowdfunding_campaigns`)
-    // (b) Fetch from BackaBuddy if they have an API
     const revenue = 0;
     const revenueGoal = 10000;
     const revenuePercentage = revenueGoal > 0
-      ? Math.round((revenue / revenueGoal) * 100)
+      ? parseFloat(((revenue / revenueGoal) * 100).toFixed(1))
       : 0;
+
+    console.log(`[platform-stats] ✅ vehicles=${vehicles}, users=${users}`);
 
     return NextResponse.json(
       {
@@ -71,15 +78,14 @@ export async function GET() {
       {
         status: 200,
         headers: {
-          // Allow Vercel edge to cache this response for 5 minutes
           'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
         },
       }
     );
-  } catch (error) {
-    console.error('[platform-stats] Unexpected error:', error);
+  } catch (err) {
+    console.error('[platform-stats] ❌ Unexpected error during query:', err);
     return NextResponse.json(
-      { error: 'Failed to fetch platform stats' },
+      { error: 'Database query failed', detail: String(err) },
       { status: 500 }
     );
   }
