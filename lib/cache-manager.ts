@@ -56,66 +56,18 @@ export class CacheManager {
         return false
       }
 
-      // Try writing; if quota exceeded, attempt to free space and retry
-      const isQuotaError = (err: any) => {
-        if (!err) return false
-        const name = err.name || ''
-        const msg = err.message || ''
-        return (
-          name === 'QuotaExceededError' ||
-          name === 'NS_ERROR_DOM_QUOTA_REACHED' ||
-          msg.toLowerCase().includes('quota') ||
-          (err.code && (err.code === 22 || err.code === 1014))
-        )
+      localStorage.setItem(key, serialized)
+
+      if (options.setTimestamp !== false) {
+        localStorage.setItem(`${key}_timestamp`, timestamp.toString())
       }
 
-      try {
-        localStorage.setItem(key, serialized)
-      } catch (err: any) {
-        console.error(`[Cache] Initial set failed for ${key}:`, err)
-        if (isQuotaError(err)) {
-          // Try progressively clearing oldest entries and retry
-          for (let attempt = 1; attempt <= 3; attempt++) {
-            try {
-              this.clearOldest(attempt * 5)
-              localStorage.setItem(key, serialized)
-              console.log(`[Cache] Set ${key} after clearing oldest (attempt ${attempt})`)
-              // write timestamp below
-              break
-            } catch (retryErr: any) {
-              console.warn(`[Cache] Retry ${attempt} failed for ${key}:`, retryErr)
-              if (attempt === 3) {
-                console.error(`[Cache] Failed to set ${key} after retries`) 
-                return false
-              }
-            }
-          }
-        } else {
-          console.error('[Cache] Set error (non-quota):', err)
-          return false
-        }
-      }
-
-      // Safe timestamp write
-      try {
-        if (options.setTimestamp !== false) {
-          localStorage.setItem(`${key}_timestamp`, timestamp.toString())
-        }
-      } catch (tsErr) {
-        console.warn(`[Cache] Failed to write timestamp for ${key}:`, tsErr)
-      }
-
-      try {
-        console.log(`[Cache] Set ${key} (${(serialized.length / 1024).toFixed(2)}KB)`)
-      } catch {
-        /* ignore logging errors */
-      }
-
+      console.log(`[Cache] Set ${key} (${(serialized.length / 1024).toFixed(2)}KB)`)
       return true
     } catch (error) {
       console.error('[Cache] Set error:', error)
-      // Try to clear some space as a last resort
-      try { this.clearOldest() } catch {}
+      // Try to clear some space
+      this.clearOldest()
       return false
     }
   }

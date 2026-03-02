@@ -1,7 +1,7 @@
 "use client"
 
 import { useRouter, usePathname } from "next/navigation"
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect } from "react"
 import { Menu, X, User, Shield } from "lucide-react"
 import { useUser } from "@/components/UserContext"
 import { useMobile } from "@/hooks/use-mobile"
@@ -33,47 +33,33 @@ export function Header({
   transparent = true,
 }: HeaderProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [isScrolled, setIsScrolled] = useState(false)
   const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false)
   const router = useRouter()
   const pathname = usePathname()
   const { user: contextUser, authUser, isEmailVerified, logout } = useUser()
   const isMobile = useMobile()
 
-  const lastScrollY = useRef(0)
-  const ticking = useRef(false)
-
   useEffect(() => {
-    const scrollThreshold = 50
+    if (isMobile) return
 
     const handleScroll = () => {
-      const currentY = window.scrollY
+      const scrollY = window.scrollY
+      const scrollThreshold = 50
 
-      if (!ticking.current) {
-        window.requestAnimationFrame(() => {
-          const delta = currentY - lastScrollY.current
-
-          if (delta > 5 && currentY > scrollThreshold) {
-            // scrolling down
-            setIsHeaderCollapsed(true)
-          } else if (delta < -5) {
-            // scrolling up
-            setIsHeaderCollapsed(false)
-          }
-
-          lastScrollY.current = currentY
-          ticking.current = false
-        })
-
-        ticking.current = true
+      if (scrollY > scrollThreshold && !isScrolled) {
+        setIsScrolled(true)
+        setIsHeaderCollapsed(true)
       }
     }
 
     window.addEventListener("scroll", handleScroll, { passive: true })
     return () => window.removeEventListener("scroll", handleScroll)
-  }, [])
+  }, [isMobile, isScrolled])
 
   const handleExpandHeader = () => {
     setIsHeaderCollapsed(false)
+    setIsScrolled(false)
   }
 
   const currentUser = contextUser || propUser
@@ -205,42 +191,30 @@ export function Header({
   if (isMobile) {
     return (
       <>
-        <header
-          className={`fixed top-2 left-1/2 transform -translate-x-1/2 z-50 transition-transform duration-300 ease-in-out ${
-            isHeaderCollapsed ? "-translate-y-full opacity-0 pointer-events-none" : "translate-y-0 opacity-100"
-          }`}
-        >
-          <Image
-            src="/imoto-icon-new.png"
-            alt="MOTO GT Logo"
-            width={200}
-            height={60}
-            className="object-contain cursor-pointer"
-            style={{ filter: "none" }}
-            priority
-            onClick={() => handleNavigation("home")}
-          />
-        </header>
+        <header className="fixed top-2 left-1/2 transform -translate-x-1/2 z-50">
+          <div className="relative w-[320px] h-[50px] bg-black/20 border border-white/50 backdrop-blur-sm rounded-full">
+            <div className="relative flex items-center justify-between w-full h-full px-6">
+              <div className="flex-1 flex justify-center">
+                <Image
+                  src="\imoto-icon-new.png"
+                  alt="MOTO GT Logo"
+                  width={200}
+                  height={60}
+                  className="object-contain cursor-pointer"
+                  style={{ filter: "none" }}
+                  priority
+                  onClick={() => handleNavigation("home")}
+                />
+              </div>
 
-        <div
-          className={`fixed top-4 right-4 z-50 cursor-pointer transition-all duration-500 ease-in-out ${
-            isHeaderCollapsed
-              ? "opacity-100 scale-100 translate-x-0"
-              : "opacity-0 scale-75 translate-x-full pointer-events-none"
-          }`}
-          onClick={() => setIsMobileMenuOpen(true)}
-        >
-          <div>
-            <Image
-              src="/imoto-icon.png"
-              alt="IMOTO GT Logo"
-              width={120}
-              height={36}
-              className="object-contain"
-              priority
-            />
+              <div className="flex items-center space-x-2">
+                <button onClick={() => setIsMobileMenuOpen(true)} className="text-black hover:text-gray-700 p-1">
+                  <Menu size={20} />
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
+        </header>
 
         {isMobileMenuOpen && (
           <div className="fixed inset-0 z-[100]">
@@ -260,7 +234,7 @@ export function Header({
               <div className="flex flex-col h-full">
                 <div className="flex justify-between items-center p-6 border-b border-white/10">
                   <Image
-                    src="/imoto-icon-new.png"
+                    src="\imoto-icon-new.png"
                     alt="MOTO GT Logo"
                     width={160}
                     height={48}
@@ -347,14 +321,14 @@ export function Header({
             ? "opacity-100 scale-100 translate-x-0"
             : "opacity-0 scale-75 translate-x-full pointer-events-none"
         }`}
-        onClick={isMobile ? () => setIsMobileMenuOpen(true) : handleExpandHeader}
+        onClick={handleExpandHeader}
       >
         <div>
           <Image
             src="/imoto-icon.png"
             alt="IMOTO GT Logo"
-            width={200}
-            height={60}
+            width={100}
+            height={30}
             className="object-contain"
             priority
           />
@@ -363,8 +337,8 @@ export function Header({
 
       {/* Updated: Changed animation from -translate-x-full to translate-x-full */}
       <header
-        className={`fixed top-0 left-0 right-0 z-50 p-4 transition-transform duration-500 ease-in-out ${
-          isHeaderCollapsed ? "-translate-y-full opacity-0 pointer-events-none" : "translate-y-0 opacity-100"
+        className={`fixed top-0 left-0 right-0 z-50 p-4 transition-all duration-500 ease-in-out ${
+          isHeaderCollapsed ? "opacity-0 translate-x-full pointer-events-none" : "opacity-100 translate-x-0"
         }`}
       >
         <nav className="mx-auto max-w-4xl w-[95%] flex items-center justify-between">

@@ -24,19 +24,13 @@ export function MyListingCard({ vehicle, onEdit }: MyListingCardProps) {
     <Card className="overflow-hidden flex flex-col h-full bg-white dark:bg-[#2A352A] border-[#9FA791]/20 dark:border-[#4A4D45]/20 rounded-2xl">
       <CardHeader className="p-0">
         <div className="relative aspect-video">
-          {(() => {
-            const src = vehicle.images?.[0] || "/placeholder.svg?width=400&height=300&query=car"
-            const isDataUrl = typeof src === "string" && src.startsWith("data:")
-            return (
-              <Image
-                src={src}
-                alt={`${vehicle.make} ${vehicle.model}`}
-                fill
-                unoptimized={isDataUrl}
-                className="rounded-t-2xl object-cover"
-              />
-            )
-          })()}
+          <Image
+            src={vehicle.images?.[0] || "/placeholder.svg?width=400&height=300&query=car"}
+            alt={`${vehicle.make} ${vehicle.model}`}
+            layout="fill"
+            objectFit="cover"
+            className="rounded-t-2xl"
+          />
         </div>
       </CardHeader>
       <CardContent className="p-4 flex-grow">

@@ -1,6 +1,49 @@
-# Car Marketplace Updates
+# iMoto Car Marketplace Updates
 
 ## Recent Updates
+
+### March 2026
+
+#### GDPR Compliance & Cookie Consent System
+- **Cookie Consent Banner**: Added a fixed bottom banner that displays until the user gives or denies cookie consent
+- **Cookie Preferences Modal**: Granular cookie category toggles allowing users to control which cookie types they accept (Necessary, Analytics, Marketing, Preferences)
+- **GDPR Provider**: React context provider (`GDPRProvider`) wrapping the entire app for global consent state management
+- **Consent Manager**: localStorage-backed consent state persistence with proper defaults (necessary-only until user opts in)
+- **Cookie Configuration**: Structured cookie category definitions with descriptions and type interfaces
+- **Privacy Policy Page**: Full GDPR-compliant privacy policy page at `/privacy` covering data collection, usage, rights, and contact information
+- **Header Integration**: Added Privacy Policy and Cookie Settings links to the mobile menu in the header component
+- **Custom Event Integration**: Cookie preferences modal can be triggered from anywhere via `open-cookie-preferences` custom event
+- **CacheManager classified as necessary**: All existing caching continues working without requiring consent gates
+
+#### Cache & Performance Optimization
+- **Cache Manager** (`lib/cache-manager.ts`): Intelligent caching layer for vehicle data, search results, and user preferences with TTL-based expiration
+- **Navigation Cache Handler** (`components/NavigationCacheHandler.tsx`): Pre-fetches and caches data during navigation for smoother page transitions
+- **Vehicle Provider** (`components/VehicleProvider.tsx`): Centralized vehicle state management with built-in caching, reducing redundant API calls
+- **Optimized Vehicle Operations** (`lib/vehicle-operations-optimized.ts`): Batch operations and optimized queries for vehicle data fetching
+
+#### Network Resilience & Error Handling
+- **Network Resilience Module** (`lib/network-resilience.ts`): Automatic retry logic with exponential backoff for failed API calls
+- **Network Status Hook** (`hooks/useNetworkStatus.ts`): Real-time online/offline detection hook for graceful degradation
+- **Auth Resilience** (`lib/auth-resilient.ts`): Resilient authentication operations that handle network failures and session recovery
+- **Enhanced Error Handler** (`lib/error-handler.ts`): Centralized error handling with user-friendly error messages and logging
+
+#### Authentication Fixes
+- **Email Verification Fix**: Fixed `emailRedirectTo` configuration in sign-up flow to ensure verification emails are properly sent with correct callback URL
+- **Resend Verification**: Updated resend verification email to include proper redirect URL for consistent user experience
+- **Password Reset Flow**: Enhanced `resetPassword` function with proper redirect URL to `/auth/reset-password` callback
+- **Forgot Password Added**: Added `sendPasswordResetEmail` function to `authService` for forgot password functionality
+
+#### New Pages & Routes
+- **About Page** (`/about`): Company information and marketplace details
+- **Services Page** (`/services`): Platform services and feature highlights
+- **Upgrade Page** (`/upgrade`): Subscription and premium plan information
+- **Privacy Policy Page** (`/privacy`): Full GDPR-compliant privacy policy
+- **Reset Password Page** (`/auth/reset-password`): Dedicated password reset page with loading state
+
+#### Vehicle Edit System
+- **Edit Vehicle Page** (`/vehicle/[id]/edit`): Full vehicle editing interface for updating existing listings
+- **Vehicle Edit Details Component** (`components/vehicle-edit-details.tsx`): Comprehensive form for modifying all vehicle attributes including images, pricing, and specifications
+- **Delete Vehicle API** (`/api/vehicles/[id]/delete`): Secure API endpoint for removing vehicle listings with owner verification
 
 ### December 2024
 
@@ -86,9 +129,17 @@
 - ✅ Authentication system fully functional with email verification
 - ✅ User profile management with auto-save functionality
 - ✅ Vehicle upload and management system
+- ✅ Vehicle editing and deletion capabilities
 - ✅ Search and filtering capabilities
 - ✅ Dashboard with proper navigation
 - ✅ Database integration with proper error handling
 - ✅ Logo integration and branding consistency
 - ✅ Email verification system with resend functionality
 - ✅ Existing user detection and proper messaging
+- ✅ GDPR compliance with cookie consent system
+- ✅ Privacy policy page
+- ✅ Cache optimization for improved performance
+- ✅ Network resilience with offline detection
+- ✅ About, Services, and Upgrade pages
+- ✅ Password reset flow with forgot password link
+- ✅ Navigation cache handler for smooth transitions

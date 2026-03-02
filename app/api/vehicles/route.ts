@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { createClient } from "@/utils/supabase/server"
+import { createRouteHandlerClient } from "@supabase/auth-helpers-nextjs"
+import { cookies } from "next/headers"
 import { vehicleService } from "@/lib/vehicle-service"
 import type { Database } from "@/types/supabase"
 
@@ -45,7 +46,10 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient()
+    const cookieStore = cookies()
+    const supabase = createRouteHandlerClient<Database>({
+      cookies: () => cookieStore,
+    })
 
     const {
       data: { session },

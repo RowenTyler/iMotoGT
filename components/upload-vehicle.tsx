@@ -872,7 +872,6 @@ export default function UploadVehicle({
     dragItemRef.current = null
   }, [])
 
-  // OPTIMIZED SUBMIT HANDLER
   const handleSubmitVehicle = async () => {
     setIsSubmitting(true)
     setSubmitError(null)
@@ -989,48 +988,73 @@ export default function UploadVehicle({
         contact_privacy_enabled: contactPrivacyEnabled,
       }
 
+      let result: Vehicle | null
+
       console.log("📤 Attempting to call vehicle service...")
       console.log("⚙️ Mode:", editMode ? "UPDATE" : "CREATE")
 
       if (editMode && existingVehicle) {
         console.log(`📝 Updating vehicle ID: ${existingVehicle.id}`)
-        
-        const result = await vehicleService.updateVehicle(existingVehicle.id, vehicleDataForSubmit)
-        
-        // ✅ CRITICAL: Validate result
-        if (!result || !result.id) {
-          throw new Error("Failed to update vehicle. Please try again.")
-        }
-        
-        console.log("✅ Update successful! Response:", result)
+        console.log(
+          "📦 Data being sent (first 500 chars):",
+          JSON.stringify(vehicleDataForSubmit).substring(0, 500) + "...",
+        )
 
-        if (onVehicleUpdate) {
-          console.log("🔄 Calling onVehicleUpdate callback")
-          onVehicleUpdate(result)
+        try {
+          result = await vehicleService.updateVehicle(existingVehicle.id, vehicleDataForSubmit)
+          console.log("✅ Update successful! Response:", result)
+
+          if (result && onVehicleUpdate) {
+            console.log("🔄 Calling onVehicleUpdate callback")
+            onVehicleUpdate(result)
+          }
+        } catch (updateError) {
+          console.error("❌ Vehicle update failed at vehicleService.updateVehicle")
+          console.error("📋 Error details:", updateError)
+          console.error("📦 Data sent:", {
+            id: existingVehicle.id,
+            data: vehicleDataForSubmit,
+            imageInfo: {
+              count: vehicleImages.length,
+              firstImagePreview: vehicleImages[0]?.substring(0, 100) + "...",
+            },
+          })
+          throw updateError
         }
       } else {
         console.log("🆕 Creating new vehicle listing")
+        console.log(
+          "📦 Data being sent (first 500 chars):",
+          JSON.stringify(vehicleDataForSubmit).substring(0, 500) + "...",
+        )
 
         if (onVehicleSubmit) {
           console.log("🔄 Using parent-provided onVehicleSubmit callback")
-          
-          // ✅ CRITICAL FIX: Wait for result and validate it
-          await onVehicleSubmit(vehicleDataForSubmit)
-          
-          // ✅ Only log success if we reach here (no error thrown)
-          console.log("✅ Parent submission callback successful")
-          
+          try {
+            await onVehicleSubmit(vehicleDataForSubmit)
+            console.log("✅ Parent submission callback successful")
+          } catch (parentError) {
+            console.error("❌ Parent submission callback failed")
+            console.error("📋 Error details:", parentError)
+            throw parentError
+          }
         } else {
           console.log("🔄 Using vehicleService.createVehicle")
-          
-          const result = await vehicleService.createVehicle(vehicleDataForSubmit)
-          
-          // ✅ CRITICAL: Validate result
-          if (!result || !result.id) {
-            throw new Error("Failed to create vehicle. Please try again.")
+          try {
+            result = await vehicleService.createVehicle(vehicleDataForSubmit)
+            console.log("✅ Creation successful! Response:", result)
+          } catch (createError) {
+            console.error("❌ Vehicle creation failed at vehicleService.createVehicle")
+            console.error("📋 Error details:", createError)
+            console.error("📦 Data sent:", {
+              data: vehicleDataForSubmit,
+              imageInfo: {
+                count: vehicleImages.length,
+                firstImagePreview: vehicleImages[0]?.substring(0, 100) + "...",
+              },
+            })
+            throw createError
           }
-          
-          console.log("✅ Creation successful! Response:", result)
         }
       }
 
@@ -1055,7 +1079,6 @@ export default function UploadVehicle({
           router.push("/dashboard")
         }
       }, 1500)
-      
     } catch (error) {
       console.group("❌ VEHICLE SUBMISSION FAILURE")
       console.error("🕒 Timestamp:", new Date().toISOString())
@@ -1078,15 +1101,11 @@ export default function UploadVehicle({
 
       console.groupEnd()
 
-      // ✅ CRITICAL: Set error message so user sees it
       setSubmitError(error instanceof Error ? error.message : String(error) || "Failed to list vehicle.")
-      setIsSubmitting(false)
-      setUploadProgress(0)
-      
-      // ✅ DO NOT redirect on error - let user see the error and try again
     } finally {
       console.log("🏁 Submission process ended, cleaning up...")
       setIsSubmitting(false)
+      setUploadProgress(0)
     }
   }
 
