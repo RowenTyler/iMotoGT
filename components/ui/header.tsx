@@ -1,8 +1,8 @@
 "use client"
 
 import { useRouter, usePathname } from "next/navigation"
-import { useState, useEffect } from "react"
-import { Menu, X, User, Shield } from "lucide-react"
+import { useState, useEffect, useRef } from "react"
+import { X, User, Shield } from "lucide-react"
 import { useUser } from "@/components/UserContext"
 import { useMobile } from "@/hooks/use-mobile"
 import Image from "next/image"
@@ -33,12 +33,12 @@ export function Header({
   transparent = true,
 }: HeaderProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  const [isScrolled, setIsScrolled] = useState(false)
   const [isHeaderCollapsed, setIsHeaderCollapsed] = useState(false)
   const router = useRouter()
   const pathname = usePathname()
   const { user: contextUser, authUser, isEmailVerified, logout } = useUser()
   const isMobile = useMobile()
+  const lastScrollY = useRef(0)
 
   useEffect(() => {
     if (isMobile) return
@@ -46,20 +46,26 @@ export function Header({
     const handleScroll = () => {
       const scrollY = window.scrollY
       const scrollThreshold = 50
+      const direction = scrollY > lastScrollY.current ? 'down' : 'up'
 
-      if (scrollY > scrollThreshold && !isScrolled) {
-        setIsScrolled(true)
+      // Collapse on scroll down past threshold
+      if (direction === 'down' && scrollY > scrollThreshold && !isHeaderCollapsed) {
         setIsHeaderCollapsed(true)
       }
+      // Expand on scroll up, regardless of threshold, but only if currently collapsed
+      else if (direction === 'up' && isHeaderCollapsed) {
+        setIsHeaderCollapsed(false)
+      }
+
+      lastScrollY.current = scrollY
     }
 
     window.addEventListener("scroll", handleScroll, { passive: true })
     return () => window.removeEventListener("scroll", handleScroll)
-  }, [isMobile, isScrolled])
+  }, [isMobile, isHeaderCollapsed])
 
   const handleExpandHeader = () => {
     setIsHeaderCollapsed(false)
-    setIsScrolled(false)
   }
 
   const currentUser = contextUser || propUser
@@ -108,7 +114,6 @@ export function Header({
         router.push("/privacy")
         break
       case "cookie-settings":
-        // Dispatch custom event to open cookie preferences modal
         if (typeof window !== 'undefined') {
           window.dispatchEvent(new CustomEvent('open-cookie-preferences'))
         }
@@ -188,35 +193,27 @@ export function Header({
 
   console.log("🎯 Header - Display Name:", displayName)
 
+  // ----- MOBILE VERSION -----
   if (isMobile) {
     return (
       <>
-        <header
-          className={`fixed top-2 left-1/2 transform -translate-x-1/2 z-50 transition-transform duration-300 ease-in-out ${
-            isHeaderCollapsed ? "-translate-y-full opacity-0 pointer-events-none" : "translate-y-0 opacity-100"
-          }`}
+        {/* Custom image as burger menu button - enlarged to 48x48 */}
+        <button
+          onClick={() => setIsMobileMenuOpen(true)}
+          className="fixed top-4 right-4 z-50 cursor-pointer"
+          aria-label="Open menu"
         >
           <Image
-            src="/imoto-icon-new.png"
-            alt="MOTO GT Logo"
-            width={120}
-            height={36}
-            className="object-contain cursor-pointer"
-            style={{ filter: "none" }}
+            src="/imoto-icon.png"
+            alt="Menu"
+            width={48}
+            height={48}
+            className="object-contain"
             priority
-            onClick={() => handleNavigation("home")}
           />
-        </header>
+        </button>
 
-              <div className="flex items-center space-x-2">
-                <button onClick={() => setIsMobileMenuOpen(true)} className="text-black hover:text-gray-700 p-1">
-                  <Menu size={20} />
-                </button>
-              </div>
-            </div>
-          </div>
-        </header>
-
+        {/* Full-screen mobile menu overlay */}
         {isMobileMenuOpen && (
           <div className="fixed inset-0 z-[100]">
             <div className="absolute inset-0 -z-10">
@@ -235,7 +232,7 @@ export function Header({
               <div className="flex flex-col h-full">
                 <div className="flex justify-between items-center p-6 border-b border-white/10">
                   <Image
-                    src="\imoto-icon-new.png"
+                    src="/imoto-icon-new.png"
                     alt="MOTO GT Logo"
                     width={160}
                     height={48}
@@ -313,9 +310,10 @@ export function Header({
     )
   }
 
+  // ----- DESKTOP VERSION (unchanged) -----
   return (
     <>
-      {/* Updated: Changed from left-4 to right-4 and updated animation */}
+      {/* Small logo to expand header when collapsed */}
       <div
         className={`fixed top-4 right-4 z-50 cursor-pointer transition-all duration-500 ease-in-out ${
           isHeaderCollapsed
@@ -324,19 +322,17 @@ export function Header({
         }`}
         onClick={handleExpandHeader}
       >
-        <div>
-          <Image
-            src="/imoto-icon.png"
-            alt="IMOTO GT Logo"
-            width={100}
-            height={30}
-            className="object-contain"
-            priority
-          />
-        </div>
+        <Image
+          src="/imoto-icon.png"
+          alt="IMOTO GT Logo"
+          width={100}
+          height={30}
+          className="object-contain"
+          priority
+        />
       </div>
 
-      {/* Updated: Changed animation from -translate-x-full to translate-x-full */}
+      {/* Main header */}
       <header
         className={`fixed top-0 left-0 right-0 z-50 p-4 transition-all duration-500 ease-in-out ${
           isHeaderCollapsed ? "opacity-0 translate-x-full pointer-events-none" : "opacity-100 translate-x-0"
