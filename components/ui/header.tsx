@@ -191,21 +191,22 @@ export function Header({
   if (isMobile) {
     return (
       <>
-        <header className="fixed top-2 left-1/2 transform -translate-x-1/2 z-50">
-          <div className="relative w-[320px] h-[50px] bg-black/20 border border-white/50 backdrop-blur-sm rounded-full">
-            <div className="relative flex items-center justify-between w-full h-full px-6">
-              <div className="flex-1 flex justify-center">
-                <Image
-                  src="\imoto-icon-new.png"
-                  alt="MOTO GT Logo"
-                  width={200}
-                  height={60}
-                  className="object-contain cursor-pointer"
-                  style={{ filter: "none" }}
-                  priority
-                  onClick={() => handleNavigation("home")}
-                />
-              </div>
+        <header
+          className={`fixed top-2 left-1/2 transform -translate-x-1/2 z-50 transition-transform duration-300 ease-in-out ${
+            isHeaderCollapsed ? "-translate-y-full opacity-0 pointer-events-none" : "translate-y-0 opacity-100"
+          }`}
+        >
+          <Image
+            src="/imoto-icon-new.png"
+            alt="MOTO GT Logo"
+            width={120}
+            height={36}
+            className="object-contain cursor-pointer"
+            style={{ filter: "none" }}
+            priority
+            onClick={() => handleNavigation("home")}
+          />
+        </header>
 
               <div className="flex items-center space-x-2">
                 <button onClick={() => setIsMobileMenuOpen(true)} className="text-black hover:text-gray-700 p-1">
