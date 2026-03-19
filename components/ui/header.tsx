@@ -213,8 +213,8 @@ export function Header({
           <Image
             src="/imoto-icon-new.png"
             alt="MOTO GT Logo"
-            width={120}
-            height={36}
+            width={278}
+            height={48}
             className="object-contain cursor-pointer"
             style={{ filter: "none" }}
             priority
@@ -353,7 +353,7 @@ export function Header({
           <Image
             src="/imoto-icon.png"
             alt="IMOTO GT Logo"
-            width={200}
+            width={120}
             height={60}
             className="object-contain"
             priority
