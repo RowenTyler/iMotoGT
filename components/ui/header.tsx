@@ -193,7 +193,7 @@ export function Header({
 
   console.log("🎯 Header - Display Name:", displayName)
 
-  // ----- MOBILE VERSION -----
+  // ----- MOBILE VERSION (with white background and black text) -----
   if (isMobile) {
     return (
       <>
@@ -206,8 +206,8 @@ export function Header({
           <Image
             src="/imoto-icon.png"
             alt="Menu"
-            width={48}
-            height={48}
+            width={90}
+            height={90}
             className="object-contain"
             priority
           />
@@ -216,21 +216,9 @@ export function Header({
         {/* Full-screen mobile menu overlay */}
         {isMobileMenuOpen && (
           <div className="fixed inset-0 z-[100]">
-            <div className="absolute inset-0 -z-10">
-              <FluidGlass
-                mode="lens"
-                lensProps={{
-                  scale: 1.2,
-                  ior: 1.1,
-                  thickness: 3,
-                  chromaticAberration: 0.05,
-                  anisotropy: 0.01,
-                }}
-              />
-            </div>
-            <div className="relative bg-black/80 backdrop-blur-md h-full">
+            <div className="relative bg-white h-full shadow-xl">
               <div className="flex flex-col h-full">
-                <div className="flex justify-between items-center p-6 border-b border-white/10">
+                <div className="flex justify-between items-center p-6 border-b border-gray-200">
                   <Image
                     src="/imoto-icon-new.png"
                     alt="MOTO GT Logo"
@@ -242,7 +230,7 @@ export function Header({
                   />
                   <button
                     onClick={() => setIsMobileMenuOpen(false)}
-                    className="text-white hover:bg-white/10 rounded-full p-2"
+                    className="text-black hover:bg-gray-100 rounded-full p-2"
                   >
                     <X size={24} />
                   </button>
@@ -253,7 +241,7 @@ export function Header({
                     <button
                       key={item.name}
                       onClick={() => handleNavigation(item.key)}
-                      className="text-white text-2xl font-medium hover:text-orange-500 transition-colors"
+                      className="text-black text-2xl font-medium hover:text-orange-500 transition-colors"
                     >
                       {item.name}
                     </button>
@@ -263,13 +251,13 @@ export function Header({
                     <div className="pt-4 space-y-4 text-center">
                       <button
                         onClick={() => handleNavigation("dashboard")}
-                        className="text-white text-xl hover:text-orange-500 transition-colors"
+                        className="text-black text-xl hover:text-orange-500 transition-colors"
                       >
                         Dashboard
                       </button>
                       <button
                         onClick={handleSignOut}
-                        className="text-red-400 text-xl hover:text-red-300 transition-colors"
+                        className="text-red-600 text-xl hover:text-red-500 transition-colors"
                       >
                         Sign Out
                       </button>
@@ -286,17 +274,17 @@ export function Header({
                   )}
 
                   {/* Privacy & Cookie Settings */}
-                  <div className="pt-8 border-t border-white/10 space-y-4 text-center">
+                  <div className="pt-8 border-t border-gray-200 space-y-4 text-center">
                     <button
                       onClick={() => handleNavigation("privacy")}
-                      className="text-white/70 text-sm hover:text-orange-500 transition-colors flex items-center justify-center gap-2"
+                      className="text-gray-600 text-sm hover:text-orange-500 transition-colors flex items-center justify-center gap-2"
                     >
                       <Shield size={14} />
                       Privacy Policy
                     </button>
                     <button
                       onClick={() => handleNavigation("cookie-settings")}
-                      className="text-white/70 text-sm hover:text-orange-500 transition-colors"
+                      className="text-gray-600 text-sm hover:text-orange-500 transition-colors"
                     >
                       Cookie Settings
                     </button>
