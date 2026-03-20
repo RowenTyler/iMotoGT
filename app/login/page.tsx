@@ -6,6 +6,8 @@ import type { UserProfile } from "@/types/user"
 
 export const dynamic = 'force-dynamic'
 
+
+
 export default function LoginPageRoute() {
   const router = useRouter()
 

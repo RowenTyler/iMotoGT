@@ -1,32 +1,6 @@
 import { supabase } from "./supabase"
 import type { Vehicle, VehicleFormData } from "@/types/vehicle"
 
-// Standardized query to avoid repetition and ensure consistent data fetching
-const VEHICLE_SELECT_QUERY = `
-  id,
-  user_id,
-  make,
-  model,
-  variant,
-  year,
-  price,
-  mileage,
-  transmission,
-  fuel,
-  engine_capacity,
-  body_type,
-  condition,
-  province,
-  city,
-  description,
-  images,
-  status,
-  contact_privacy_enabled,
-  created_at,
-  updated_at,
-  users(id, email, first_name, last_name, phone, profile_pic, suburb, city, province)
-`
-
 /**
  * Map database record to Vehicle type
  */
@@ -44,10 +18,9 @@ function mapDatabaseToVehicle(data: any): Vehicle {
     mileage: data.mileage,
     transmission: data.transmission,
     fuel: data.fuel,
-    fuelType: data.fuel, // ensuring compatibility if interface uses both
+    fuelType: data.fuel,
     engineCapacity: data.engine_capacity || "",
     bodyType: data.body_type || "",
-    condition: data.condition || "Used",
     province: data.province,
     city: data.city,
     description: data.description || "",
@@ -79,7 +52,31 @@ export async function getVehicles(status = "active"): Promise<Vehicle[]> {
   try {
     const { data, error } = await supabase
       .from("vehicles")
-      .select(VEHICLE_SELECT_QUERY)
+      .select(
+        `
+        id,
+        user_id,
+        make,
+        model,
+        variant,
+        year,
+        price,
+        mileage,
+        transmission,
+        fuel,
+        engine_capacity,
+        body_type,
+        province,
+        city,
+        description,
+        images,
+        status,
+        contact_privacy_enabled,
+        created_at,
+        updated_at,
+        users(id, email, first_name, last_name, phone, profile_pic, suburb, city, province)
+      `,
+      )
       .eq("status", status)
       .order("created_at", { ascending: false })
 
@@ -102,7 +99,31 @@ export async function getVehicleById(id: string): Promise<Vehicle | null> {
   try {
     const { data, error } = await supabase
       .from("vehicles")
-      .select(VEHICLE_SELECT_QUERY)
+      .select(
+        `
+        id,
+        user_id,
+        make,
+        model,
+        variant,
+        year,
+        price,
+        mileage,
+        transmission,
+        fuel,
+        engine_capacity,
+        body_type,
+        province,
+        city,
+        description,
+        images,
+        status,
+        contact_privacy_enabled,
+        created_at,
+        updated_at,
+        users(id, email, first_name, last_name, phone, profile_pic, suburb, city, province)
+      `,
+      )
       .eq("id", id)
       .single()
 
@@ -125,7 +146,31 @@ export async function getUserVehicles(userId: string): Promise<Vehicle[]> {
   try {
     const { data, error } = await supabase
       .from("vehicles")
-      .select(VEHICLE_SELECT_QUERY)
+      .select(
+        `
+        id,
+        user_id,
+        make,
+        model,
+        variant,
+        year,
+        price,
+        mileage,
+        transmission,
+        fuel,
+        engine_capacity,
+        body_type,
+        province,
+        city,
+        description,
+        images,
+        status,
+        contact_privacy_enabled,
+        created_at,
+        updated_at,
+        users(id, email, first_name, last_name, phone, profile_pic, suburb, city, province)
+      `,
+      )
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
 
@@ -155,7 +200,31 @@ export async function searchVehicles(query: string): Promise<Vehicle[]> {
 
     const { data, error } = await supabase
       .from("vehicles")
-      .select(VEHICLE_SELECT_QUERY)
+      .select(
+        `
+        id,
+        user_id,
+        make,
+        model,
+        variant,
+        year,
+        price,
+        mileage,
+        transmission,
+        fuel,
+        engine_capacity,
+        body_type,
+        province,
+        city,
+        description,
+        images,
+        status,
+        contact_privacy_enabled,
+        created_at,
+        updated_at,
+        users(id, email, first_name, last_name, phone, profile_pic, suburb, city, province)
+      `,
+      )
       .or(`make.ilike.${searchTerm},model.ilike.${searchTerm},variant.ilike.${searchTerm}`)
       .eq("status", "active")
       .order("created_at", { ascending: false })
@@ -174,6 +243,7 @@ export async function searchVehicles(query: string): Promise<Vehicle[]> {
 
 /**
  * Filter vehicles by various criteria
+ * Returns empty array if no matches found
  */
 export interface VehicleFilters {
   query?: string
@@ -200,7 +270,31 @@ export async function filterVehicles(filters: VehicleFilters): Promise<Vehicle[]
   try {
     let query = supabase
       .from("vehicles")
-      .select(VEHICLE_SELECT_QUERY)
+      .select(
+        `
+        id,
+        user_id,
+        make,
+        model,
+        variant,
+        year,
+        price,
+        mileage,
+        transmission,
+        fuel,
+        engine_capacity,
+        body_type,
+        province,
+        city,
+        description,
+        images,
+        status,
+        contact_privacy_enabled,
+        created_at,
+        updated_at,
+        users(id, email, first_name, last_name, phone, profile_pic, suburb, city, province)
+      `,
+      )
       .eq("status", "active")
 
     if (filters.query && filters.query.trim()) {
@@ -292,40 +386,28 @@ export async function filterVehicles(filters: VehicleFilters): Promise<Vehicle[]
 }
 
 /**
- * Create a new vehicle listing with enhanced validation and error handling
+ * Create a new vehicle listing with enhanced error handling
  */
-export async function createVehicle(vehicleData: VehicleFormData, userId: string): Promise<Vehicle> {
-  console.log("[Vehicle Create] Starting creation process...")
-
+export async function createVehicle(
+  vehicleData: VehicleFormData, 
+  userId: string
+): Promise<Vehicle | null> {
   try {
-    // Verify user authentication
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-
-    if (authError || !user) {
-      throw new Error("Authentication required. Please log in again.")
-    }
-
-    if (user.id !== userId) {
-      throw new Error("User ID mismatch. Please refresh and try again.")
-    }
-
-    // Prepare database record
     const dbData = {
       user_id: userId,
       make: vehicleData.make,
       model: vehicleData.model,
-      variant: vehicleData.variant || null,
-      year: Number(vehicleData.year),
-      price: Number(vehicleData.price),
-      mileage: Number(vehicleData.mileage),
+      variant: vehicleData.variant || "",
+      year: vehicleData.year,
+      price: vehicleData.price,
+      mileage: vehicleData.mileage,
       transmission: vehicleData.transmission,
       fuel: vehicleData.fuel,
-      engine_capacity: vehicleData.engineCapacity || null,
-      body_type: vehicleData.bodyType || null,
-      condition: vehicleData.condition || "Used",
+      engine_capacity: vehicleData.engineCapacity || "",
+      body_type: vehicleData.bodyType || "",
       province: vehicleData.province,
       city: vehicleData.city,
-      description: vehicleData.description || null,
+      description: vehicleData.description || "",
       images: vehicleData.images || [],
       contact_privacy_enabled: vehicleData.contactPrivacyEnabled ?? vehicleData.contactPrivacy ?? false,
       status: "active",
@@ -333,48 +415,70 @@ export async function createVehicle(vehicleData: VehicleFormData, userId: string
       updated_at: new Date().toISOString(),
     }
 
-    console.log("[Vehicle Create] Inserting into database...")
-
     const { data, error } = await supabase
       .from("vehicles")
       .insert([dbData])
-      .select(VEHICLE_SELECT_QUERY)
+      .select(
+        `
+        id,
+        user_id,
+        make,
+        model,
+        variant,
+        year,
+        price,
+        mileage,
+        transmission,
+        fuel,
+        engine_capacity,
+        body_type,
+        province,
+        city,
+        description,
+        images,
+        status,
+        contact_privacy_enabled,
+        created_at,
+        updated_at,
+        users(id, email, first_name, last_name, phone, profile_pic, suburb, city, province)
+      `,
+      )
       .single()
 
-    // Handle errors - THROW instead of returning null
     if (error) {
-      let userMessage = "Failed to create vehicle listing."
-
+      console.error("[v0] Error creating vehicle:", {
+        message: error.message,
+        code: error.code,
+        details: error.details,
+        hint: error.hint,
+        userId,
+        vehicleData: {
+          make: vehicleData.make,
+          model: vehicleData.model,
+          year: vehicleData.year
+        }
+      })
+      
+      // Check for common RLS error patterns
       if (error.code === '42501') {
-        userMessage = "Permission denied. Please log out and log back in."
-      } else if (error.message?.toLowerCase().includes('abort')) {
-        userMessage = "Request timed out. Please check your internet connection and try again."
-      } else if (error.message?.toLowerCase().includes('network')) {
-        userMessage = "Network error. Please check your connection and try again."
+        console.error("[v0] RLS Policy Violation: User may not have permission to create vehicle listings")
       }
-
-      console.error("[Vehicle Create] Error:", error)
-      throw new Error(userMessage)
+      
+      if (error.code === '23505') {
+        console.error("[v0] Duplicate entry or unique constraint violation")
+      }
+      
+      return null
     }
 
-    if (!data) {
-      throw new Error("No data returned from database. Please try again.")
-    }
-
-    const vehicle = mapDatabaseToVehicle(data)
-
-    if (!vehicle) {
-      throw new Error("Failed to process vehicle data. Please try again.")
-    }
-
-    console.log("[Vehicle Create] ✅ Vehicle created successfully:", vehicle.id)
-    return vehicle
-
-  } catch (error: any) {
-    if (error?.name === 'AbortError' || error?.message?.includes('AbortError')) {
-      throw new Error("Request was cancelled. Please check your internet connection and try again.")
-    }
-    throw error instanceof Error ? error : new Error("Failed to create vehicle")
+    return data ? mapDatabaseToVehicle(data) : null
+  } catch (error) {
+    console.error("[v0] Exception creating vehicle:", {
+      error,
+      userId,
+      timestamp: new Date().toISOString()
+    })
+    return null
   }
 }
 
@@ -397,7 +501,6 @@ export async function updateVehicle(id: string, vehicleData: Partial<VehicleForm
     if (vehicleData.fuel) dbData.fuel = vehicleData.fuel
     if (vehicleData.engineCapacity !== undefined) dbData.engine_capacity = vehicleData.engineCapacity
     if (vehicleData.bodyType !== undefined) dbData.body_type = vehicleData.bodyType
-    if (vehicleData.condition !== undefined) dbData.condition = vehicleData.condition
     if (vehicleData.province) dbData.province = vehicleData.province
     if (vehicleData.city) dbData.city = vehicleData.city
     if (vehicleData.description !== undefined) dbData.description = vehicleData.description
@@ -408,7 +511,31 @@ export async function updateVehicle(id: string, vehicleData: Partial<VehicleForm
       .from("vehicles")
       .update(dbData)
       .eq("id", id)
-      .select(VEHICLE_SELECT_QUERY)
+      .select(
+        `
+        id,
+        user_id,
+        make,
+        model,
+        variant,
+        year,
+        price,
+        mileage,
+        transmission,
+        fuel,
+        engine_capacity,
+        body_type,
+        province,
+        city,
+        description,
+        images,
+        status,
+        contact_privacy_enabled,
+        created_at,
+        updated_at,
+        users(id, email, first_name, last_name, phone, profile_pic, suburb, city, province)
+      `,
+      )
       .single()
 
     if (error) {
@@ -443,7 +570,7 @@ export async function deleteVehicle(id: string): Promise<boolean> {
 }
 
 // ============================================================================
-// SAVED VEHICLES OPERATIONS
+// SAVED VEHICLES OPERATIONS - NEW FUNCTIONS ADDED BELOW
 // ============================================================================
 
 /**
@@ -451,9 +578,10 @@ export async function deleteVehicle(id: string): Promise<boolean> {
  */
 export async function saveVehicle(userId: string, vehicleId: string): Promise<boolean> {
   try {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('saved_vehicles')
       .insert([{ user_id: userId, vehicle_id: vehicleId }])
+      .select()
 
     if (error) {
       console.error('[v0] Error saving vehicle:', error)
@@ -499,7 +627,29 @@ export async function getSavedVehicles(userId: string): Promise<Vehicle[]> {
       .from('saved_vehicles')
       .select(`
         vehicle_id,
-        vehicles (${VEHICLE_SELECT_QUERY})
+        vehicles (
+          id,
+          user_id,
+          make,
+          model,
+          variant,
+          year,
+          price,
+          mileage,
+          transmission,
+          fuel,
+          engine_capacity,
+          body_type,
+          province,
+          city,
+          description,
+          images,
+          status,
+          contact_privacy_enabled,
+          created_at,
+          updated_at,
+          users(id, email, first_name, last_name, phone, profile_pic, suburb, city, province)
+        )
       `)
       .eq('user_id', userId)
 
@@ -508,10 +658,13 @@ export async function getSavedVehicles(userId: string): Promise<Vehicle[]> {
       return []
     }
 
-    return (data || [])
+    // Extract and map the vehicle data
+    const savedVehicles = (data || [])
       .map(item => item.vehicles)
       .filter(vehicle => vehicle !== null)
       .map(mapDatabaseToVehicle)
+
+    return savedVehicles
   } catch (error) {
     console.error('[v0] Exception fetching saved vehicles:', error)
     return []

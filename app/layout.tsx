@@ -14,14 +14,6 @@ const inter = Inter({ subsets: ["latin"] })
 
 export const dynamic = 'force-dynamic'
 
-
-
-export const viewport = {
-  width: 'device-width',
-  initialScale: 1,
-  maximumScale: 1,
-}
-
 export const metadata: Metadata = {
   title: {
     default: "Buy & Sell Affordable Cars in South Africa | iMoto GT",
@@ -55,6 +47,11 @@ export const metadata: Metadata = {
       'max-image-preview': 'large',
       'max-snippet': -1,
     },
+  },
+  viewport: {
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 1,
   },
 };
 
