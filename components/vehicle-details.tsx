@@ -43,6 +43,8 @@ export default function VehicleDetails({
     if (!phone) return ""
     return phone.replace(/\d(?=\d{4})/g, '*')
   }
+  
+  const isDataUrl = (src?: string | null) => typeof src === "string" && src.startsWith("data:")
 
   // SAFE access with fallback
   const isContactPrivate = vehicle.contactPrivacyEnabled ?? false
@@ -560,6 +562,7 @@ export default function VehicleDetails({
                       src={imgSrc || "/placeholder.svg"}
                       alt={`${vehicle.make} ${vehicle.model} view ${index + 1}`}
                       fill
+                      unoptimized={isDataUrl(imgSrc)}
                       className="object-cover"
                     />
                   </div>
@@ -615,6 +618,7 @@ export default function VehicleDetails({
                         src={galleryOneDisplayImages[0] || "/placeholder.svg"}
                         alt={`${vehicle.make} ${vehicle.model} main view`}
                         fill
+                        unoptimized={isDataUrl(galleryOneDisplayImages[0])}
                         className="object-cover group-hover:scale-105 transition-transform duration-300"
                       />
                       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
@@ -635,6 +639,7 @@ export default function VehicleDetails({
                               src={imgSrc || "/placeholder.svg"}
                               alt={`${vehicle.make} ${vehicle.model} view ${index + 2}`}
                               fill
+                              unoptimized={isDataUrl(imgSrc)}
                               className="object-cover group-hover:scale-105 transition-transform duration-300"
                             />
                             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
@@ -661,6 +666,7 @@ export default function VehicleDetails({
                           src={imgSrc || "/placeholder.svg"}
                           alt={`${vehicle.make} ${vehicle.model} additional view ${index + 6}`}
                           fill
+                          unoptimized={isDataUrl(imgSrc)}
                           className="object-cover group-hover:scale-105 transition-transform duration-300"
                         />
                         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
@@ -685,6 +691,7 @@ export default function VehicleDetails({
                           src={imgSrc || "/placeholder.svg"}
                           alt={`${vehicle.make} ${vehicle.model} additional view ${index + 14}`}
                           fill
+                          unoptimized={isDataUrl(imgSrc)}
                           className="object-cover group-hover:scale-105 transition-transform duration-300"
                         />
                         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
@@ -794,6 +801,7 @@ export default function VehicleDetails({
                   src={allDisplayableImages[selectedImageIndex] || "/placeholder.svg"}
                   alt={`${vehicle.make} ${vehicle.model} enlarged view`}
                   fill
+                  unoptimized={isDataUrl(allDisplayableImages[selectedImageIndex])}
                   className={`object-contain transition-transform duration-300 ${isZoomed ? "scale-150" : "scale-100"}`}
                   priority
                   onError={() => setImageError(true)}
@@ -1099,9 +1107,9 @@ export default function VehicleDetails({
                     <Image
                       src={vehicle.sellerProfilePic || "/placeholder-user.jpg"}
                       alt={vehicle.sellerName || "Seller"}
-                      layout="fill"
-                      objectFit="cover"
-                      className="rounded-full"
+                      fill
+                      unoptimized={isDataUrl(vehicle.sellerProfilePic)}
+                      className="rounded-full object-cover"
                     />
                   </div>
                 )}
