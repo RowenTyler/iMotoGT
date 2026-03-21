@@ -57,16 +57,21 @@ export default function VehicleCard({ vehicle, onViewDetails, isSaved, onToggleS
     >
       {/* Full-height image container */}
       <div className="relative w-full h-full">
-        <Image
-          src={
-            (vehicle.images && vehicle.images.length > 0 ? vehicle.images[0] : vehicle.image) ||
+        {(() => {
+          const src = (vehicle.images && vehicle.images.length > 0 ? vehicle.images[0] : vehicle.image) ||
             "/placeholder.svg?height=400&width=300&query=vehicle"
-          }
-          alt={`${vehicle.make} ${vehicle.model}`}
-          fill
-          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-          className="object-cover group-hover:scale-105 transition-transform duration-300"
-        />
+          const isDataUrl = typeof src === "string" && src.startsWith("data:")
+          return (
+            <Image
+              src={src}
+              alt={`${vehicle.make} ${vehicle.model}`}
+              fill
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+              unoptimized={isDataUrl}
+              className="object-cover group-hover:scale-105 transition-transform duration-300"
+            />
+          )
+        })()}
 
         {/* Glass gradient overlay from bottom */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />

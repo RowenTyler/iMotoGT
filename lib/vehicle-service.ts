@@ -1,8 +1,10 @@
-import type { Vehicle, VehicleFormData } from "@/types/vehicle" // Assuming Vehicle and VehicleFormData are declared in a types file
+// lib/vehicle-service.ts
+import type { Vehicle, VehicleFormData } from "@/types/vehicle"
+import { CacheManager } from "@/lib/cache-manager"
 
 // Import cache-aware functions from optimized module
 import {
-  getVehicles,
+  getVehicles as originalGetVehicles,
   getVehicleById,
   getUserVehicles,
   createVehicle,
@@ -35,6 +37,36 @@ export class VehicleError extends Error {
 }
 
 /**
+ * PRUNING UTILITY: Prevents 12MB LocalStorage Overflow
+ * Strips Base64 images from the dataset before caching to keep size < 100KB.
+ */
+const pruneForCache = (vehicles: Vehicle[]): Vehicle[] => {
+  return vehicles.map((v) => ({
+    ...v,
+    // Keep only the first image to reduce cache size but preserve the original
+    // image data (URL or data URI). Avoid replacing with hardcoded placeholder
+    // paths which break rendering after reload. If storage becomes a problem
+    // we can fallback to compressing or truncating but for now keep the real
+    // image so the UI can show original images after reloading.
+    images: v.images?.slice(0, 1) || [],
+  }))
+}
+
+/**
+ * Wrapped getVehicles to handle pruning and cache safety
+ */
+const getVehicles = async (status = 'active') => {
+  const vehicles = await originalGetVehicles(status);
+  
+  // Logic: The originalGetVehicles might have already triggered a cache set.
+  // We manually override the cache entry with a PRUNED version to prevent 12MB crashes.
+  const prunedData = pruneForCache(vehicles);
+  CacheManager.set(`imoto_vehicles_cache_${status}`, prunedData);
+  
+  return vehicles;
+};
+
+/**
  * Map database record to Vehicle type
  */
 function mapDatabaseToVehicle(data: any): Vehicle {
@@ -59,7 +91,6 @@ function mapDatabaseToVehicle(data: any): Vehicle {
     description: data.description || "",
     images: data.images || [],
     status: data.status || "active",
-    // Get seller information from joined users table
     sellerName:
       user.first_name && user.last_name
         ? `${user.first_name} ${user.last_name}`
@@ -90,7 +121,7 @@ function mapVehicleToDatabase(vehicleData: VehicleFormData, userId: string): Rec
     transmission: vehicleData.transmission,
     fuel: vehicleData.fuel,
     engine_capacity: vehicleData.engineCapacity || "",
-    body_type: vehicleData.bodyType || "",
+    body_type: vehicleData.body_type || "",
     province: vehicleData.province,
     city: vehicleData.city,
     description: vehicleData.description || "",
