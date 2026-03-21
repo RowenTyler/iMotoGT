@@ -1,0 +1,28 @@
+# robots.txt — iMoto GT
+# https://imoto-gt.co.za
+
+User-agent: *
+
+# Public pages — allow crawling
+Allow: /home
+Allow: /results
+Allow: /about
+Allow: /services
+Allow: /privacy
+Allow: /login
+Allow: /upgrade
+Allow: /vehicle-details/
+
+# Auth-gated & private pages — disallow indexing
+Disallow: /dashboard
+Disallow: /settings
+Disallow: /upload-vehicle
+Disallow: /reset-password
+Disallow: /liked-cars-page
+Disallow: /vehicle/*/edit
+
+# API routes — never index
+Disallow: /api/
+
+# Sitemap location
+Sitemap: https://imoto-gt.co.za/sitemap.xml
