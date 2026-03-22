@@ -1,0 +1,340 @@
+# iMoto GT — LLM Context File
+# South African Car Marketplace
+# https://imoto-gt.co.za
+# Generated: 2026-03-21
+
+---
+
+## Project Overview
+
+iMoto GT is a South African peer-to-peer vehicle marketplace built with Next.js 14+ (App Router),
+TypeScript, Tailwind CSS, shadcn/ui, and Supabase (PostgreSQL + Auth + Storage). Users can browse,
+list, save, and sell vehicles. The platform supports email/password and Google OAuth authentication,
+contact privacy controls, GDPR cookie consent, and a smart caching layer for performance.
+
+---
+
+## Tech Stack
+
+- **Framework**: Next.js 14+ (App Router, `force-dynamic` on most routes)
+- **Language**: TypeScript (strict mode, `ignoreBuildErrors: true` in prod)
+- **Styling**: Tailwind CSS + shadcn/ui (Radix primitives)
+- **Backend/DB**: Supabase (PostgreSQL, Auth, RLS)
+- **Deployment**: Vercel
+- **State**: React Context API (`UserContext`, `VehicleProvider`, `GDPRProvider`)
+- **Caching**: In-memory (`VehicleProvider`) + `localStorage` (`CacheManager`)
+- **Image handling**: Next.js `<Image>` with `unoptimized: true`; client-side canvas compression
+
+---
+
+## Repository Structure
+
+```
+/app
+  /api
+    /auth/callback          OAuth callback (exchanges code for session)
+    /platform-stats         Public vehicle + user counts (revalidate 300s)
+    /sync-user              Syncs auth user to public.users via service role
+    /user/profile           GET/PUT user profile (session-gated)
+    /vehicles               GET (filtered list) / POST (create, session-gated)
+    /vehicles/[id]          GET / PUT / DELETE single vehicle
+    /vehicles/[id]/delete   POST soft-delete with audit trail
+    /vehicles/saved         GET / POST toggle saved vehicle
+  /auth/reset-password      Password reset callback page
+  /dashboard                User dashboard (force-dynamic)
+  /home                     Landing page (CarMarketplace + PlatformStats + footer)
+  /login                    Auth page (sign-in / sign-up / forgot / reset)
+  /reset-password           Standalone password reset request page
+  /results                  Search results (Suspense-wrapped ResultsPage)
+  /settings                 Profile settings (force-dynamic)
+  /upload-vehicle           Vehicle listing creation
+  /vehicle/[id]/edit        Vehicle editing
+  /vehicle-details/[id]     Public vehicle detail page
+  /about  /services  /upgrade  /privacy   Static informational pages
+
+/components
+  UserContext.tsx            Global auth + vehicle state (React Context)
+  VehicleProvider.tsx        In-memory vehicle cache + navigation history
+  NavigationCacheHandler.tsx Scroll restoration + route-level state cache
+  car-marketplace.tsx        Home search form + featured vehicles grid
+  dashboard.tsx              User dashboard UI (desktop 12-col grid + mobile)
+  results-page.tsx           Filtered results grid with AdvancedFilters sheet
+  vehicle-details.tsx        Full vehicle detail view with gallery + contact
+  vehicle-edit-details.tsx   Inline edit form for existing listings
+  upload-vehicle.tsx         Multi-step vehicle listing form (images + details)
+  profile-settings.tsx       Personal info + security tabs
+  vehicle-card.tsx           Card component used in grids (full-height image)
+  advanced-filters.tsx       Accordion filter panel (price, year, mileage, etc.)
+  platform-stats.tsx         Animated bento stats with cache + animation
+  privacy-toggle-card.tsx    Contact privacy toggle used in listing forms
+  liked-cars-page.tsx        Saved vehicles list page
+  location-page.tsx          Province/city filtered vehicle view
+  /gdpr
+    gdpr-provider.tsx         React context for consent state
+    cookie-consent-banner.tsx Fixed bottom consent banner
+    cookie-preferences-modal  Granular category toggles
+  /ui                        shadcn/ui components (button, card, input, etc.)
+
+/lib
+  auth.ts                   authService: signUp, signIn, signOut, OAuth, profile CRUD
+  auth-resilient.ts         Network-resilient wrappers around authService
+  cache-manager.ts          localStorage cache with TTL, stale-while-revalidate, pruning
+  deployment-config.ts      Env validation + feature flags
+  error-handler.ts          Centralized error handling with toast
+  gdpr/
+    consent-manager.ts      Singleton consent store (localStorage-backed)
+    cookie-config.ts        Cookie category definitions + ConsentState types
+  image-utils.ts            compressImage / compressImages (canvas-based)
+  network-resilience.ts     fetchWithRetry with exponential backoff
+  supabase.ts               Supabase browser client (PKCE flow, 10s timeout)
+  supabase-server.ts        Supabase SSR client (cookies-based)
+  userSync.ts               syncUserToPublic / syncUserToEditors
+  vehicle-operations.ts     Raw Supabase CRUD + saved vehicles operations
+  vehicle-operations-optimized.ts  Cache-aware vehicle operations (stale-while-revalidate)
+  vehicle-service.ts        Unified vehicleService export (pruned caching wrapper)
+
+/types
+  vehicle.ts    Vehicle, VehicleFormData interfaces
+  user.ts       UserProfile, Vehicle (legacy), SavedVehicle interfaces
+  supabase.ts   Database type definitions (users, vehicles, saved_vehicles tables)
+
+/hooks
+  use-mobile.tsx         Window resize → boolean
+  use-saved-vehicles.ts  Saved vehicle CRUD + real-time subscription
+  use-toast.ts           Toast hook
+  use-vehicles.ts        Paginated vehicle fetch + real-time
+  useNetworkStatus.ts    navigator.onLine + event listeners
+
+/public
+  sitemap.xml   Static sitemap
+  robots.txt    Crawl directives
+```
+
+---
+
+## Database Schema (Supabase PostgreSQL)
+
+### `public.users`
+| Column        | Type      | Notes                              |
+|---------------|-----------|------------------------------------|
+| id            | UUID PK   | References auth.users(id)          |
+| email         | TEXT      | Unique, not null                   |
+| first_name    | TEXT      | Default ''                         |
+| last_name     | TEXT      | Default ''                         |
+| phone         | TEXT      | Nullable                           |
+| profile_pic   | TEXT      | Base64 or URL, nullable            |
+| suburb        | TEXT      | Nullable                           |
+| city          | TEXT      | Nullable                           |
+| province      | TEXT      | Nullable                           |
+| login_method  | TEXT      | 'email' | 'google' | 'facebook' | 'apple' |
+| created_at    | TIMESTAMPTZ |                                  |
+| updated_at    | TIMESTAMPTZ |                                  |
+
+### `public.vehicles`
+| Column                   | Type        | Notes                          |
+|--------------------------|-------------|--------------------------------|
+| id                       | UUID PK     | uuid_generate_v4()             |
+| user_id                  | UUID FK     | → public.users(id) CASCADE     |
+| make / model / variant   | TEXT        | Required except variant        |
+| year                     | INTEGER     | 1900–current+1                 |
+| price                    | DECIMAL(12,2)|                               |
+| mileage                  | INTEGER     |                                |
+| transmission             | TEXT        | 'Manual' | 'Automatic'         |
+| fuel                     | TEXT        | 'Petrol'|'Diesel'|'Electric'|'Hybrid' |
+| engine_capacity          | TEXT        | e.g. '2.0L'                   |
+| body_type                | TEXT        |                                |
+| condition                | TEXT        |                                |
+| province / city          | TEXT        |                                |
+| description              | TEXT        | Nullable                       |
+| images                   | TEXT[]      | Base64 or URLs, max 21         |
+| status                   | TEXT        | 'active' | 'sold' | 'inactive' |
+| contact_privacy_enabled  | BOOLEAN     | Default false                  |
+| is_deleted               | BOOLEAN     | Soft delete flag               |
+| deleted_at               | TIMESTAMPTZ | Soft delete timestamp          |
+| deletion_reason          | TEXT        | Nullable                       |
+| created_at / updated_at  | TIMESTAMPTZ |                                |
+
+### `public.saved_vehicles`
+| Column     | Type    | Notes                        |
+|------------|---------|------------------------------|
+| id         | UUID PK |                              |
+| user_id    | UUID FK | → users(id) CASCADE          |
+| vehicle_id | UUID FK | → vehicles(id) CASCADE       |
+| created_at | TIMESTAMPTZ |                          |
+| UNIQUE(user_id, vehicle_id) |    |                          |
+
+### Row Level Security
+- **users**: SELECT/UPDATE/INSERT only for auth.uid() = id
+- **vehicles**: Anyone can SELECT status='active'; INSERT/UPDATE/DELETE only by owner (auth.uid() = user_id)
+- **saved_vehicles**: All operations only for auth.uid() = user_id
+
+---
+
+## Authentication Flow
+
+1. **Sign Up**: `supabase.auth.signUp()` → verification email → user clicks link → redirect to `/dashboard`
+2. **Sign In**: `supabase.auth.signInWithPassword()` → check `email_confirmed_at` → load profile → redirect
+3. **OAuth (Google)**: `supabase.auth.signInWithOAuth({ provider: 'google' })` → `/api/auth/callback` → exchange code → upsert profile → redirect `/dashboard`
+4. **Session**: PKCE flow, auto-refresh, persisted in localStorage
+5. **Profile Creation**: Triggered by `handle_new_user()` DB trigger on `auth.users` INSERT, with fallback to `createUserProfile()` in app code
+6. **Password Reset**: `resetPasswordForEmail()` → email link → `/reset-password?token=...&type=recovery` → `updateUser({ password })`
+
+---
+
+## Caching Architecture
+
+### CacheManager (lib/cache-manager.ts)
+- localStorage-backed key/value store
+- TTL: 5 minutes default, background refresh threshold: 2 minutes
+- Max entry size: 5MB; evicts oldest entries on quota error
+- Keys: `imoto_vehicles_cache_active`, `imoto_user_vehicles_{userId}`, `imoto_vehicle_details_{id}`, `imoto_saved_vehicles_{userId}`
+- `pruneForCache()` in vehicle-service strips images to 1 per vehicle before caching to prevent localStorage overflow
+
+### VehicleProvider (components/VehicleProvider.tsx)
+- In-memory React context cache (not persisted)
+- Stores: `byId` (single vehicles), `lists` (vehicle lists keyed by route/filter), `navigationHistory` (scroll + state per route)
+- Max 20 vehicles in `byId`, max 10 lists; LRU eviction by `lastAccessed`
+- Provides: `getVehicle`, `getVehicleList`, `savePageState`, `restorePageState`, `saveScrollPosition`, `restoreScrollPosition`
+
+### NavigationCacheHandler (components/NavigationCacheHandler.tsx)
+- Saves scroll position on scroll (200ms debounce)
+- Restores scroll position on route change (100ms delay, `behavior: 'instant'`)
+- Exposes `useNavigationCache` hook for form state persistence across navigation
+
+---
+
+## Key Component Patterns
+
+### Vehicle Listing Form (upload-vehicle.tsx)
+- Min 5 images, max 21; client-side canvas compression to JPEG 85% quality, max 1200px
+- Drag-to-reorder images using `setPointerCapture` API
+- Autocomplete for make/model from `/vehicle-data.json`
+- Seller info auto-populated from `userProfile` context; editable inline with `onSaveProfile` callback
+- Contact privacy toggle stored as `contact_privacy_enabled` on vehicle record
+
+### Vehicle Card (vehicle-card.tsx)
+- Full-height image with gradient overlay
+- Orange price text, transmission/mileage details, save (heart) button
+- Links to `/vehicle-details/[id]`
+
+### Results Page (results-page.tsx)
+- Reads filters from URL search params via `useSearchParams`
+- Uses `useVehicleList` hook with cache key derived from serialized filters
+- Desktop: 4-col layout with sticky `AdvancedFilters` sidebar
+- Mobile: `Sheet` component for filter panel
+
+### Dashboard (dashboard.tsx)
+- Desktop: 12-column CSS grid (profile card, metrics, upload CTA, subscription, saved cars carousel, recently listed)
+- Mobile: 4-column metric row + stacked cards
+- Soft delete with reason modal; upgrade modal at 3 listing limit
+- Auto-rotating saved cars carousel (5s interval)
+
+---
+
+## API Routes Summary
+
+| Route | Method | Auth | Description |
+|-------|--------|------|-------------|
+| /api/vehicles | GET | Public | Filtered vehicle list |
+| /api/vehicles | POST | Required | Create vehicle |
+| /api/vehicles/[id] | GET | Public | Single vehicle |
+| /api/vehicles/[id] | PUT | Owner | Update vehicle |
+| /api/vehicles/[id] | DELETE | Owner | Soft delete vehicle |
+| /api/vehicles/[id]/delete | POST | Owner | Soft delete with audit |
+| /api/vehicles/saved | GET | Required | User's saved vehicles |
+| /api/vehicles/saved | POST | Required | Toggle save/unsave |
+| /api/user/profile | GET | Required | Get user profile |
+| /api/user/profile | PUT | Required | Update user profile |
+| /api/auth/callback | GET | - | OAuth code exchange |
+| /api/sync-user | POST | - | Sync user to editors table |
+| /api/platform-stats | GET | Public | Vehicle + user counts |
+
+---
+
+## Environment Variables
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=https://mwzrrrnmtyiyrwdqhcqb.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGci...
+SUPABASE_SERVICE_ROLE_KEY=eyJhbGci...  # Server-only, used in API routes
+NEXT_PUBLIC_APP_URL=https://imoto-gt.co.za
+NODE_ENV=production
+```
+
+---
+
+## GDPR / Cookie Consent
+
+- **Consent Manager**: Singleton, localStorage key `imoto_gdpr_consent`, versioned (`1.0`)
+- **Categories**: necessary (always on), functional, analytics, marketing
+- **CacheManager** is classified as "necessary" — operates without consent gating
+- **Banner**: Fixed bottom, shown until `hasConsented = true`
+- **Preferences Modal**: Triggered by banner link or `open-cookie-preferences` custom event (used in mobile header menu)
+- **Privacy Policy**: `/privacy` page covering GDPR/POPIA compliance
+
+---
+
+## Design System
+
+### Colors
+- Orange (primary CTA): `#FF6700` (light) / `#FF7D33` (dark)
+- Dark Green (headings): `#3E5641`
+- Medium Green (secondary text): `#6F7F69`
+- Light Green (borders): `#9FA791`
+- Cream (hover/backgrounds): `#FFF8E0`
+- Dark background: `#0A0F0A` / Card dark: `#2A352A` / Input dark: `#1F2B20`
+
+### Layout
+- Header: Fixed pill-shaped nav, max-w-4xl, collapses on scroll down, expands on scroll up
+- Mobile header: Hamburger → full-screen overlay menu
+- Main content: max-w-7xl, px-4/6
+- Border radius scale: sm(4px) → 3xl(24px) used heavily
+
+### Typography
+- Font: Inter (system fallback)
+- H1: 36px/700, H2: 30px/700, H3: 24px/600
+- Body: 16px/400, Small: 14px/400
+
+---
+
+## Performance Notes
+
+- `images: { unoptimized: true }` in next.config.mjs (base64 images stored directly in DB)
+- All pages use `export const dynamic = 'force-dynamic'` to prevent stale SSR cache
+- Vehicle images compressed client-side before storage (1200px max, 0.7–0.85 JPEG quality)
+- `pruneForCache()` strips vehicle image arrays to 1 image before localStorage caching to avoid 12MB quota overflow
+- `backgroundRefreshQueue` in vehicle-operations-optimized prevents duplicate background refreshes
+- Platform stats route uses `revalidate = 300` (ISR, 5 minutes)
+- Service Worker registration attempted but sw.js not yet implemented
+
+---
+
+## Known Limitations / TODOs
+
+- `vehicle-operations.ts` exports are re-exported via `vehicle-service.ts`; both files have overlapping `createVehicle`/`updateVehicle` — the optimized version is used for cache-aware ops, original for search/filter/saved
+- `vehicleService.toggleSaveVehicle` referenced in `use-vehicles.ts` and `use-saved-vehicles.ts` but not exported from `vehicle-service.ts` (these hooks may be partially unused)
+- `VehicleProvider` exposes `saveForCurrentRoute` and `addToCache` in `vehicle-details/[id]/page.tsx` but these are not defined in the provider interface — guarded with `typeof fn === 'function'` checks
+- Service Worker (`/sw.js`) is registered in layout.tsx but the file does not exist — registration fails silently
+- `ThemeProvider` in `components/theme-provider.tsx` is a stub (no actual theme switching logic)
+- Subscription/upgrade tiers show "ZAR TBD" — payment integration not yet implemented
+- `authService.updateProfile` referenced in `/api/user/profile` route but not exported from `auth.ts` (should be `updateUserProfile`)
+- Real-time subscriptions (`subscribeToVehicles`, `subscribeToSavedVehicles`, `toggleSaveVehicle`) referenced in hooks but not exported from `vehicle-service.ts`
+
+---
+
+## Optimization Recommendations
+
+1. **Deduplicate vehicle-service exports**: Consolidate `vehicle-operations.ts` and `vehicle-operations-optimized.ts` into a single module
+2. **Move images to Supabase Storage**: Replace base64 DB storage with Storage bucket URLs to reduce DB row size and localStorage pressure
+3. **Add database indexes**: Run the SQL from `CACHE_OPTIMIZATION_GUIDE.md` — composite indexes on `(status, created_at)` and GIN full-text index
+4. **Implement sw.js**: Add a service worker for offline support and asset caching
+5. **Fix ThemeProvider**: Wire up `next-themes` properly (the package is installed but the provider is a stub)
+6. **Type-safe API responses**: API routes return `any`; add Zod validation on inputs and typed responses
+7. **Consolidate image compression**: Two compression utilities exist (`lib/image-utils.ts` and inline in `upload-vehicle.tsx`) — use one
+8. **Add error boundaries**: No React Error Boundaries wrapping major page sections
+9. **Rate limiting**: `/api/platform-stats` and other public routes have no rate limiting
+10. **Audit log table**: `vehicle_deletion_audit` table referenced in delete API but not in migrations — add migration
+
+---
+
+*This file follows the llms.txt standard (https://llmstxt.org) for providing structured context to AI language models about this codebase.*
