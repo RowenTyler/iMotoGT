@@ -5,8 +5,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Shield, Database, Clock, Users, Mail, Settings } from 'lucide-react'
 
 export const metadata: Metadata = {
-  title: 'Privacy Policy | iMoto GT',
+  title: 'Privacy Policy - iMoto GT',
   description: 'Learn how iMoto GT collects, uses, and protects your personal data in compliance with GDPR.',
+  alternates: {
+    canonical: 'https://imoto-gt.co.za/privacy',
+  },
 }
 
 export default function PrivacyPolicyPage() {
