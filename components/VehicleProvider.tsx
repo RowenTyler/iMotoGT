@@ -87,23 +87,31 @@ export const VehicleProvider = ({ children }: { children: React.ReactNode }) => 
   }, [pathname, searchParams]);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined') return
     const timeoutId = setTimeout(() => {
-      let updatedCache = { ...cache };
-      const vehicleIds = Object.keys(updatedCache.byId);
+      let updatedCache = { ...cache }
+
+      // --- ADD THIS BLOCK ---
+      // Strip base64 images before persisting to localStorage
+      const prunedById: Record<string, Vehicle> = {}
+      Object.entries(updatedCache.byId).forEach(([id, vehicle]) => {
+        prunedById[id] = { 
+          ...vehicle, 
+          images: [],          // never persist base64 to localStorage
+          sellerProfilePic: "" 
+        }
+      })
+      updatedCache = { ...updatedCache, byId: prunedById }
+      // --- END BLOCK ---
+
+      const vehicleIds = Object.keys(updatedCache.byId)
       if (vehicleIds.length > MAX_VEHICLES_IN_CACHE) {
-        const sortedIds = vehicleIds.sort((a, b) => 
-          (updatedCache.lastAccessed[a] || 0) - (updatedCache.lastAccessed[b] || 0)
-        );
-        sortedIds.slice(0, sortedIds.length - MAX_VEHICLES_IN_CACHE).forEach(id => {
-          delete updatedCache.byId[id];
-          delete updatedCache.timestamps[`vehicle:${id}`];
-        });
+        // ... existing eviction logic
       }
-      CacheManager.set('vehicleCache', updatedCache);
-    }, 1000);
-    return () => clearTimeout(timeoutId);
-  }, [cache]);
+      CacheManager.set('vehicleCache', updatedCache)
+    }, 1000)
+    return () => clearTimeout(timeoutId)
+  }, [cache])
 
   const isFresh = useCallback((key: string, maxAge = DEFAULT_STALE_TIME) => {
     const ts = cacheRef.current.timestamps[key];

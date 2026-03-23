@@ -688,7 +688,7 @@ export default function UploadVehicle({
     }
   }
 
-  const compressImage = (file: File, maxWidth = 1200, quality = 0.8): Promise<string> => {
+  const compressImage = (file: File, maxWidth = 800, quality = 0.72): Promise<string> => {
     return new Promise((resolve, reject) => {
       try {
         const canvas = document.createElement("canvas")
@@ -761,7 +761,7 @@ export default function UploadVehicle({
 
             setImageUploadProgress(((index + 1) / fileArray.length) * 100)
 
-            return await compressImage(file, 1200, 0.85)
+            return await compressImage(file, 800, 0.72)
           } catch (error) {
             throw new Error(`Processing ${file.name}: ${error instanceof Error ? error.message : "Unknown error"}`)
           }

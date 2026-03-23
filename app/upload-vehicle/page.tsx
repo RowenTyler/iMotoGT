@@ -6,7 +6,7 @@ import UploadVehicleComponent from "@/components/upload-vehicle"
 import { useEffect, useState } from "react"
 import { vehicleService } from "@/lib/vehicle-service"
 import { authService } from "@/lib/auth"
-import { compressImages } from "@/lib/image-utils"
+
 import type { UserProfile } from "@/types/user"
 import type { VehicleFormData } from "@/types/vehicle"
 
@@ -29,46 +29,38 @@ export default function UploadVehiclePage() {
    * Handles vehicle submission including image compression and database insertion
    */
   const handleVehicleSubmit = async (vehicleData: VehicleFormData) => {
-    console.log("🚀 handleVehicleSubmit - START")
     setIsSubmitting(true)
     setSubmitError(null)
 
     if (!user || !user.id) {
-      console.error("❌ User not authenticated")
       setSubmitError("User is not authenticated. Please refresh the page and try again.")
       setIsSubmitting(false)
       return
     }
 
-  try {
-    console.log("📝 Submitting vehicle data...")
-    
-    // Compress images before uploading to optimize storage and bandwidth
-    if (vehicleData.images && vehicleData.images.length > 0) {
-      console.log(`🖼️ Compressing ${vehicleData.images.length} images...`)
-      vehicleData.images = await compressImages(vehicleData.images)
-      console.log("✅ Images compressed successfully")
-    }
-    
-    const result = await vehicleService.createVehicle(vehicleData, user.id)
-    
-    if (!result || !result.id) {
-      throw new Error("Invalid response from server. Listing may not have been created.")
-    }
+    try {
+      // Step 1: Create the vehicle record first to get an ID
+      const vehicleWithoutImages = { ...vehicleData, images: [] }
+      const vehicle = await vehicleService.createVehicle(vehicleWithoutImages, user.id)
 
-    console.log("✅ Vehicle created successfully:", result.id)
-    setIsSubmitting(false)
-    router.push("/dashboard")
-    
-  } catch (error: any) {
-    console.error("❌ Failed to submit vehicle:", error)
-    
-    // Provide specific feedback for compression or network failures
-    const errorMessage = error?.message || "Failed to create vehicle listing. Please try again."
-    setSubmitError(errorMessage)
-    setIsSubmitting(false)
+      if (!vehicle?.id) throw new Error("Failed to create vehicle record")
+
+      // Step 2: Upload images to Supabase Storage — returns public URLs
+      const { uploadAllVehicleImages } = await import('@/lib/image-upload')
+      const imageUrls = await uploadAllVehicleImages(vehicleData.images || [], vehicle.id)
+
+      // Step 3: Update the vehicle with storage URLs
+      if (imageUrls.length > 0) {
+        await vehicleService.updateVehicle(vehicle.id, { images: imageUrls })
+      }
+
+      setIsSubmitting(false)
+      router.push("/dashboard")
+    } catch (error: any) {
+      setSubmitError(error.message || "Failed to create listing")
+      setIsSubmitting(false)
+    }
   }
-}
 
   /**
    * Updates user profile data during the vehicle upload process

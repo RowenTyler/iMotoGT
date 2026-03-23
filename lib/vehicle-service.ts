@@ -43,12 +43,8 @@ export class VehicleError extends Error {
 const pruneForCache = (vehicles: Vehicle[]): Vehicle[] => {
   return vehicles.map((v) => ({
     ...v,
-    // Keep only the first image to reduce cache size but preserve the original
-    // image data (URL or data URI). Avoid replacing with hardcoded placeholder
-    // paths which break rendering after reload. If storage becomes a problem
-    // we can fallback to compressing or truncating but for now keep the real
-    // image so the UI can show original images after reloading.
-    images: v.images?.slice(0, 1) || [],
+    images: [],          // strip ALL images from cache — fetch fresh on detail view
+    sellerProfilePic: "", // profile pics are also base64 blobs
   }))
 }
 
