@@ -1,8 +1,8 @@
 import { supabase } from "./supabase"
 import type { Vehicle, VehicleFormData } from "@/types/vehicle"
 
-// Standardized query to avoid repetition and ensure consistent data fetching
-const VEHICLE_SELECT_QUERY = `
+// Lightweight query for list views (no images, no description)
+const VEHICLE_LIST_QUERY = `
   id,
   user_id,
   make,
@@ -15,7 +15,29 @@ const VEHICLE_SELECT_QUERY = `
   fuel,
   engine_capacity,
   body_type,
-  condition,
+  province,
+  city,
+  status,
+  contact_privacy_enabled,
+  created_at,
+  updated_at,
+  users(id, first_name, last_name, profile_pic, city, province)
+`
+
+// Full query for detail views (includes images, description, and seller contact info)
+const VEHICLE_DETAIL_QUERY = `
+  id,
+  user_id,
+  make,
+  model,
+  variant,
+  year,
+  price,
+  mileage,
+  transmission,
+  fuel,
+  engine_capacity,
+  body_type,
   province,
   city,
   description,
@@ -26,6 +48,9 @@ const VEHICLE_SELECT_QUERY = `
   updated_at,
   users(id, email, first_name, last_name, phone, profile_pic, suburb, city, province)
 `
+
+// Keep original for compatibility if needed (point to detail query)
+const VEHICLE_SELECT_QUERY = VEHICLE_DETAIL_QUERY
 
 /**
  * Map database record to Vehicle type
@@ -79,7 +104,7 @@ export async function getVehicles(status = "active"): Promise<Vehicle[]> {
   try {
     const { data, error } = await supabase
       .from("vehicles")
-      .select(VEHICLE_SELECT_QUERY)
+      .select(VEHICLE_LIST_QUERY)
       .eq("status", status)
       .order("created_at", { ascending: false })
 
@@ -102,7 +127,7 @@ export async function getVehicleById(id: string): Promise<Vehicle | null> {
   try {
     const { data, error } = await supabase
       .from("vehicles")
-      .select(VEHICLE_SELECT_QUERY)
+      .select(VEHICLE_DETAIL_QUERY)
       .eq("id", id)
       .single()
 
@@ -125,7 +150,7 @@ export async function getUserVehicles(userId: string): Promise<Vehicle[]> {
   try {
     const { data, error } = await supabase
       .from("vehicles")
-      .select(VEHICLE_SELECT_QUERY)
+      .select(VEHICLE_LIST_QUERY)
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
 
@@ -155,7 +180,7 @@ export async function searchVehicles(query: string): Promise<Vehicle[]> {
 
     const { data, error } = await supabase
       .from("vehicles")
-      .select(VEHICLE_SELECT_QUERY)
+      .select(VEHICLE_LIST_QUERY)
       .or(`make.ilike.${searchTerm},model.ilike.${searchTerm},variant.ilike.${searchTerm}`)
       .eq("status", "active")
       .order("created_at", { ascending: false })
@@ -200,7 +225,7 @@ export async function filterVehicles(filters: VehicleFilters): Promise<Vehicle[]
   try {
     let query = supabase
       .from("vehicles")
-      .select(VEHICLE_SELECT_QUERY)
+      .select(VEHICLE_LIST_QUERY)
       .eq("status", "active")
 
     if (filters.query && filters.query.trim()) {
@@ -338,7 +363,7 @@ export async function createVehicle(vehicleData: VehicleFormData, userId: string
     const { data, error } = await supabase
       .from("vehicles")
       .insert([dbData])
-      .select(VEHICLE_SELECT_QUERY)
+      .select(VEHICLE_DETAIL_QUERY)
       .single()
 
     // Handle errors - THROW instead of returning null
@@ -408,7 +433,7 @@ export async function updateVehicle(id: string, vehicleData: Partial<VehicleForm
       .from("vehicles")
       .update(dbData)
       .eq("id", id)
-      .select(VEHICLE_SELECT_QUERY)
+      .select(VEHICLE_DETAIL_QUERY)
       .single()
 
     if (error) {
@@ -499,7 +524,7 @@ export async function getSavedVehicles(userId: string): Promise<Vehicle[]> {
       .from('saved_vehicles')
       .select(`
         vehicle_id,
-        vehicles (${VEHICLE_SELECT_QUERY})
+        vehicles (${VEHICLE_LIST_QUERY})
       `)
       .eq('user_id', userId)
 

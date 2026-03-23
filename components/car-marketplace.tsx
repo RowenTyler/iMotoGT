@@ -3,6 +3,7 @@
 import type React from "react"
 import { useEffect, useState, useRef, useCallback, useMemo } from "react"
 import { useRouter } from "next/navigation"
+import Image from "next/image"
 import * as SliderPrimitive from "@radix-ui/react-slider"
 import { Search, X, ChevronDown, ChevronRight, Truck, CarIcon, Bike, Facebook, Instagram, Twitter } from "lucide-react"
 import VehicleDetails from "./vehicle-details"
@@ -782,10 +783,13 @@ export default function CarMarketplace() {
           <div className="min-h-screen flex flex-col items-center justify-center px-4 py-20 relative">
             {/* Background Image with Rounded Bottom */}
             <div className="absolute inset-0 overflow-hidden rounded-b-[50px]">
-              <img 
+              <Image 
                 src="/home-page.png" 
                 alt="Car marketplace hero" 
-                className="w-full h-full object-cover"
+                fill
+                priority
+                quality={80}
+                className="object-cover"
               />
               {/* Overlay for better text readability */}
               <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/40 to-black/60"></div>

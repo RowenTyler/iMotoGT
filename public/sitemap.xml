@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9
+        http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
+
+  <!-- ============================================================
+       IMOTO GT — SITEMAP
+       Base URL: https://imoto-gt.co.za
+       Generated: 2026-03-21
+       ============================================================ -->
+
+  <!-- ───────────────────────────────────────────────
+       HIGH PRIORITY — Core public pages
+       ─────────────────────────────────────────────── -->
+
+  <url>
+    <loc>https://imoto-gt.co.za/home</loc>
+    <lastmod>2026-03-21</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+
+  <url>
+    <loc>https://imoto-gt.co.za/results</loc>
+    <lastmod>2026-03-21</lastmod>
+    <changefreq>hourly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <!-- ───────────────────────────────────────────────
+       MEDIUM-HIGH PRIORITY — User-facing feature pages
+       ─────────────────────────────────────────────── -->
+
+  <url>
+    <loc>https://imoto-gt.co.za/upload-vehicle</loc>
+    <lastmod>2026-03-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://imoto-gt.co.za/login</loc>
+    <lastmod>2026-03-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <url>
+    <loc>https://imoto-gt.co.za/upgrade</loc>
+    <lastmod>2026-03-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <!-- ───────────────────────────────────────────────
+       MEDIUM PRIORITY — Auth flows
+       ─────────────────────────────────────────────── -->
+
+  <url>
+    <loc>https://imoto-gt.co.za/reset-password</loc>
+    <lastmod>2026-03-21</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.4</priority>
+  </url>
+
+  <!-- ───────────────────────────────────────────────
+       MEDIUM PRIORITY — Informational pages
+       ─────────────────────────────────────────────── -->
+
+  <url>
+    <loc>https://imoto-gt.co.za/about</loc>
+    <lastmod>2026-03-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+
+  <url>
+    <loc>https://imoto-gt.co.za/services</loc>
+    <lastmod>2026-03-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+
+  <url>
+    <loc>https://imoto-gt.co.za/privacy</loc>
+    <lastmod>2026-03-21</lastmod>
+    <changefreq>yearly</changefreq>
+    <priority>0.4</priority>
+  </url>
+
+  <!-- ───────────────────────────────────────────────
+       LOW PRIORITY — Auth-gated pages
+       (included for crawlability; robots.txt should
+        disallow indexing of /dashboard, /settings etc.)
+       ─────────────────────────────────────────────── -->
+
+  <url>
+    <loc>https://imoto-gt.co.za/dashboard</loc>
+    <lastmod>2026-03-21</lastmod>
+    <changefreq>always</changefreq>
+    <priority>0.3</priority>
+  </url>
+
+  <url>
+    <loc>https://imoto-gt.co.za/settings</loc>
+    <lastmod>2026-03-21</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.2</priority>
+  </url>
+
+</urlset>
