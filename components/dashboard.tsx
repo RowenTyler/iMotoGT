@@ -346,55 +346,50 @@ export default function Dashboard({
 
                 {/* ROW 2: Subscription + Saved Cars — must fill row height exactly */}
                 <div className="grid grid-cols-9 gap-4 min-h-0 h-full">
-                  {/* Subscription — 3 of 9 cols */}
-                  <Card className="col-span-3 rounded-3xl w-full h-full flex flex-col overflow-hidden">
-                    <div className="px-4 py-3 border-b">
-                      <div className="flex justify-between items-center min-h-0">
-                        <h3 className="text-xl font-semibold leading-tight">Subscription</h3>
-                        <Package className="h-5 w-5 text-[#FF6700]" />
-                      </div>
+                  {/* ---------- Subscription Card (fixed layout) ---------- */}
+                  <Card className="col-span-3 rounded-3xl w-full h-full flex flex-col overflow-hidden bg-white dark:bg-[#2A352A]">
+                    {/* Header */}
+                    <div className="px-5 pt-5 pb-3 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                      <h3 className="text-xl font-semibold text-[#3E5641] dark:text-white">Subscription</h3>
+                      <Package className="h-5 w-5 text-[#FF6700]" />
                     </div>
 
-                    <div className="p-3 flex-grow flex flex-col gap-3 min-h-0">
-                      {/* Free Plan */}
-                      <div className="bg-gray-50 rounded-xl p-3 flex-1 flex flex-col min-h-0">
-                        <div className="flex justify-between items-center mb-1 min-h-0">
-                          <h4 className="font-medium leading-tight">Free Plan</h4>
-                          <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full leading-none">
+                    {/* Scrollable Content */}
+                    <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+                      {/* Free Plan Section */}
+                      <div className="bg-gray-50 dark:bg-[#1F2B20] rounded-xl p-4">
+                        <div className="flex justify-between items-center mb-2">
+                          <h4 className="font-semibold text-[#3E5641] dark:text-white">Free Plan</h4>
+                          <span className="text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 px-2 py-1 rounded-full">
                             Active
                           </span>
                         </div>
-
-                        <div className="flex items-center justify-between text-sm min-h-0">
-                          <span className="leading-tight break-words">Vehicle Listings</span>
-                          <span className="font-medium leading-tight">
+                        <div className="flex justify-between items-center text-sm mb-2">
+                          <span className="text-gray-600 dark:text-gray-400">Vehicle Listings</span>
+                          <span className="font-medium text-[#3E5641] dark:text-white">
                             {totalListings}/{maxFreeListings} Used
                           </span>
                         </div>
-
-                        <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mb-2">
                           <div
                             className="bg-[#FF6700] h-2 rounded-full"
                             style={{ width: `${(totalListings / maxFreeListings) * 100}%` }}
                           />
                         </div>
-
-                        <p className="text-xs text-gray-500 mt-1 leading-tight break-words min-h-0">
-                          {freeListingsRemaining} free listings remaining
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          {freeListingsRemaining} free {freeListingsRemaining === 1 ? "listing" : "listings"} remaining
                         </p>
                       </div>
 
-                      {/* Premium */}
-                      <div className="border border-dashed border-gray-300 rounded-xl p-3 flex-1 flex flex-col min-h-0">
-                        <h4 className="font-medium mb-1 leading-tight">Premium Plans</h4>
-
-                        <p className="text-xs text-gray-500 mb-2 leading-tight break-words min-h-0">
+                      {/* Premium Plans Section */}
+                      <div className="border border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-4">
+                        <h4 className="font-semibold mb-1 text-[#3E5641] dark:text-white">Premium Plans</h4>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
                           Unlock unlimited listings and premium features
                         </p>
-
                         <Button
                           variant="outline"
-                          className="w-full text-[#FF6700] border-[#FF6700] hover:bg-[#FFF8E0] bg-transparent h-8 text-xs"
+                          className="w-full text-[#FF6700] border-[#FF6700] hover:bg-[#FFF8E0] dark:hover:bg-[#2A352A] bg-transparent h-9 text-sm"
                           onClick={() => router.push("/upgrade")}
                         >
                           Upgrade Plan
@@ -403,7 +398,7 @@ export default function Dashboard({
                     </div>
                   </Card>
 
-                  {/* Saved Cars Card — 6 of 9 cols */}
+                  {/* ---------- Saved Cars Card (with working image) ---------- */}
                   <Card className="col-span-6 rounded-3xl overflow-hidden w-full h-full relative">
                     <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-transparent z-10"></div>
 
@@ -416,13 +411,13 @@ export default function Dashboard({
                       </div>
                     ) : (
                       <img
-                        src={getVehicleImage(safeSavedCars[currentCarIndex]) || "/placeholder.svg"}
+                        src={getVehicleImage(safeSavedCars[currentCarIndex]) || "/placeholder.svg?height=400&width=600"}
                         alt="Saved Car"
                         className="absolute inset-0 w-full h-full object-cover"
                         onError={(e) => {
-                          console.error("❌ Dashboard: Image failed to load, using placeholder")
-                          const target = e.target as HTMLImageElement
-                          target.src = "/placeholder.svg?height=400&width=600"
+                          console.error("❌ Dashboard: Image failed to load, using placeholder");
+                          const target = e.target as HTMLImageElement;
+                          target.src = "/placeholder.svg?height=400&width=600";
                         }}
                       />
                     )}
@@ -448,8 +443,8 @@ export default function Dashboard({
                             <div
                               className="text-white cursor-pointer"
                               onClick={() => {
-                                console.log("🔄 Dashboard: Clicking on saved car:", safeSavedCars[currentCarIndex]?.id)
-                                handleViewDetails(safeSavedCars[currentCarIndex])
+                                console.log("🔄 Dashboard: Clicking on saved car:", safeSavedCars[currentCarIndex]?.id);
+                                handleViewDetails(safeSavedCars[currentCarIndex]);
                               }}
                             >
                               <h3 className="text-2xl font-bold mb-1">
@@ -467,9 +462,8 @@ export default function Dashboard({
                             <Button
                               className="bg-white text-[#3E5641] hover:bg-white/90"
                               onClick={(e) => {
-                                e.stopPropagation()
-                                // mailto logic would go here
-                                console.log("📧 Contact seller clicked")
+                                e.stopPropagation();
+                                console.log("📧 Contact seller clicked");
                               }}
                             >
                               Contact Seller
@@ -495,8 +489,8 @@ export default function Dashboard({
                                 currentCarIndex === index ? "bg-white w-4" : "bg-white/40"
                               }`}
                               onClick={(e) => {
-                                e.stopPropagation()
-                                setCurrentCarIndex(index)
+                                e.stopPropagation();
+                                setCurrentCarIndex(index);
                               }}
                             />
                           ))}
@@ -524,8 +518,8 @@ export default function Dashboard({
                           key={vehicle.id}
                           className="flex items-center gap-3 p-3 mb-2 rounded-xl hover:bg-gray-50 transition-colors cursor-pointer"
                           onClick={() => {
-                            console.log("🔄 Dashboard: Clicking on listed car:", vehicle.id)
-                            handleViewDetails(vehicle)
+                            console.log("🔄 Dashboard: Clicking on listed car:", vehicle.id);
+                            handleViewDetails(vehicle);
                           }}
                         >
                           <div className="w-16 h-12 rounded-lg overflow-hidden bg-gray-200 flex-shrink-0">
@@ -534,8 +528,8 @@ export default function Dashboard({
                               alt="car"
                               className="w-full h-full object-cover"
                               onError={(e) => {
-                                const target = e.target as HTMLImageElement
-                                target.src = "/placeholder.svg"
+                                const target = e.target as HTMLImageElement;
+                                target.src = "/placeholder.svg";
                               }}
                             />
                           </div>
@@ -552,8 +546,8 @@ export default function Dashboard({
                                 size="icon"
                                 className="flex-shrink-0"
                                 onClick={(e) => {
-                                  e.stopPropagation()
-                                  handleEditListedCar(vehicle)
+                                  e.stopPropagation();
+                                  handleEditListedCar(vehicle);
                                 }}
                               >
                                 <Edit className="h-4 w-4 text-blue-500" />
@@ -565,8 +559,8 @@ export default function Dashboard({
                                 size="icon"
                                 className="flex-shrink-0"
                                 onClick={(e) => {
-                                  e.stopPropagation()
-                                  handleDeleteVehicle(vehicle)
+                                  e.stopPropagation();
+                                  handleDeleteVehicle(vehicle);
                                 }}
                               >
                                 <Trash2 className="h-4 w-4 text-red-500" />
@@ -600,14 +594,396 @@ export default function Dashboard({
           </div>
         </div>
 
-        {/* MOBILE / TABLET / LANDSCAPE LAYOUT (lg:hidden) — unchanged */}
+        {/* MOBILE / TABLET / LANDSCAPE LAYOUT (lg:hidden) */}
         <div className="lg:hidden w-full mx-auto h-full overflow-y-auto px-6 pb-6">
-          {/* ... existing mobile layout ... */}
+          <div className="max-w-4xl mx-auto">
+            <h1 className="text-3xl font-bold mb-4">Welcome, {user.firstName}</h1>
+
+            {/* Metrics Grid */}
+            <div className="grid grid-cols-4 gap-2 mb-4">
+              <div className="col-span-1" onClick={handleProfileClick}>
+                <Card className="rounded-xl overflow-hidden aspect-square transition-transform hover:scale-105 cursor-pointer flex flex-col justify-end">
+                  <div className="relative w-full h-full">
+                    {user.profilePic ? (
+                      <Image
+                        src={user.profilePic || "/placeholder.svg"}
+                        alt={`${user.firstName}'s profile`}
+                        layout="fill"
+                        objectFit="cover"
+                        className="object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-[#2E933C] flex items-center justify-center text-white">
+                        <div className="text-center">
+                          <div className="text-3xl font-bold">{user.firstName?.[0]?.toUpperCase() || "U"}</div>
+                          <div className="text-xs">{user.firstName}</div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </Card>
+              </div>
+
+              <Card className="col-span-1 rounded-xl p-2 flex flex-col items-center justify-center">
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="text-xs font-semibold text-[#3E5641]">Metrics</h3>
+                  <Eye className="w-3 h-3 text-[#FF6700]" />
+                </div>
+                <div className="text-xl font-bold text-[#3E5641]">{totalListings}</div>
+                <div className="text-xs text-[#6F7F69]">Listings</div>
+              </Card>
+
+              <Card
+                className={`col-span-1 rounded-xl p-2 flex flex-col items-center justify-center bg-gradient-to-br from-[#FF6700] to-[#FF9248] text-white cursor-pointer ${
+                  totalListings >= maxFreeListings ? "opacity-90" : ""
+                }`}
+                onClick={handleUploadClick}
+              >
+                <Plus className="w-5 h-5" />
+                <span className="text-xs font-semibold mt-1">
+                  {totalListings >= maxFreeListings ? "Upgrade to List More" : "Upload"}
+                </span>
+              </Card>
+
+              <Card className="col-span-1 rounded-xl p-2 flex flex-col items-center justify-center">
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="text-xs font-semibold text-[#3E5641]">Plan</h3>
+                  <Package className="h-3 w-3 text-[#FF6700]" />
+                </div>
+                <div className="text-xl font-bold text-[#3E5641]">Free</div>
+                <div className="text-xs text-[#6F7F69]">{freeListingsRemaining} left</div>
+              </Card>
+            </div>
+
+            {/* Mobile Saved Cars */}
+            <Card className="rounded-lg overflow-hidden w-full h-40 relative mb-4">
+              <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-transparent z-10"></div>
+
+              {isLoadingSavedCars ? (
+                <div className="absolute inset-0 w-full h-full bg-gray-200 flex items-center justify-center">
+                  <div className="text-white text-center">
+                    <Car className="w-8 h-8 mx-auto mb-2 opacity-50 animate-pulse" />
+                    <p className="text-sm">Loading...</p>
+                  </div>
+                </div>
+              ) : (
+                <img
+                  src={getVehicleImage(safeSavedCars[currentCarIndex]) || "/placeholder.svg"}
+                  alt="Saved Car"
+                  className="absolute inset-0 w-full h-full object-cover"
+                  onError={(e) => {
+                    const target = e.target as HTMLImageElement;
+                    target.src = "/placeholder.svg";
+                  }}
+                />
+              )}
+
+              <div className="relative z-20 h-full flex flex-col justify-between p-4">
+                <div className="flex justify-between items-start">
+                  <span
+                    onClick={() => router.push("/liked-cars-page")}
+                    className="bg-[#FF6700] text-white px-2 py-1 rounded-full text-xs cursor-pointer hover:bg-[#FF7D33] transition-colors"
+                  >
+                    View Saved Cars
+                  </span>
+                  {safeSavedCars.length > 0 && (
+                    <span className="bg-white/20 backdrop-blur-sm text-white px-2 py-1 rounded-full text-xs">
+                      {safeSavedCars.length} saved
+                    </span>
+                  )}
+                </div>
+                <div className="flex justify-between items-end">
+                  {safeSavedCars.length > 0 ? (
+                    <>
+                      <div
+                        className="text-white cursor-pointer"
+                        onClick={() => handleViewDetails(safeSavedCars[currentCarIndex])}
+                      >
+                        <h3 className="text-lg font-bold">
+                          {safeSavedCars[currentCarIndex]?.year} {safeSavedCars[currentCarIndex]?.make}{" "}
+                          {safeSavedCars[currentCarIndex]?.model}
+                        </h3>
+                        <p className="text-white/80 text-xs mb-1">
+                          {safeSavedCars[currentCarIndex]?.variant} •{" "}
+                          {safeSavedCars[currentCarIndex]?.mileage?.toLocaleString()} km
+                        </p>
+                        <p className="text-lg font-bold text-[#FF6700]">
+                          ${safeSavedCars[currentCarIndex]?.price?.toLocaleString()}
+                        </p>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-white text-center w-full">
+                      <Car className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                      <h3 className="text-base font-bold mb-1">No Saved Cars</h3>
+                      <Button
+                        className="bg-white text-[#3E5641] hover:bg-white/90 text-xs h-auto py-1.5 px-3"
+                        onClick={handleBrowseCars}
+                      >
+                        Browse Cars
+                      </Button>
+                    </div>
+                  )}
+                </div>
+                {safeSavedCars.length > 1 && (
+                  <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1">
+                    {safeSavedCars.map((_, index) => (
+                      <button
+                        key={index}
+                        className={`w-1.5 h-1.5 rounded-full transition-all ${
+                          currentCarIndex === index ? "bg-white w-3" : "bg-white/40"
+                        }`}
+                        onClick={() => setCurrentCarIndex(index)}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            </Card>
+
+            {/* Mobile Recently Listed */}
+            <Card className="rounded-3xl w-full flex flex-col mb-4">
+              <div className="p-4 border-b flex justify-between items-center">
+                <h3 className="text-lg font-semibold">Recently Listed</h3>
+              </div>
+              <div className="p-2">
+                {safeListedCars.length > 0 ? (
+                  safeListedCars.map((vehicle) => (
+                    <div
+                      key={vehicle.id}
+                      className="flex items-center gap-2 p-2 mb-1 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+                      onClick={() => handleViewDetails(vehicle)}
+                    >
+                      <div className="w-12 h-9 rounded-md overflow-hidden bg-gray-200 flex-shrink-0">
+                        <img
+                          src={getVehicleImage(vehicle) || "/placeholder.svg"}
+                          alt="car"
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.src = "/placeholder.svg";
+                          }}
+                        />
+                      </div>
+                      <div className="flex-grow min-w-0">
+                        <div className="font-medium text-sm truncate">
+                          {vehicle.year} {vehicle.make} {vehicle.model}
+                        </div>
+                        <div className="text-xs text-gray-500">${vehicle.price?.toLocaleString()}</div>
+                      </div>
+
+                      <div className="flex items-center ml-1">
+                        {onEditListedCar && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="flex-shrink-0 h-8 w-8"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEditListedCar(vehicle);
+                            }}
+                          >
+                            <Edit className="h-4 w-4 text-blue-500" />
+                          </Button>
+                        )}
+                        {onDeleteListedCar && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="flex-shrink-0 h-8 w-8"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteVehicle(vehicle);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4 text-red-500" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center text-gray-500 py-6">
+                    <Car className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">No cars listed yet.</p>
+                  </div>
+                )}
+              </div>
+              <div className="p-3 border-t">
+                <Button
+                  variant="outline"
+                  className="w-full text-sm bg-transparent"
+                  onClick={handleUploadClick}
+                  disabled={uploadBlocked}
+                >
+                  <Plus className="mr-1 h-3 w-3" />
+                  {totalListings >= maxFreeListings ? "Upgrade to List More" : "Add New Listing"}
+                </Button>
+              </div>
+            </Card>
+          </div>
         </div>
       </main>
 
-      {/* Delete Confirmation Modal — unchanged */}
-      {/* Upgrade Plan Modal — unchanged */}
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold mb-4">Delete Vehicle Listing</h3>
+            <p className="text-gray-600 mb-4">
+              Are you sure you want to delete your {vehicleToDelete?.year} {vehicleToDelete?.make}{" "}
+              {vehicleToDelete?.model} listing?
+            </p>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Reason for deletion:
+                <span className="text-red-500 ml-1">*</span>
+              </label>
+              <select
+                value={deleteReason}
+                onChange={(e) => setDeleteReason(e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#FF6700] focus:border-transparent"
+                disabled={isDeleting}
+              >
+                <option value="">Select a reason</option>
+                <option value="sold">Vehicle has been sold</option>
+                <option value="no_longer_selling">No longer selling</option>
+                <option value="no_longer_need_service">No longer need the service</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+
+            {deleteReason === "other" && (
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Please specify:
+                  <span className="text-red-500 ml-1">*</span>
+                </label>
+                <textarea
+                  value={customDeleteReason}
+                  onChange={(e) => setCustomDeleteReason(e.target.value)}
+                  placeholder="Please provide your reason..."
+                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#FF6700] focus:border-transparent"
+                  rows={3}
+                  disabled={isDeleting}
+                />
+              </div>
+            )}
+
+            <div className="flex gap-3 justify-end">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowDeleteModal(false)
+                  setVehicleToDelete(null)
+                  setDeleteReason("")
+                  setCustomDeleteReason("")
+                }}
+                disabled={isDeleting}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={confirmDeleteVehicle}
+                disabled={!deleteReason || (deleteReason === "other" && !customDeleteReason.trim()) || isDeleting}
+                className="bg-red-500 hover:bg-red-600 text-white"
+              >
+                {isDeleting ? "Deleting..." : "Delete Listing"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Upgrade Plan Modal */}
+      {showUpgradeModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4 shadow-xl">
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 bg-[#FF6700] rounded-full flex items-center justify-center mx-auto mb-4">
+                <Package className="w-8 h-8 text-white" />
+              </div>
+              <h3 className="text-2xl font-bold text-[#3E5641] mb-2">Upgrade Your Plan</h3>
+              <p className="text-[#6F7F69]">You've reached your free listing limit of {maxFreeListings} vehicles.</p>
+            </div>
+
+            <div className="bg-[#FFF8E0] border border-[#FF6700]/20 rounded-xl p-4 mb-6">
+              <h4 className="font-semibold text-[#3E5641] mb-2">Current Usage</h4>
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-sm text-[#6F7F69]">Listings Used</span>
+                <span className="font-bold">
+                  {totalListings}/{maxFreeListings}
+                </span>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div
+                  className="bg-[#FF6700] h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${(totalListings / maxFreeListings) * 100}%` }}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-4 mb-6">
+              <div className="flex items-start space-x-3">
+                <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="text-green-600 text-sm">✓</span>
+                </div>
+                <div>
+                  <h5 className="font-semibold text-[#3E5641]">Unlimited Listings</h5>
+                  <p className="text-sm text-[#6F7F69]">List as many vehicles as you want</p>
+                </div>
+              </div>
+
+              <div className="flex items-start space-x-3">
+                <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="text-green-600 text-sm">✓</span>
+                </div>
+                <div>
+                  <h5 className="font-semibold text-[#3E5641]">Premium Placement</h5>
+                  <p className="text-sm text-[#6F7F69]">Get featured at the top of search results</p>
+                </div>
+              </div>
+
+              <div className="flex items-start space-x-3">
+                <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <span className="text-green-600 text-sm">✓</span>
+                </div>
+                <div>
+                  <h5 className="font-semibold text-[#3E5641]">Priority Support</h5>
+                  <p className="text-sm text-[#6F7F69]">Dedicated support team and faster response times</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                className="flex-1 border-[#3E5641] text-[#3E5641] hover:bg-[#3E5641] hover:text-white bg-transparent"
+                onClick={() => handleUpgradeAction("contact")}
+              >
+                Contact Sales
+              </Button>
+              <Button
+                className="flex-1 bg-[#FF6700] hover:bg-[#FF6700]/90 text-white"
+                onClick={() => handleUpgradeAction("upgrade")}
+              >
+                Upgrade Plan
+              </Button>
+            </div>
+
+            <button
+              onClick={() => {
+                setShowUpgradeModal(false)
+                setUploadBlocked(false)
+              }}
+              className="absolute top-4 right-4 text-[#6F7F69] hover:text-[#3E5641]"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
