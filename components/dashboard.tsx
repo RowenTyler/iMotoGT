@@ -346,50 +346,50 @@ export default function Dashboard({
 
                 {/* ROW 2: Subscription + Saved Cars — must fill row height exactly */}
                 <div className="grid grid-cols-9 gap-4 min-h-0 h-full">
-                  {/* ---------- Subscription Card (fixed layout) ---------- */}
-                  <Card className="col-span-3 rounded-3xl w-full h-full flex flex-col overflow-hidden bg-white dark:bg-[#2A352A]">
+                  {/* ---------- Subscription Card (compact, no scroll) ---------- */}
+                  <Card className="col-span-3 rounded-3xl w-full h-full flex flex-col bg-white dark:bg-[#2A352A]">
                     {/* Header */}
-                    <div className="px-5 pt-5 pb-3 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-                      <h3 className="text-xl font-semibold text-[#3E5641] dark:text-white">Subscription</h3>
-                      <Package className="h-5 w-5 text-[#FF6700]" />
+                    <div className="px-4 pt-4 pb-2 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                      <h3 className="text-lg font-semibold text-[#3E5641] dark:text-white">Subscription</h3>
+                      <Package className="h-4 w-4 text-[#FF6700]" />
                     </div>
 
-                    {/* Scrollable Content */}
-                    <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
-                      {/* Free Plan Section */}
-                      <div className="bg-gray-50 dark:bg-[#1F2B20] rounded-xl p-4">
-                        <div className="flex justify-between items-center mb-2">
-                          <h4 className="font-semibold text-[#3E5641] dark:text-white">Free Plan</h4>
-                          <span className="text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 px-2 py-1 rounded-full">
+                    {/* Content — no overflow, compact spacing */}
+                    <div className="flex-1 flex flex-col justify-between px-4 py-3 space-y-3">
+                      {/* Free Plan Section — compact */}
+                      <div className="bg-gray-50 dark:bg-[#1F2B20] rounded-lg p-3">
+                        <div className="flex justify-between items-center mb-1">
+                          <h4 className="font-medium text-sm text-[#3E5641] dark:text-white">Free Plan</h4>
+                          <span className="text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 px-2 py-0.5 rounded-full">
                             Active
                           </span>
                         </div>
-                        <div className="flex justify-between items-center text-sm mb-2">
-                          <span className="text-gray-600 dark:text-gray-400">Vehicle Listings</span>
+                        <div className="flex justify-between items-center text-xs mb-1">
+                          <span className="text-gray-600 dark:text-gray-400">Listings used</span>
                           <span className="font-medium text-[#3E5641] dark:text-white">
-                            {totalListings}/{maxFreeListings} Used
+                            {totalListings}/{maxFreeListings}
                           </span>
                         </div>
-                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mb-2">
+                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 mb-1">
                           <div
-                            className="bg-[#FF6700] h-2 rounded-full"
+                            className="bg-[#FF6700] h-1.5 rounded-full"
                             style={{ width: `${(totalListings / maxFreeListings) * 100}%` }}
                           />
                         </div>
                         <p className="text-xs text-gray-500 dark:text-gray-400">
-                          {freeListingsRemaining} free {freeListingsRemaining === 1 ? "listing" : "listings"} remaining
+                          {freeListingsRemaining} free {freeListingsRemaining === 1 ? "listing" : "listings"} left
                         </p>
                       </div>
 
-                      {/* Premium Plans Section */}
-                      <div className="border border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-4">
-                        <h4 className="font-semibold mb-1 text-[#3E5641] dark:text-white">Premium Plans</h4>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
-                          Unlock unlimited listings and premium features
+                      {/* Premium Plans Section — compact */}
+                      <div className="border border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-3">
+                        <h4 className="font-medium text-sm mb-0.5 text-[#3E5641] dark:text-white">Premium Plans</h4>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                          Unlimited listings & premium features
                         </p>
                         <Button
                           variant="outline"
-                          className="w-full text-[#FF6700] border-[#FF6700] hover:bg-[#FFF8E0] dark:hover:bg-[#2A352A] bg-transparent h-9 text-sm"
+                          className="w-full text-[#FF6700] border-[#FF6700] hover:bg-[#FFF8E0] dark:hover:bg-[#2A352A] bg-transparent h-8 text-xs"
                           onClick={() => router.push("/upgrade")}
                         >
                           Upgrade Plan
