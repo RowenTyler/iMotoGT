@@ -50,7 +50,7 @@ export default function HomePage() {
                   <a href="#" className="text-sm text-gray-300 hover:text-[#FF7D33]">Careers</a>
                 </li>
                 <li>
-                  <a href="#" className="text-sm text-gray-300 hover:text-[#FF7D33]">Press</a>
+                  <a href="#" className="text-sm text-gray-300 hover:text-[#FF7D33]">Blogs & Articles</a>
                 </li>
                 <li>
                   <a href="#" className="text-sm text-[#FF7D33]">Contact Us</a>
