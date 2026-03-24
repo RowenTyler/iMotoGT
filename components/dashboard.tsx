@@ -456,7 +456,7 @@ export default function Dashboard({
                                 {safeSavedCars[currentCarIndex]?.mileage?.toLocaleString()} km
                               </p>
                               <p className="text-xl font-bold text-[#FF6700]">
-                                ${safeSavedCars[currentCarIndex]?.price?.toLocaleString()}
+                                R{safeSavedCars[currentCarIndex]?.price?.toLocaleString()}
                               </p>
                             </div>
                             <Button
@@ -537,7 +537,7 @@ export default function Dashboard({
                             <div className="font-medium truncate">
                               {vehicle.year} {vehicle.make} {vehicle.model}
                             </div>
-                            <div className="text-sm text-gray-500">${vehicle.price?.toLocaleString()}</div>
+                            <div className="text-sm text-gray-500">R{vehicle.price?.toLocaleString()}</div>
                           </div>
                           <div className="flex items-center ml-2">
                             {onEditListedCar && (
@@ -708,7 +708,7 @@ export default function Dashboard({
                           {safeSavedCars[currentCarIndex]?.mileage?.toLocaleString()} km
                         </p>
                         <p className="text-lg font-bold text-[#FF6700]">
-                          ${safeSavedCars[currentCarIndex]?.price?.toLocaleString()}
+                          R{safeSavedCars[currentCarIndex]?.price?.toLocaleString()}
                         </p>
                       </div>
                     </>
@@ -769,7 +769,7 @@ export default function Dashboard({
                         <div className="font-medium text-sm truncate">
                           {vehicle.year} {vehicle.make} {vehicle.model}
                         </div>
-                        <div className="text-xs text-gray-500">${vehicle.price?.toLocaleString()}</div>
+                        <div className="text-xs text-gray-500">R{vehicle.price?.toLocaleString()}</div>
                       </div>
 
                       <div className="flex items-center ml-1">
