@@ -346,50 +346,50 @@ export default function Dashboard({
 
                 {/* ROW 2: Subscription + Saved Cars — must fill row height exactly */}
                 <div className="grid grid-cols-9 gap-4 min-h-0 h-full">
-                  {/* ---------- Subscription Card (fixed layout - compact to fit without scroll) ---------- */}
+                  {/* ---------- Subscription Card (compact, fits without scroll) ---------- */}
                   <Card className="col-span-3 rounded-3xl w-full h-full flex flex-col overflow-hidden bg-white dark:bg-[#2A352A]">
-                    {/* Header - compact */}
-                    <div className="px-4 pt-4 pb-2 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-                      <h3 className="text-base font-semibold text-[#3E5641] dark:text-white">Subscription</h3>
-                      <Package className="h-4 w-4 text-[#FF6700]" />
+                    {/* Header - minimal */}
+                    <div className="px-3 pt-3 pb-1.5 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                      <h3 className="text-sm font-semibold text-[#3E5641] dark:text-white">Subscription</h3>
+                      <Package className="h-3.5 w-3.5 text-[#FF6700]" />
                     </div>
 
-                    {/* Content - compact, no scroll */}
-                    <div className="px-4 py-3 space-y-3">
+                    {/* Content - tightly packed, no scroll */}
+                    <div className="px-3 py-2 space-y-2 flex-1 flex flex-col justify-between">
                       {/* Free Plan Section */}
-                      <div className="bg-gray-50 dark:bg-[#1F2B20] rounded-xl p-3">
-                        <div className="flex justify-between items-center mb-1">
-                          <h4 className="text-sm font-semibold text-[#3E5641] dark:text-white">Free Plan</h4>
-                          <span className="text-xs bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 px-2 py-0.5 rounded-full">
+                      <div className="bg-gray-50 dark:bg-[#1F2B20] rounded-lg p-2">
+                        <div className="flex justify-between items-center mb-0.5">
+                          <h4 className="text-xs font-semibold text-[#3E5641] dark:text-white">Free Plan</h4>
+                          <span className="text-[10px] bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 px-1.5 py-0.5 rounded-full">
                             Active
                           </span>
                         </div>
-                        <div className="flex justify-between items-center text-xs mb-1">
+                        <div className="flex justify-between items-center text-[10px] mb-0.5">
                           <span className="text-gray-600 dark:text-gray-400">Vehicle Listings</span>
                           <span className="font-medium text-[#3E5641] dark:text-white">
                             {totalListings}/{maxFreeListings} Used
                           </span>
                         </div>
-                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5 mb-1">
+                        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1 mb-0.5">
                           <div
-                            className="bg-[#FF6700] h-1.5 rounded-full"
+                            className="bg-[#FF6700] h-1 rounded-full"
                             style={{ width: `${(totalListings / maxFreeListings) * 100}%` }}
                           />
                         </div>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                        <p className="text-[10px] text-gray-500 dark:text-gray-400">
                           {freeListingsRemaining} free {freeListingsRemaining === 1 ? "listing" : "listings"} remaining
                         </p>
                       </div>
 
                       {/* Premium Plans Section */}
-                      <div className="border border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-3">
-                        <h4 className="text-sm font-semibold mb-0.5 text-[#3E5641] dark:text-white">Premium Plans</h4>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                      <div className="border border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-2">
+                        <h4 className="text-xs font-semibold mb-0.5 text-[#3E5641] dark:text-white">Premium Plans</h4>
+                        <p className="text-[10px] text-gray-500 dark:text-gray-400 mb-1.5">
                           Unlock unlimited listings and premium features
                         </p>
                         <Button
                           variant="outline"
-                          className="w-full text-xs text-[#FF6700] border-[#FF6700] hover:bg-[#FFF8E0] dark:hover:bg-[#2A352A] bg-transparent h-8"
+                          className="w-full text-[10px] text-[#FF6700] border-[#FF6700] hover:bg-[#FFF8E0] dark:hover:bg-[#2A352A] bg-transparent h-6"
                           onClick={() => router.push("/upgrade")}
                         >
                           Upgrade Plan
