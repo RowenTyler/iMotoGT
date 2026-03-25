@@ -1,50 +1,80 @@
 // lib/image-utils.ts
+// Compress images before uploading to storage
 
 /**
- * Compress image to reduce size before uploading
+ * Compress a single image to reduce file size before Supabase Storage upload.
+ * Uses WebP format for better compression than JPEG.
  */
 export async function compressImage(
-  base64Image: string, 
+  base64Image: string,
   maxWidth: number = 1200,
-  quality: number = 0.7
+  quality: number = 0.75
 ): Promise<string> {
   return new Promise((resolve) => {
     const img = new Image()
-    
+
     img.onload = () => {
-      const canvas = document.createElement('canvas')
+      const canvas = document.createElement("canvas")
       let width = img.width
       let height = img.height
-      
-      // Calculate new dimensions
+
+      // Scale down if wider than maxWidth
       if (width > maxWidth) {
-        height = (height * maxWidth) / width
+        height = Math.round((height * maxWidth) / width)
         width = maxWidth
       }
-      
+
       canvas.width = width
       canvas.height = height
+
+      const ctx = canvas.getContext("2d")!
+      ctx.drawImage(img, 0, 0, width, height)
+
+      // Try WebP first (much better compression), fall back to JPEG
+      const webpResult = canvas.toDataURL("image/webp", quality)
       
-      const ctx = canvas.getContext('2d')
-      ctx!.drawImage(img, 0, 0, width, height)
-      
-      // Compress as JPEG
-      const compressed = canvas.toDataURL('image/jpeg', quality)
-      resolve(compressed)
+      // If WebP is not supported (returns image/png), use JPEG
+      if (webpResult.startsWith("data:image/webp")) {
+        resolve(webpResult)
+      } else {
+        resolve(canvas.toDataURL("image/jpeg", quality))
+      }
     }
-    
+
+    img.onerror = () => {
+      // If compression fails, return original
+      console.warn("[ImageUtils] Compression failed, using original")
+      resolve(base64Image)
+    }
+
     img.src = base64Image
   })
 }
 
 /**
- * Compress multiple images
+ * Compress multiple images in parallel.
+ * Used in the upload-vehicle form before images are sent to storage.
  */
 export async function compressImages(images: string[]): Promise<string[]> {
-  console.log(`🖼️ Compressing ${images.length} images...`)
+  if (!images || images.length === 0) return []
+  
+  console.log(`[ImageUtils] Compressing ${images.length} images...`)
+  
   const compressed = await Promise.all(
-    images.map(img => compressImage(img, 1200, 0.7))
+    images.map((img) => {
+      // Skip if already a URL (already uploaded to storage)
+      if (!img.startsWith("data:")) return Promise.resolve(img)
+      return compressImage(img, 1200, 0.75)
+    })
   )
-  console.log(`✅ Compressed ${compressed.length} images`)
+
+  // Log size reduction
+  const originalSize = images.reduce((sum, img) => sum + img.length, 0)
+  const compressedSize = compressed.reduce((sum, img) => sum + img.length, 0)
+  const reduction = Math.round((1 - compressedSize / originalSize) * 100)
+  console.log(
+    `[ImageUtils] ✅ Compressed ${images.length} images — ${reduction}% size reduction`
+  )
+
   return compressed
 }
