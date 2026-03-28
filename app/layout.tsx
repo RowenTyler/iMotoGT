@@ -40,7 +40,7 @@ export const metadata: Metadata = {
   ],
   authors: [{ name: "iMoto GT" }],
   openGraph: {
-    title: "Buy & Sell Affordable Cars in South Africa - iMoto GT",
+    title: "Buy & Sell Affordable Cars in South Africa | ",
     description:
       "Buy and sell affordable cars across South Africa on a trusted local marketplace.",
     type: "website",
