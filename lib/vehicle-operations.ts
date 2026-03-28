@@ -2,7 +2,7 @@
  * lib/vehicle-operations.ts
  *
  * Core Supabase operations for vehicles.
- * 
+ *
  * This file handles:
  *   - Search and filter queries (used by results page)
  *   - Saved vehicles CRUD (save, unsave, get, check)
@@ -11,8 +11,8 @@
  * vehicle-operations-with-storage.ts which handles
  * Supabase Storage image uploads and lean queries.
  *
- * The VEHICLE_LIST_QUERY now includes images for thumbnails,
- * but excludes description to keep search/filter payloads small.
+ * VEHICLE_LIST_QUERY includes images (first image used for card thumbnails).
+ * VEHICLE_DETAIL_QUERY includes full images array and all seller contact info.
  */
 
 import { supabase } from "./supabase"
@@ -21,9 +21,9 @@ import type { Vehicle } from "@/types/vehicle"
 // ─── Queries ──────────────────────────────────────────────────────────────────
 
 /**
- * Lean query for list/search/filter views.
- * Includes images for thumbnails (cache layer prunes to first image).
- * No description — it's only needed on the detail page.
+ * Query for list/search/filter views.
+ * Includes images so card thumbnails work correctly.
+ * No description — only needed on the detail page.
  */
 const VEHICLE_LIST_QUERY = `
   id,
@@ -50,7 +50,7 @@ const VEHICLE_LIST_QUERY = `
 
 /**
  * Full detail query used for vehicle detail pages and saved vehicles.
- * Includes images and complete seller information.
+ * Includes full images array and complete seller contact information.
  */
 const VEHICLE_DETAIL_QUERY = `
   id,
@@ -68,33 +68,6 @@ const VEHICLE_DETAIL_QUERY = `
   province,
   city,
   description,
-  images,
-  status,
-  contact_privacy_enabled,
-  created_at,
-  updated_at,
-  users(id, email, first_name, last_name, phone, profile_pic, suburb, city, province)
-`
-
-/**
- * Full query used only for saved vehicles display.
- * (Kept for backward compatibility – use VEHICLE_DETAIL_QUERY for new code.)
- */
-const VEHICLE_SAVED_QUERY = `
-  id,
-  user_id,
-  make,
-  model,
-  variant,
-  year,
-  price,
-  mileage,
-  transmission,
-  fuel,
-  engine_capacity,
-  body_type,
-  province,
-  city,
   images,
   status,
   contact_privacy_enabled,
@@ -125,7 +98,7 @@ function mapDatabaseToVehicle(data: any): Vehicle {
     province: data.province,
     city: data.city,
     description: data.description || "",
-    images: data.images || [],
+    images: Array.isArray(data.images) && data.images.length > 0 ? data.images : [],
     status: data.status || "active",
     contactPrivacyEnabled: data.contact_privacy_enabled ?? false,
     sellerName:
@@ -145,10 +118,6 @@ function mapDatabaseToVehicle(data: any): Vehicle {
 
 // ─── Search ───────────────────────────────────────────────────────────────────
 
-/**
- * Search vehicles by make, model, or variant.
- * Returns lean results — no description.
- */
 export async function searchVehicles(query: string): Promise<Vehicle[]> {
   if (!query || query.trim().length === 0) {
     try {
@@ -216,11 +185,6 @@ export interface VehicleFilters {
   mileageMax?: number
 }
 
-/**
- * Filter vehicles by multiple criteria.
- * Returns lean results — no description.
- * Used by the results page.
- */
 export async function filterVehicles(
   filters: VehicleFilters
 ): Promise<Vehicle[]> {
@@ -230,7 +194,6 @@ export async function filterVehicles(
       .select(VEHICLE_LIST_QUERY)
       .eq("status", "active")
 
-    // Text search across make, model, variant
     if (filters.query && filters.query.trim()) {
       const searchTerm = `%${filters.query.trim()}%`
       query = query.or(
@@ -238,7 +201,6 @@ export async function filterVehicles(
       )
     }
 
-    // Price range
     const minPrice =
       filters.minPrice !== undefined
         ? Number(filters.minPrice)
@@ -251,7 +213,6 @@ export async function filterVehicles(
     if (minPrice && !isNaN(minPrice)) query = query.gte("price", minPrice)
     if (maxPrice && !isNaN(maxPrice)) query = query.lte("price", maxPrice)
 
-    // Year range
     const minYear = filters.minYear ? Number(filters.minYear) : undefined
     const maxYear = filters.maxYear ? Number(filters.maxYear) : undefined
 
@@ -260,7 +221,6 @@ export async function filterVehicles(
     if (maxYear && !isNaN(maxYear) && maxYear > 0)
       query = query.lte("year", maxYear)
 
-    // Mileage range
     const minMileage =
       filters.minMileage !== undefined
         ? Number(filters.minMileage)
@@ -275,7 +235,6 @@ export async function filterVehicles(
     if (maxMileage && !isNaN(maxMileage))
       query = query.lte("mileage", maxMileage)
 
-    // Fuel type — supports single string or array
     if (filters.fuelType) {
       if (Array.isArray(filters.fuelType) && filters.fuelType.length > 0) {
         const fuelFilters = filters.fuelType
@@ -290,7 +249,6 @@ export async function filterVehicles(
       }
     }
 
-    // Transmission
     if (
       filters.transmission &&
       filters.transmission.trim() &&
@@ -299,7 +257,6 @@ export async function filterVehicles(
       query = query.ilike("transmission", `%${filters.transmission}%`)
     }
 
-    // Body type — supports single string or array
     if (filters.bodyType) {
       if (Array.isArray(filters.bodyType) && filters.bodyType.length > 0) {
         const bodyFilters = filters.bodyType
@@ -314,7 +271,6 @@ export async function filterVehicles(
       }
     }
 
-    // Engine capacity range
     const engineMin = filters.engineCapacityMin
       ? Number(filters.engineCapacityMin)
       : undefined
@@ -327,7 +283,6 @@ export async function filterVehicles(
     if (engineMax !== undefined && !isNaN(engineMax) && engineMax < 8.0)
       query = query.lte("engine_capacity", engineMax)
 
-    // Location
     if (filters.province && filters.province.trim())
       query = query.ilike("province", `%${filters.province}%`)
     if (filters.city && filters.city.trim())
@@ -351,9 +306,6 @@ export async function filterVehicles(
 
 // ─── Saved Vehicles ───────────────────────────────────────────────────────────
 
-/**
- * Save a vehicle to a user's saved list.
- */
 export async function saveVehicle(
   userId: string,
   vehicleId: string
@@ -364,7 +316,6 @@ export async function saveVehicle(
       .insert([{ user_id: userId, vehicle_id: vehicleId }])
 
     if (error) {
-      // Unique constraint violation means it's already saved — treat as success
       if (error.code === "23505") {
         console.log("[VehicleOps] Vehicle already saved")
         return true
@@ -380,9 +331,6 @@ export async function saveVehicle(
   }
 }
 
-/**
- * Remove a vehicle from a user's saved list.
- */
 export async function unsaveVehicle(
   userId: string,
   vehicleId: string
@@ -408,48 +356,62 @@ export async function unsaveVehicle(
 
 /**
  * Get all saved vehicles for a user.
- * Uses a two‑step query to ensure full vehicle details including seller info.
+ *
+ * Two-step query:
+ * 1. Get vehicle IDs from saved_vehicles table
+ * 2. Fetch full vehicle details (including images + seller info) using VEHICLE_DETAIL_QUERY
+ *
+ * Uses VEHICLE_DETAIL_QUERY so images and all seller fields are populated.
+ * This is intentional — saved vehicles are displayed in the dashboard carousel
+ * and liked-cars-page, both of which need the image and contact info.
  */
 export async function getSavedVehicles(userId: string): Promise<Vehicle[]> {
   try {
     // Step 1: get the saved vehicle IDs for this user
     const { data: savedRows, error: savedError } = await supabase
-      .from('saved_vehicles')
-      .select('vehicle_id')
-      .eq('user_id', userId)
+      .from("saved_vehicles")
+      .select("vehicle_id")
+      .eq("user_id", userId)
 
     if (savedError) {
-      console.error('[VehicleOps] Error fetching saved vehicle IDs:', savedError)
+      console.error("[VehicleOps] Error fetching saved vehicle IDs:", savedError)
       return []
     }
 
-    if (!savedRows || savedRows.length === 0) return []
+    if (!savedRows || savedRows.length === 0) {
+      console.log("[VehicleOps] No saved vehicles for user:", userId)
+      return []
+    }
 
-    const vehicleIds = savedRows.map(row => row.vehicle_id)
+    const vehicleIds = savedRows.map((row) => row.vehicle_id)
+    console.log(`[VehicleOps] Found ${vehicleIds.length} saved vehicle IDs`)
 
     // Step 2: fetch full vehicle details including images and seller info
     const { data, error } = await supabase
-      .from('vehicles')
+      .from("vehicles")
       .select(VEHICLE_DETAIL_QUERY)
-      .in('id', vehicleIds)
-      .eq('status', 'active')
-      .order('created_at', { ascending: false })
+      .in("id", vehicleIds)
+      .eq("status", "active")
+      .order("created_at", { ascending: false })
 
     if (error) {
-      console.error('[VehicleOps] Error fetching saved vehicles detail:', error)
+      console.error("[VehicleOps] Error fetching saved vehicles detail:", error)
       return []
     }
 
-    return (data || []).map(mapDatabaseToVehicle)
+    const vehicles = (data || []).map(mapDatabaseToVehicle)
+    console.log(
+      `[VehicleOps] Loaded ${vehicles.length} saved vehicles, ` +
+      `first has ${vehicles[0]?.images?.length ?? 0} images`
+    )
+
+    return vehicles
   } catch (error) {
-    console.error('[VehicleOps] Exception fetching saved vehicles:', error)
+    console.error("[VehicleOps] Exception fetching saved vehicles:", error)
     return []
   }
 }
 
-/**
- * Check if a specific vehicle is saved by a user.
- */
 export async function isVehicleSaved(
   userId: string,
   vehicleId: string
@@ -462,7 +424,6 @@ export async function isVehicleSaved(
       .eq("vehicle_id", vehicleId)
       .single()
 
-    // PGRST116 = row not found — not saved
     if (error && error.code !== "PGRST116") {
       console.error("[VehicleOps] isVehicleSaved error:", error)
       return false

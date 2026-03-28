@@ -2,16 +2,16 @@
 //
 // Central service layer for all vehicle operations.
 // Wires together:
-//   - Storage-aware create/update/delete (file 3)
-//   - Lean list queries that exclude images (file 3)
-//   - Full detail query that includes images (file 3)
-//   - Search/filter/saved operations (original vehicle-operations.ts)
+//   - Storage-aware create/update/delete (vehicle-operations-with-storage.ts)
+//   - Lean list queries that exclude description (vehicle-operations-with-storage.ts)
+//   - Full detail query that includes images (vehicle-operations-with-storage.ts)
+//   - Search/filter/saved operations (vehicle-operations.ts)
 //   - Cache management (cache-manager.ts)
 
 import type { Vehicle, VehicleFormData } from "@/types/vehicle"
 import { CacheManager } from "@/lib/cache-manager"
 
-// Storage-aware operations (new)
+// Storage-aware operations
 import {
   createVehicleWithStorage,
   updateVehicleWithStorage,
@@ -21,13 +21,13 @@ import {
   getVehicleByIdFull,
 } from "./vehicle-operations-with-storage"
 
-// Non-image operations from original (search, filter, saved vehicles)
+// Non-image operations (search, filter, saved vehicles)
 import {
   searchVehicles,
   filterVehicles,
   saveVehicle,
   unsaveVehicle,
-  getSavedVehicles,
+  getSavedVehicles as getSavedVehiclesFromDB,
   isVehicleSaved,
 } from "./vehicle-operations"
 
@@ -46,47 +46,31 @@ export class VehicleError extends Error {
 // ─── Cache Pruning ────────────────────────────────────────────────────────────
 
 /**
- * Strip images and descriptions before storing in localStorage cache.
- *
- * Images are the main cause of the 6MB payload issue. Since list views
- * (home, search results, dashboard) never show full images anyway — they
- * show a card thumbnail — we do not need images in the list cache at all.
- *
- * When a user opens a vehicle detail page, getVehicleById fetches the
- * full record including images from Supabase.
+ * Strip images and descriptions before storing list views in localStorage.
+ * Single vehicle detail records (getVehicleById) are cached WITH images
+ * since they're one record and much smaller.
  */
 const pruneForCache = (vehicles: Vehicle[]): Vehicle[] => {
   return vehicles.map((v) => ({
     ...v,
-    images: [],       // Never cache images in list view
-    description: "",  // Strip description too — only needed on detail page
+    images: v.images && v.images.length > 0 ? [v.images[0]] : [], // keep only first image for thumbnails
+    description: "",
   }))
 }
 
 // ─── getVehicles ──────────────────────────────────────────────────────────────
 
-/**
- * Fetch all active vehicles for list/home/search views.
- *
- * Uses the lean query (no images) and caches the result.
- * If cache is stale, triggers a background refresh so the
- * user always sees instant results.
- */
 const getVehicles = async (status = "active"): Promise<Vehicle[]> => {
   const cacheKey = `imoto_vehicles_cache_${status}`
 
-  // Try cache first
   const cached = CacheManager.get<Vehicle[]>(cacheKey)
   if (cached) {
     console.log(`✅ [VehicleService] ${cached.length} vehicles from cache`)
 
-    // Background refresh if stale — non-blocking
     if (CacheManager.isStale(cacheKey)) {
-      console.log("[VehicleService] Cache stale, refreshing in background...")
       getVehiclesLean(status)
         .then((fresh) => {
           CacheManager.set(cacheKey, pruneForCache(fresh))
-          console.log("✅ [VehicleService] Background refresh complete")
         })
         .catch((err) =>
           console.error("❌ [VehicleService] Background refresh failed:", err)
@@ -96,46 +80,29 @@ const getVehicles = async (status = "active"): Promise<Vehicle[]> => {
     return cached
   }
 
-  // Cache miss — fetch from database
   console.log(`🔄 [VehicleService] Fetching vehicles (status: ${status})...`)
   const vehicles = await getVehiclesLean(status)
 
-  // Cache WITHOUT images to keep localStorage small
   CacheManager.set(cacheKey, pruneForCache(vehicles))
-  console.log(
-    `✅ [VehicleService] Cached ${vehicles.length} vehicles (images excluded)`
-  )
 
   return vehicles
 }
 
 // ─── getVehicleById ───────────────────────────────────────────────────────────
 
-/**
- * Fetch a single vehicle WITH images and full seller details.
- * Only called when a user opens the vehicle detail page.
- *
- * Caches the full vehicle (including images) since it is a single
- * record and much smaller than caching an entire list.
- */
 const getVehicleById = async (id: string): Promise<Vehicle | null> => {
   const cacheKey = `imoto_vehicle_details_${id}`
 
-  // Try cache
   const cached = CacheManager.get<Vehicle>(cacheKey)
   if (cached) {
     console.log(`✅ [VehicleService] Vehicle ${id} from cache`)
     return cached
   }
 
-  // Fetch full detail record including images
-  console.log(`🔄 [VehicleService] Fetching vehicle ${id}...`)
   const vehicle = await getVehicleByIdFull(id)
 
   if (vehicle) {
-    // Cache single vehicle including images — small enough to store
     CacheManager.set(cacheKey, vehicle)
-    console.log(`✅ [VehicleService] Cached vehicle ${id}`)
   }
 
   return vehicle
@@ -143,10 +110,6 @@ const getVehicleById = async (id: string): Promise<Vehicle | null> => {
 
 // ─── getUserVehicles ──────────────────────────────────────────────────────────
 
-/**
- * Fetch all vehicles for a specific user (dashboard listed cars).
- * Uses lean query — no images in the list.
- */
 const getUserVehicles = async (
   userId: string,
   forceRefresh = false
@@ -156,68 +119,54 @@ const getUserVehicles = async (
   if (!forceRefresh) {
     const cached = CacheManager.get<Vehicle[]>(cacheKey)
     if (cached) {
-      console.log(
-        `✅ [VehicleService] ${cached.length} user vehicles from cache`
-      )
-
-      // Background refresh if stale
       if (CacheManager.isStale(cacheKey)) {
         getUserVehiclesLean(userId)
-          .then((fresh) => {
-            CacheManager.set(cacheKey, pruneForCache(fresh))
-            console.log("✅ [VehicleService] User vehicles refreshed")
-          })
+          .then((fresh) => CacheManager.set(cacheKey, pruneForCache(fresh)))
           .catch((err) =>
-            console.error(
-              "❌ [VehicleService] User vehicle refresh failed:",
-              err
-            )
+            console.error("❌ [VehicleService] User vehicle refresh failed:", err)
           )
       }
-
       return cached
     }
   }
 
-  console.log(`🔄 [VehicleService] Fetching vehicles for user ${userId}...`)
   const vehicles = await getUserVehiclesLean(userId)
-
   CacheManager.set(cacheKey, pruneForCache(vehicles))
-  console.log(`✅ [VehicleService] Cached ${vehicles.length} user vehicles`)
+  return vehicles
+}
 
+// ─── getSavedVehicles ─────────────────────────────────────────────────────────
+
+/**
+ * Fetch saved vehicles for a user.
+ *
+ * NOT cached — saved vehicles need fresh images every time since they use
+ * VEHICLE_DETAIL_QUERY and display in the dashboard carousel and liked-cars-page.
+ * Caching here caused stale empty-image arrays to persist after the fix.
+ */
+const getSavedVehicles = async (userId: string): Promise<Vehicle[]> => {
+  console.log(`🔄 [VehicleService] Fetching saved vehicles for ${userId}...`)
+  const vehicles = await getSavedVehiclesFromDB(userId)
+  console.log(
+    `✅ [VehicleService] Got ${vehicles.length} saved vehicles, ` +
+    `first image: ${vehicles[0]?.images?.[0]?.substring(0, 60) ?? "none"}`
+  )
   return vehicles
 }
 
 // ─── createVehicle ────────────────────────────────────────────────────────────
 
-/**
- * Create a new vehicle listing.
- *
- * Images are uploaded to vehicle-storage bucket before the DB insert.
- * Public URLs are stored in the database instead of base64 strings.
- * Falls back to base64 per-image if any individual upload fails.
- */
 const createVehicle = async (
   vehicleData: VehicleFormData,
   userId: string
 ): Promise<Vehicle> => {
   const vehicle = await createVehicleWithStorage(vehicleData, userId)
-
-  // Invalidate list caches so new listing appears immediately
   invalidateCaches(userId)
-
   return vehicle
 }
 
 // ─── updateVehicle ────────────────────────────────────────────────────────────
 
-/**
- * Update an existing vehicle listing.
- *
- * Any new base64 images are uploaded to storage.
- * Existing storage URLs are kept unchanged.
- * Cache for this vehicle is cleared so the detail page shows fresh data.
- */
 const updateVehicle = async (
   id: string,
   vehicleData: Partial<VehicleFormData>,
@@ -226,10 +175,7 @@ const updateVehicle = async (
   const vehicle = await updateVehicleWithStorage(id, vehicleData)
 
   if (vehicle) {
-    // Clear detail cache for this specific vehicle
     CacheManager.delete(`imoto_vehicle_details_${id}`)
-
-    // Invalidate user list cache
     if (userId) invalidateCaches(userId)
   }
 
@@ -238,13 +184,6 @@ const updateVehicle = async (
 
 // ─── deleteVehicle ────────────────────────────────────────────────────────────
 
-/**
- * Soft-delete a vehicle listing.
- *
- * Sets is_deleted = true and status = inactive in the database.
- * Asynchronously cleans up storage images after the delete completes.
- * Cache is cleared so the vehicle disappears from lists immediately.
- */
 const deleteVehicle = async (
   id: string,
   userId?: string
@@ -261,20 +200,12 @@ const deleteVehicle = async (
 
 // ─── Cache Invalidation ───────────────────────────────────────────────────────
 
-/**
- * Invalidate all vehicle-related caches.
- * Called after create, update, or delete so lists refresh.
- */
 export function invalidateCaches(userId?: string): void {
-  console.log("🗑️ [VehicleService] Invalidating caches...")
-
   CacheManager.delete("imoto_vehicles_cache_active")
 
   if (userId) {
     CacheManager.clearUserCache(userId)
   }
-
-  console.log("✅ [VehicleService] Cache invalidation complete")
 }
 
 // ─── Service Object Export ────────────────────────────────────────────────────
@@ -296,7 +227,6 @@ export const vehicleService = {
 }
 
 // ─── Named Exports ────────────────────────────────────────────────────────────
-// Kept for any files that import functions directly rather than via vehicleService
 
 export {
   getVehicles,
