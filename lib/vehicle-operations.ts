@@ -22,7 +22,8 @@ import type { Vehicle } from "@/types/vehicle"
 
 /**
  * Lean query for list/search/filter views.
- * No images, no description — these are only needed on the detail page.
+ * No description — these are only needed on the detail page.
+ * Images are included for thumbnails; the cache layer prunes them to first image.
  */
 const VEHICLE_LIST_QUERY = `
   id,
@@ -39,6 +40,7 @@ const VEHICLE_LIST_QUERY = `
   body_type,
   province,
   city,
+  images,
   status,
   contact_privacy_enabled,
   created_at,
@@ -124,7 +126,7 @@ function mapDatabaseToVehicle(data: any): Vehicle {
 
 /**
  * Search vehicles by make, model, or variant.
- * Returns lean results — no images.
+ * Returns lean results — no description.
  */
 export async function searchVehicles(query: string): Promise<Vehicle[]> {
   if (!query || query.trim().length === 0) {
@@ -195,7 +197,7 @@ export interface VehicleFilters {
 
 /**
  * Filter vehicles by multiple criteria.
- * Returns lean results — no images.
+ * Returns lean results — no description.
  * Used by the results page.
  */
 export async function filterVehicles(

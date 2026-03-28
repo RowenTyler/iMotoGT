@@ -538,7 +538,7 @@ export default function ProfileSettings({
                         htmlFor="phone"
                         className="text-sm font-medium text-[#3E5641] dark:text-gray-300"
                       >
-                        Phone (Optional)
+                        Phone *
                       </Label>
                       <Input
                         id="phone"
@@ -558,7 +558,7 @@ export default function ProfileSettings({
                         htmlFor="suburb"
                         className="text-sm font-medium text-[#3E5641] dark:text-gray-300"
                       >
-                        Suburb / Area (Optional)
+                        Suburb / Area *
                       </Label>
                       <Input
                         id="suburb"
@@ -578,7 +578,7 @@ export default function ProfileSettings({
                           htmlFor="city"
                           className="text-sm font-medium text-[#3E5641] dark:text-gray-300"
                         >
-                          City (Optional)
+                          City *
                         </Label>
                         <Input
                           id="city"
@@ -595,7 +595,7 @@ export default function ProfileSettings({
                           htmlFor="province"
                           className="text-sm font-medium text-[#3E5641] dark:text-gray-300"
                         >
-                          Province (Optional)
+                          Province *
                         </Label>
                         <Input
                           id="province"
