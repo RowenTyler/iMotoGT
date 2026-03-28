@@ -200,14 +200,10 @@ export default function Dashboard({
     }
   }
 
-  // Get image URL with better fallback logic
+  // Get image URL with clean logic (no singular 'image' field)
   const getVehicleImage = (vehicle: Vehicle) => {
     if (!vehicle) return "/placeholder.svg?height=400&width=600"
-
-    // Try multiple image sources
-    const imageUrl = vehicle.images?.[0] || vehicle.image || "/placeholder.svg?height=400&width=600"
-    console.log("🖼️ Dashboard: Image URL for vehicle", vehicle.id, imageUrl)
-    return imageUrl
+    return vehicle.images?.[0] ?? "/placeholder.svg?height=400&width=600"
   }
 
   const totalListings = safeListedCars.length

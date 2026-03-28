@@ -11,8 +11,8 @@
  * vehicle-operations-with-storage.ts which handles
  * Supabase Storage image uploads and lean queries.
  *
- * The VEHICLE_LIST_QUERY here deliberately excludes images
- * and description to keep search/filter payloads small.
+ * The VEHICLE_LIST_QUERY now includes images for thumbnails,
+ * but excludes description to keep search/filter payloads small.
  */
 
 import { supabase } from "./supabase"
@@ -22,8 +22,8 @@ import type { Vehicle } from "@/types/vehicle"
 
 /**
  * Lean query for list/search/filter views.
- * No description — these are only needed on the detail page.
- * Images are included for thumbnails; the cache layer prunes them to first image.
+ * Includes images for thumbnails (cache layer prunes to first image).
+ * No description — it's only needed on the detail page.
  */
 const VEHICLE_LIST_QUERY = `
   id,
@@ -49,15 +49,36 @@ const VEHICLE_LIST_QUERY = `
 `
 
 /**
+ * Full detail query used for vehicle detail pages and saved vehicles.
+ * Includes images and complete seller information.
+ */
+const VEHICLE_DETAIL_QUERY = `
+  id,
+  user_id,
+  make,
+  model,
+  variant,
+  year,
+  price,
+  mileage,
+  transmission,
+  fuel,
+  engine_capacity,
+  body_type,
+  province,
+  city,
+  description,
+  images,
+  status,
+  contact_privacy_enabled,
+  created_at,
+  updated_at,
+  users(id, email, first_name, last_name, phone, profile_pic, suburb, city, province)
+`
+
+/**
  * Full query used only for saved vehicles display.
- * Includes first image only via the detail query so cards
- * can show a thumbnail without loading all images.
- * 
- * Note: saved vehicle cards show one image so we need images here,
- * but we handle this in getSavedVehicles by fetching the detail
- * query for each saved vehicle individually via getVehicleByIdFull.
- * For the saved vehicle list cards we use the lean query and load
- * the thumbnail lazily.
+ * (Kept for backward compatibility – use VEHICLE_DETAIL_QUERY for new code.)
  */
 const VEHICLE_SAVED_QUERY = `
   id,
@@ -387,37 +408,41 @@ export async function unsaveVehicle(
 
 /**
  * Get all saved vehicles for a user.
- *
- * Uses VEHICLE_SAVED_QUERY which includes images so the saved
- * vehicle cards can show a thumbnail in the dashboard carousel
- * and the liked cars page.
- *
- * These are individual records so the payload is much smaller
- * than loading images for all active listings.
+ * Uses a two‑step query to ensure full vehicle details including seller info.
  */
 export async function getSavedVehicles(userId: string): Promise<Vehicle[]> {
   try {
-    const { data, error } = await supabase
-      .from("saved_vehicles")
-      .select(
-        `
-        vehicle_id,
-        vehicles (${VEHICLE_SAVED_QUERY})
-      `
-      )
-      .eq("user_id", userId)
+    // Step 1: get the saved vehicle IDs for this user
+    const { data: savedRows, error: savedError } = await supabase
+      .from('saved_vehicles')
+      .select('vehicle_id')
+      .eq('user_id', userId)
 
-    if (error) {
-      console.error("[VehicleOps] getSavedVehicles error:", error)
+    if (savedError) {
+      console.error('[VehicleOps] Error fetching saved vehicle IDs:', savedError)
       return []
     }
 
-    return (data || [])
-      .map((item: any) => item.vehicles)
-      .filter((vehicle: any) => vehicle !== null && vehicle !== undefined)
-      .map(mapDatabaseToVehicle)
+    if (!savedRows || savedRows.length === 0) return []
+
+    const vehicleIds = savedRows.map(row => row.vehicle_id)
+
+    // Step 2: fetch full vehicle details including images and seller info
+    const { data, error } = await supabase
+      .from('vehicles')
+      .select(VEHICLE_DETAIL_QUERY)
+      .in('id', vehicleIds)
+      .eq('status', 'active')
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      console.error('[VehicleOps] Error fetching saved vehicles detail:', error)
+      return []
+    }
+
+    return (data || []).map(mapDatabaseToVehicle)
   } catch (error) {
-    console.error("[VehicleOps] getSavedVehicles exception:", error)
+    console.error('[VehicleOps] Exception fetching saved vehicles:', error)
     return []
   }
 }
