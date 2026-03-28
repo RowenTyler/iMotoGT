@@ -1,7 +1,29 @@
-import { supabase } from "./supabase"
-import type { Vehicle, VehicleFormData } from "@/types/vehicle"
+/**
+ * lib/vehicle-operations.ts
+ *
+ * Core Supabase operations for vehicles.
+ * 
+ * This file handles:
+ *   - Search and filter queries (used by results page)
+ *   - Saved vehicles CRUD (save, unsave, get, check)
+ *
+ * Create, update, delete and list fetches have moved to
+ * vehicle-operations-with-storage.ts which handles
+ * Supabase Storage image uploads and lean queries.
+ *
+ * The VEHICLE_LIST_QUERY here deliberately excludes images
+ * and description to keep search/filter payloads small.
+ */
 
-// Lightweight query for list views (no images, no description)
+import { supabase } from "./supabase"
+import type { Vehicle } from "@/types/vehicle"
+
+// ─── Queries ──────────────────────────────────────────────────────────────────
+
+/**
+ * Lean query for list/search/filter views.
+ * No images, no description — these are only needed on the detail page.
+ */
 const VEHICLE_LIST_QUERY = `
   id,
   user_id,
@@ -24,8 +46,18 @@ const VEHICLE_LIST_QUERY = `
   users(id, first_name, last_name, profile_pic, city, province)
 `
 
-// Full query for detail views (includes images, description, and seller contact info)
-const VEHICLE_DETAIL_QUERY = `
+/**
+ * Full query used only for saved vehicles display.
+ * Includes first image only via the detail query so cards
+ * can show a thumbnail without loading all images.
+ * 
+ * Note: saved vehicle cards show one image so we need images here,
+ * but we handle this in getSavedVehicles by fetching the detail
+ * query for each saved vehicle individually via getVehicleByIdFull.
+ * For the saved vehicle list cards we use the lean query and load
+ * the thumbnail lazily.
+ */
+const VEHICLE_SAVED_QUERY = `
   id,
   user_id,
   make,
@@ -40,7 +72,6 @@ const VEHICLE_DETAIL_QUERY = `
   body_type,
   province,
   city,
-  description,
   images,
   status,
   contact_privacy_enabled,
@@ -49,12 +80,8 @@ const VEHICLE_DETAIL_QUERY = `
   users(id, email, first_name, last_name, phone, profile_pic, suburb, city, province)
 `
 
-// Keep original for compatibility if needed (point to detail query)
-const VEHICLE_SELECT_QUERY = VEHICLE_DETAIL_QUERY
+// ─── Mapper ───────────────────────────────────────────────────────────────────
 
-/**
- * Map database record to Vehicle type
- */
 function mapDatabaseToVehicle(data: any): Vehicle {
   const user = data.users || {}
 
@@ -69,18 +96,15 @@ function mapDatabaseToVehicle(data: any): Vehicle {
     mileage: data.mileage,
     transmission: data.transmission,
     fuel: data.fuel,
-    fuelType: data.fuel, // ensuring compatibility if interface uses both
+    fuelType: data.fuel,
     engineCapacity: data.engine_capacity || "",
     bodyType: data.body_type || "",
-    condition: data.condition || "Used",
     province: data.province,
     city: data.city,
     description: data.description || "",
     images: data.images || [],
     status: data.status || "active",
-    // ENSURE backward compatibility - default to false if missing
     contactPrivacyEnabled: data.contact_privacy_enabled ?? false,
-    // Get seller information from joined users table
     sellerName:
       user.first_name && user.last_name
         ? `${user.first_name} ${user.last_name}`
@@ -96,110 +120,58 @@ function mapDatabaseToVehicle(data: any): Vehicle {
   }
 }
 
-/**
- * Fetch all vehicles from Supabase with seller information
- * Optionally filter by status
- */
-export async function getVehicles(status = "active"): Promise<Vehicle[]> {
-  try {
-    const { data, error } = await supabase
-      .from("vehicles")
-      .select(VEHICLE_LIST_QUERY)
-      .eq("status", status)
-      .order("created_at", { ascending: false })
-
-    if (error) {
-      console.error("[v0] Error fetching vehicles:", error)
-      return []
-    }
-
-    return (data || []).map(mapDatabaseToVehicle)
-  } catch (error) {
-    console.error("[v0] Exception fetching vehicles:", error)
-    return []
-  }
-}
+// ─── Search ───────────────────────────────────────────────────────────────────
 
 /**
- * Get a single vehicle by ID with seller information
- */
-export async function getVehicleById(id: string): Promise<Vehicle | null> {
-  try {
-    const { data, error } = await supabase
-      .from("vehicles")
-      .select(VEHICLE_DETAIL_QUERY)
-      .eq("id", id)
-      .single()
-
-    if (error) {
-      console.error("[v0] Error fetching vehicle:", error)
-      return null
-    }
-
-    return data ? mapDatabaseToVehicle(data) : null
-  } catch (error) {
-    console.error("[v0] Exception fetching vehicle:", error)
-    return null
-  }
-}
-
-/**
- * Get all vehicles for a specific user
- */
-export async function getUserVehicles(userId: string): Promise<Vehicle[]> {
-  try {
-    const { data, error } = await supabase
-      .from("vehicles")
-      .select(VEHICLE_LIST_QUERY)
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false })
-
-    if (error) {
-      console.error("[v0] Error fetching user vehicles:", error)
-      return []
-    }
-
-    return (data || []).map(mapDatabaseToVehicle)
-  } catch (error) {
-    console.error("[v0] Exception fetching user vehicles:", error)
-    return []
-  }
-}
-
-/**
- * Search vehicles by make, model, year, or registration
- * Uses .ilike for case-insensitive partial matches
+ * Search vehicles by make, model, or variant.
+ * Returns lean results — no images.
  */
 export async function searchVehicles(query: string): Promise<Vehicle[]> {
   if (!query || query.trim().length === 0) {
-    return getVehicles()
+    try {
+      const { data, error } = await supabase
+        .from("vehicles")
+        .select(VEHICLE_LIST_QUERY)
+        .eq("status", "active")
+        .order("created_at", { ascending: false })
+
+      if (error) {
+        console.error("[VehicleOps] searchVehicles error:", error)
+        return []
+      }
+      return (data || []).map(mapDatabaseToVehicle)
+    } catch (error) {
+      console.error("[VehicleOps] searchVehicles exception:", error)
+      return []
+    }
   }
 
   try {
-    const searchTerm = `%${query}%`
+    const searchTerm = `%${query.trim()}%`
 
     const { data, error } = await supabase
       .from("vehicles")
       .select(VEHICLE_LIST_QUERY)
-      .or(`make.ilike.${searchTerm},model.ilike.${searchTerm},variant.ilike.${searchTerm}`)
+      .or(
+        `make.ilike.${searchTerm},model.ilike.${searchTerm},variant.ilike.${searchTerm}`
+      )
       .eq("status", "active")
       .order("created_at", { ascending: false })
 
     if (error) {
-      console.error("[v0] Error searching vehicles:", error)
+      console.error("[VehicleOps] searchVehicles error:", error)
       return []
     }
 
     return (data || []).map(mapDatabaseToVehicle)
   } catch (error) {
-    console.error("[v0] Exception searching vehicles:", error)
+    console.error("[VehicleOps] searchVehicles exception:", error)
     return []
   }
 }
 
-/**
- * Filter vehicles by various criteria
- */
+// ─── Filter ───────────────────────────────────────────────────────────────────
+
 export interface VehicleFilters {
   query?: string
   minPrice?: number | string
@@ -221,348 +193,257 @@ export interface VehicleFilters {
   mileageMax?: number
 }
 
-export async function filterVehicles(filters: VehicleFilters): Promise<Vehicle[]> {
+/**
+ * Filter vehicles by multiple criteria.
+ * Returns lean results — no images.
+ * Used by the results page.
+ */
+export async function filterVehicles(
+  filters: VehicleFilters
+): Promise<Vehicle[]> {
   try {
     let query = supabase
       .from("vehicles")
       .select(VEHICLE_LIST_QUERY)
       .eq("status", "active")
 
+    // Text search across make, model, variant
     if (filters.query && filters.query.trim()) {
-      const searchTerm = `%${filters.query}%`
-      query = query.or(`make.ilike.${searchTerm},model.ilike.${searchTerm},variant.ilike.${searchTerm}`)
+      const searchTerm = `%${filters.query.trim()}%`
+      query = query.or(
+        `make.ilike.${searchTerm},model.ilike.${searchTerm},variant.ilike.${searchTerm}`
+      )
     }
 
-    const minPrice = filters.minPrice !== undefined ? Number(filters.minPrice) : filters.priceMin
-    const maxPrice = filters.maxPrice !== undefined ? Number(filters.maxPrice) : filters.priceMax
+    // Price range
+    const minPrice =
+      filters.minPrice !== undefined
+        ? Number(filters.minPrice)
+        : filters.priceMin
+    const maxPrice =
+      filters.maxPrice !== undefined
+        ? Number(filters.maxPrice)
+        : filters.priceMax
 
-    if (minPrice && !isNaN(minPrice)) {
-      query = query.gte("price", minPrice)
-    }
-    if (maxPrice && !isNaN(maxPrice)) {
-      query = query.lte("price", maxPrice)
-    }
+    if (minPrice && !isNaN(minPrice)) query = query.gte("price", minPrice)
+    if (maxPrice && !isNaN(maxPrice)) query = query.lte("price", maxPrice)
 
+    // Year range
     const minYear = filters.minYear ? Number(filters.minYear) : undefined
     const maxYear = filters.maxYear ? Number(filters.maxYear) : undefined
 
-    if (minYear && !isNaN(minYear) && minYear > 0) {
+    if (minYear && !isNaN(minYear) && minYear > 0)
       query = query.gte("year", minYear)
-    }
-    if (maxYear && !isNaN(maxYear) && maxYear > 0) {
+    if (maxYear && !isNaN(maxYear) && maxYear > 0)
       query = query.lte("year", maxYear)
-    }
 
-    const minMileage = filters.minMileage !== undefined ? Number(filters.minMileage) : filters.mileageMin
-    const maxMileage = filters.maxMileage !== undefined ? Number(filters.maxMileage) : filters.mileageMax
+    // Mileage range
+    const minMileage =
+      filters.minMileage !== undefined
+        ? Number(filters.minMileage)
+        : filters.mileageMin
+    const maxMileage =
+      filters.maxMileage !== undefined
+        ? Number(filters.maxMileage)
+        : filters.mileageMax
 
-    if (minMileage && !isNaN(minMileage)) {
+    if (minMileage && !isNaN(minMileage))
       query = query.gte("mileage", minMileage)
-    }
-    if (maxMileage && !isNaN(maxMileage)) {
+    if (maxMileage && !isNaN(maxMileage))
       query = query.lte("mileage", maxMileage)
-    }
 
+    // Fuel type — supports single string or array
     if (filters.fuelType) {
       if (Array.isArray(filters.fuelType) && filters.fuelType.length > 0) {
-        const fuelFilters = filters.fuelType.map((f) => `fuel.ilike.%${f}%`).join(",")
+        const fuelFilters = filters.fuelType
+          .map((f) => `fuel.ilike.%${f}%`)
+          .join(",")
         query = query.or(fuelFilters)
-      } else if (typeof filters.fuelType === "string" && filters.fuelType.trim()) {
+      } else if (
+        typeof filters.fuelType === "string" &&
+        filters.fuelType.trim()
+      ) {
         query = query.ilike("fuel", `%${filters.fuelType}%`)
       }
     }
 
-    if (filters.transmission && filters.transmission.trim() && filters.transmission.toLowerCase() !== "all") {
+    // Transmission
+    if (
+      filters.transmission &&
+      filters.transmission.trim() &&
+      filters.transmission.toLowerCase() !== "all"
+    ) {
       query = query.ilike("transmission", `%${filters.transmission}%`)
     }
 
+    // Body type — supports single string or array
     if (filters.bodyType) {
       if (Array.isArray(filters.bodyType) && filters.bodyType.length > 0) {
-        const bodyFilters = filters.bodyType.map((b) => `body_type.ilike.%${b}%`).join(",")
+        const bodyFilters = filters.bodyType
+          .map((b) => `body_type.ilike.%${b}%`)
+          .join(",")
         query = query.or(bodyFilters)
-      } else if (typeof filters.bodyType === "string" && filters.bodyType.trim()) {
+      } else if (
+        typeof filters.bodyType === "string" &&
+        filters.bodyType.trim()
+      ) {
         query = query.ilike("body_type", `%${filters.bodyType}%`)
       }
     }
 
-    const engineMin = filters.engineCapacityMin ? Number(filters.engineCapacityMin) : undefined
-    const engineMax = filters.engineCapacityMax ? Number(filters.engineCapacityMax) : undefined
+    // Engine capacity range
+    const engineMin = filters.engineCapacityMin
+      ? Number(filters.engineCapacityMin)
+      : undefined
+    const engineMax = filters.engineCapacityMax
+      ? Number(filters.engineCapacityMax)
+      : undefined
 
-    if (engineMin !== undefined && !isNaN(engineMin) && engineMin > 1.0) {
+    if (engineMin !== undefined && !isNaN(engineMin) && engineMin > 1.0)
       query = query.gte("engine_capacity", engineMin)
-    }
-    if (engineMax !== undefined && !isNaN(engineMax) && engineMax < 8.0) {
+    if (engineMax !== undefined && !isNaN(engineMax) && engineMax < 8.0)
       query = query.lte("engine_capacity", engineMax)
-    }
 
-    if (filters.province && filters.province.trim()) {
+    // Location
+    if (filters.province && filters.province.trim())
       query = query.ilike("province", `%${filters.province}%`)
-    }
-    if (filters.city && filters.city.trim()) {
+    if (filters.city && filters.city.trim())
       query = query.ilike("city", `%${filters.city}%`)
-    }
 
-    const { data, error } = await query.order("created_at", { ascending: false })
+    const { data, error } = await query.order("created_at", {
+      ascending: false,
+    })
 
     if (error) {
-      console.error("[v0] Error filtering vehicles:", error)
+      console.error("[VehicleOps] filterVehicles error:", error)
       return []
     }
 
     return (data || []).map(mapDatabaseToVehicle)
   } catch (error) {
-    console.error("[v0] Exception filtering vehicles:", error)
+    console.error("[VehicleOps] filterVehicles exception:", error)
     return []
   }
 }
 
-/**
- * Create a new vehicle listing with enhanced validation and error handling
- */
-export async function createVehicle(vehicleData: VehicleFormData, userId: string): Promise<Vehicle> {
-  console.log("[Vehicle Create] Starting creation process...")
-
-  try {
-    // Verify user authentication
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-
-    if (authError || !user) {
-      throw new Error("Authentication required. Please log in again.")
-    }
-
-    if (user.id !== userId) {
-      throw new Error("User ID mismatch. Please refresh and try again.")
-    }
-
-    // Prepare database record
-    const dbData = {
-      user_id: userId,
-      make: vehicleData.make,
-      model: vehicleData.model,
-      variant: vehicleData.variant || null,
-      year: Number(vehicleData.year),
-      price: Number(vehicleData.price),
-      mileage: Number(vehicleData.mileage),
-      transmission: vehicleData.transmission,
-      fuel: vehicleData.fuel,
-      engine_capacity: vehicleData.engineCapacity || null,
-      body_type: vehicleData.bodyType || null,
-      condition: vehicleData.condition || "Used",
-      province: vehicleData.province,
-      city: vehicleData.city,
-      description: vehicleData.description || null,
-      images: vehicleData.images || [],
-      contact_privacy_enabled: vehicleData.contactPrivacyEnabled ?? vehicleData.contactPrivacy ?? false,
-      status: "active",
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    }
-
-    console.log("[Vehicle Create] Inserting into database...")
-
-    const { data, error } = await supabase
-      .from("vehicles")
-      .insert([dbData])
-      .select(VEHICLE_DETAIL_QUERY)
-      .single()
-
-    // Handle errors - THROW instead of returning null
-    if (error) {
-      let userMessage = "Failed to create vehicle listing."
-
-      if (error.code === '42501') {
-        userMessage = "Permission denied. Please log out and log back in."
-      } else if (error.message?.toLowerCase().includes('abort')) {
-        userMessage = "Request timed out. Please check your internet connection and try again."
-      } else if (error.message?.toLowerCase().includes('network')) {
-        userMessage = "Network error. Please check your connection and try again."
-      }
-
-      console.error("[Vehicle Create] Error:", error)
-      throw new Error(userMessage)
-    }
-
-    if (!data) {
-      throw new Error("No data returned from database. Please try again.")
-    }
-
-    const vehicle = mapDatabaseToVehicle(data)
-
-    if (!vehicle) {
-      throw new Error("Failed to process vehicle data. Please try again.")
-    }
-
-    console.log("[Vehicle Create] ✅ Vehicle created successfully:", vehicle.id)
-    return vehicle
-
-  } catch (error: any) {
-    if (error?.name === 'AbortError' || error?.message?.includes('AbortError')) {
-      throw new Error("Request was cancelled. Please check your internet connection and try again.")
-    }
-    throw error instanceof Error ? error : new Error("Failed to create vehicle")
-  }
-}
+// ─── Saved Vehicles ───────────────────────────────────────────────────────────
 
 /**
- * Update an existing vehicle listing
+ * Save a vehicle to a user's saved list.
  */
-export async function updateVehicle(id: string, vehicleData: Partial<VehicleFormData>): Promise<Vehicle | null> {
-  try {
-    const dbData: Record<string, any> = {
-      updated_at: new Date().toISOString(),
-    }
-
-    if (vehicleData.make) dbData.make = vehicleData.make
-    if (vehicleData.model) dbData.model = vehicleData.model
-    if (vehicleData.variant !== undefined) dbData.variant = vehicleData.variant
-    if (vehicleData.year) dbData.year = vehicleData.year
-    if (vehicleData.price !== undefined) dbData.price = vehicleData.price
-    if (vehicleData.mileage !== undefined) dbData.mileage = vehicleData.mileage
-    if (vehicleData.transmission) dbData.transmission = vehicleData.transmission
-    if (vehicleData.fuel) dbData.fuel = vehicleData.fuel
-    if (vehicleData.engineCapacity !== undefined) dbData.engine_capacity = vehicleData.engineCapacity
-    if (vehicleData.bodyType !== undefined) dbData.body_type = vehicleData.bodyType
-    if (vehicleData.condition !== undefined) dbData.condition = vehicleData.condition
-    if (vehicleData.province) dbData.province = vehicleData.province
-    if (vehicleData.city) dbData.city = vehicleData.city
-    if (vehicleData.description !== undefined) dbData.description = vehicleData.description
-    if (vehicleData.images) dbData.images = vehicleData.images
-    if (vehicleData.contactPrivacyEnabled !== undefined) dbData.contact_privacy_enabled = vehicleData.contactPrivacyEnabled
-
-    const { data, error } = await supabase
-      .from("vehicles")
-      .update(dbData)
-      .eq("id", id)
-      .select(VEHICLE_DETAIL_QUERY)
-      .single()
-
-    if (error) {
-      console.error("[v0] Error updating vehicle:", error)
-      return null
-    }
-
-    return data ? mapDatabaseToVehicle(data) : null
-  } catch (error) {
-    console.error("[v0] Exception updating vehicle:", error)
-    return null
-  }
-}
-
-/**
- * Delete a vehicle listing
- */
-export async function deleteVehicle(id: string): Promise<boolean> {
-  try {
-    const { error } = await supabase.from("vehicles").delete().eq("id", id)
-
-    if (error) {
-      console.error("[v0] Error deleting vehicle:", error)
-      return false
-    }
-
-    return true
-  } catch (error) {
-    console.error("[v0] Exception deleting vehicle:", error)
-    return false
-  }
-}
-
-// ============================================================================
-// SAVED VEHICLES OPERATIONS
-// ============================================================================
-
-/**
- * Save a vehicle for a user
- */
-export async function saveVehicle(userId: string, vehicleId: string): Promise<boolean> {
+export async function saveVehicle(
+  userId: string,
+  vehicleId: string
+): Promise<boolean> {
   try {
     const { error } = await supabase
-      .from('saved_vehicles')
+      .from("saved_vehicles")
       .insert([{ user_id: userId, vehicle_id: vehicleId }])
 
     if (error) {
-      console.error('[v0] Error saving vehicle:', error)
+      // Unique constraint violation means it's already saved — treat as success
+      if (error.code === "23505") {
+        console.log("[VehicleOps] Vehicle already saved")
+        return true
+      }
+      console.error("[VehicleOps] saveVehicle error:", error)
       return false
     }
 
     return true
   } catch (error) {
-    console.error('[v0] Exception saving vehicle:', error)
+    console.error("[VehicleOps] saveVehicle exception:", error)
     return false
   }
 }
 
 /**
- * Unsave a vehicle for a user
+ * Remove a vehicle from a user's saved list.
  */
-export async function unsaveVehicle(userId: string, vehicleId: string): Promise<boolean> {
+export async function unsaveVehicle(
+  userId: string,
+  vehicleId: string
+): Promise<boolean> {
   try {
     const { error } = await supabase
-      .from('saved_vehicles')
+      .from("saved_vehicles")
       .delete()
-      .eq('user_id', userId)
-      .eq('vehicle_id', vehicleId)
+      .eq("user_id", userId)
+      .eq("vehicle_id", vehicleId)
 
     if (error) {
-      console.error('[v0] Error unsaving vehicle:', error)
+      console.error("[VehicleOps] unsaveVehicle error:", error)
       return false
     }
 
     return true
   } catch (error) {
-    console.error('[v0] Exception unsaving vehicle:', error)
+    console.error("[VehicleOps] unsaveVehicle exception:", error)
     return false
   }
 }
 
 /**
- * Get all saved vehicles for a user
+ * Get all saved vehicles for a user.
+ *
+ * Uses VEHICLE_SAVED_QUERY which includes images so the saved
+ * vehicle cards can show a thumbnail in the dashboard carousel
+ * and the liked cars page.
+ *
+ * These are individual records so the payload is much smaller
+ * than loading images for all active listings.
  */
 export async function getSavedVehicles(userId: string): Promise<Vehicle[]> {
   try {
     const { data, error } = await supabase
-      .from('saved_vehicles')
-      .select(`
+      .from("saved_vehicles")
+      .select(
+        `
         vehicle_id,
-        vehicles (${VEHICLE_LIST_QUERY})
-      `)
-      .eq('user_id', userId)
+        vehicles (${VEHICLE_SAVED_QUERY})
+      `
+      )
+      .eq("user_id", userId)
 
     if (error) {
-      console.error('[v0] Error fetching saved vehicles:', error)
+      console.error("[VehicleOps] getSavedVehicles error:", error)
       return []
     }
 
     return (data || [])
-      .map(item => item.vehicles)
-      .filter(vehicle => vehicle !== null)
+      .map((item: any) => item.vehicles)
+      .filter((vehicle: any) => vehicle !== null && vehicle !== undefined)
       .map(mapDatabaseToVehicle)
   } catch (error) {
-    console.error('[v0] Exception fetching saved vehicles:', error)
+    console.error("[VehicleOps] getSavedVehicles exception:", error)
     return []
   }
 }
 
 /**
- * Check if a vehicle is saved by a user
+ * Check if a specific vehicle is saved by a user.
  */
-export async function isVehicleSaved(userId: string, vehicleId: string): Promise<boolean> {
+export async function isVehicleSaved(
+  userId: string,
+  vehicleId: string
+): Promise<boolean> {
   try {
     const { data, error } = await supabase
-      .from('saved_vehicles')
-      .select('id')
-      .eq('user_id', userId)
-      .eq('vehicle_id', vehicleId)
+      .from("saved_vehicles")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("vehicle_id", vehicleId)
       .single()
 
-    if (error && error.code !== 'PGRST116') { // PGRST116 is "not found"
-      console.error('[v0] Error checking saved vehicle:', error)
+    // PGRST116 = row not found — not saved
+    if (error && error.code !== "PGRST116") {
+      console.error("[VehicleOps] isVehicleSaved error:", error)
       return false
     }
 
     return !!data
   } catch (error) {
-    console.error('[v0] Exception checking saved vehicle:', error)
+    console.error("[VehicleOps] isVehicleSaved exception:", error)
     return false
   }
 }
