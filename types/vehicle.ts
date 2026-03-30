@@ -16,6 +16,8 @@ export interface Vehicle {
   city: string
   description?: string
   images: string[]
+  image?: string
+  coverImage?: string
   status?: string
   sellerName?: string
   sellerEmail?: string

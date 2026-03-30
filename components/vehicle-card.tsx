@@ -58,17 +58,19 @@ export default function VehicleCard({ vehicle, onViewDetails, isSaved, onToggleS
       {/* Full-height image container */}
       <div className="relative w-full h-full">
         {(() => {
-          const src = (vehicle.images && vehicle.images.length > 0 ? vehicle.images[0] : vehicle.image) ||
+          const src = vehicle.coverImage || vehicle.image || (vehicle.images && vehicle.images.length > 0 ? vehicle.images[0] : null) ||
             "/placeholder.svg?height=400&width=300&query=vehicle"
-          const isDataUrl = typeof src === "string" && src.startsWith("data:")
           return (
             <Image
               src={src}
               alt={`${vehicle.make} ${vehicle.model}`}
               fill
               sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-              unoptimized={isDataUrl}
+              unoptimized={true}
               className="object-cover group-hover:scale-105 transition-transform duration-300"
+              onError={(e: any) => {
+                ;(e.target as HTMLImageElement).src = "/placeholder.svg?height=400&width=300"
+              }}
             />
           )
         })()}

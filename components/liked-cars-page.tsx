@@ -1,63 +1,198 @@
 "use client"
 
+import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { useUser } from "@/components/UserContext"
-import LikedCarsPage from "@/components/liked-cars-page"
-import { useEffect, useState } from "react"
-import { vehicleService } from "@/lib/vehicle-service"
+import { Heart, Search, ArrowLeft } from "lucide-react"
 import type { Vehicle } from "@/types/vehicle"
+import { Header } from "./ui/header"
+import type { UserProfile } from "@/types/user"
+import Image from "next/image"
 
-export const dynamic = "force-dynamic"
+interface LikedCarsPageProps {
+  likedVehicles: Vehicle[]
+  onBack: () => void
+  user: UserProfile | null
+  onSignOut?: () => void
+  onGoHome: () => void
+  onShowAllCars: () => void
+  onNavigateToUpload: () => void
+  onViewDetails: (vehicle: Vehicle) => void
+}
 
-export default function LikedCarsRoute() {
+export default function LikedCarsPage({
+  likedVehicles,
+  onBack,
+  user,
+  onSignOut,
+  onGoHome,
+  onShowAllCars,
+  onNavigateToUpload,
+  onViewDetails,
+}: LikedCarsPageProps) {
+  const [searchTerm, setSearchTerm] = useState("")
   const router = useRouter()
-  const { user, authUser, isLoading, toggleSaveVehicle } = useUser()
-  const [likedVehicles, setLikedVehicles] = useState<Vehicle[]>([])
-  const [loadingVehicles, setLoadingVehicles] = useState(true)
 
-  useEffect(() => {
-    if (!isLoading && !authUser) {
-      router.push("/login?redirect=/liked-cars-page")
-    }
-  }, [authUser, isLoading, router])
+  const filteredVehicles = likedVehicles.filter((vehicle) =>
+    `${vehicle.make} ${vehicle.model} ${vehicle.variant || ""}`
+      .toLowerCase()
+      .includes(searchTerm.toLowerCase())
+  )
 
-  useEffect(() => {
-    const load = async () => {
-      if (!user?.id) return
-      try {
-        setLoadingVehicles(true)
-        const saved = await vehicleService.getSavedVehicles(user.id)
-        setLikedVehicles(saved)
-      } catch (err) {
-        console.error("Failed to load liked vehicles:", err)
-        setLikedVehicles([])
-      } finally {
-        setLoadingVehicles(false)
-      }
-    }
-    load()
-  }, [user?.id])
-
-  if (isLoading || loadingVehicles) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-500">Loading your saved cars...</p>
-      </div>
-    )
+  const handleLogin = () => {
+    router.push("/login")
   }
 
-  if (!user) return null
+  const handleGoToSellPage = () => {
+    if (!user) {
+      router.push(`/login?next=/upload-vehicle`)
+      return
+    }
+    onNavigateToUpload()
+  }
+
+  const handleSignOutClick = () => {
+    if (onSignOut) onSignOut()
+    router.push("/login")
+  }
+
+  const handleBrowseRedirect = () => {
+    router.push("/results")
+  }
+
+  const getPrimaryImage = (vehicle: Vehicle) => {
+    if (vehicle.coverImage && vehicle.coverImage.trim().length > 10) return vehicle.coverImage;
+    if (vehicle.image && vehicle.image.trim().length > 10) return vehicle.image;
+    if (vehicle.images?.[0]) return vehicle.images[0];
+    return "/placeholder.svg?height=400&width=600";
+  }
 
   return (
-    <LikedCarsPage
-      likedVehicles={likedVehicles}
-      onBack={() => router.push("/dashboard")}
-      user={user}
-      onGoHome={() => router.push("/home")}
-      onShowAllCars={() => router.push("/results")}
-      onNavigateToUpload={() => router.push("/upload-vehicle")}
-      onSignOut={() => router.push("/login")}
-      onViewDetails={(vehicle) => router.push(`/vehicle-details/${vehicle.id}`)}
-    />
+    <div className="min-h-screen">
+      <Header
+        user={user}
+        onLoginClick={handleLogin}
+        onDashboardClick={onBack}
+        onGoHome={onGoHome}
+        onShowAllCars={handleBrowseRedirect}
+        onGoToSellPage={handleGoToSellPage}
+        onSignOut={handleSignOutClick}
+        transparent={false}
+      />
+
+      <div className="pt-20 pb-10">
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Back Button */}
+          <button
+            onClick={onBack}
+            className="mb-6 inline-flex items-center text-[#FF6700] dark:text-[#FF7D33] hover:underline"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" /> Back to Dashboard
+          </button>
+
+          {/* Header + Search */}
+          <div className="flex justify-between items-center mb-6">
+            <h1 className="text-3xl font-bold">Your Liked Cars</h1>
+
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Search your liked cars..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="px-4 py-2 pr-10 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] dark:bg-[#2A352A] w-64"
+              />
+              <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+            </div>
+          </div>
+
+          {/* Empty State */}
+          {filteredVehicles.length === 0 ? (
+            <div className="text-center py-16">
+              <Heart className="w-16 h-16 mx-auto mb-4 opacity-30" />
+              <h2 className="text-xl font-semibold mb-2">No liked cars found</h2>
+              <p className="opacity-70 mb-6">
+                {searchTerm
+                  ? "No cars match your search criteria"
+                  : "You haven't liked any cars yet"}
+              </p>
+
+              <button
+                onClick={handleBrowseRedirect}
+                className="bg-[#FF6700] dark:bg-[#FF7D33] text-white px-6 py-3 rounded-lg hover:bg-[#FF6700]/90 dark:hover:bg-[#FF7D33]/90 transition-colors"
+              >
+                Browse Vehicles
+              </button>
+            </div>
+          ) : (
+            <>
+              {/* Count */}
+              <div className="flex items-center mb-4">
+                <p className="text-sm opacity-70">
+                  Showing {filteredVehicles.length} of {likedVehicles.length} liked vehicles
+                </p>
+              </div>
+
+              {/* Vehicle Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredVehicles.map((vehicle) => {
+                  const imgSrc = getPrimaryImage(vehicle)
+                  const isBase64 = imgSrc.startsWith("data:")
+                  return (
+                    <div
+                      key={vehicle.id}
+                      className="bg-white dark:bg-[#1F2B20] border border-[#9FA791]/20 dark:border-[#4A4D45]/20 rounded-lg shadow hover:shadow-md transition-shadow cursor-pointer relative"
+                      onClick={() => onViewDetails(vehicle)}
+                    >
+                      {/* Heart Icon */}
+                      <div className="absolute top-3 right-3 z-20">
+                        <Heart
+                          className="w-6 h-6 text-[#FF6700] dark:text-[#FF7D33]"
+                          fill="currentColor"
+                        />
+                      </div>
+
+                      {/* Image */}
+                      <div className="w-full h-48 relative overflow-hidden rounded-t-lg bg-gray-100">
+                        <Image
+                          src={imgSrc}
+                          alt={`${vehicle.make} ${vehicle.model}`}
+                          fill
+                          unoptimized={true}
+                          className="object-cover"
+                          onError={(e) => {
+                            ;(e.target as HTMLImageElement).src =
+                              "/placeholder.svg?height=400&width=600"
+                          }}
+                        />
+                      </div>
+
+                      {/* Text Info */}
+                      <div className="p-4">
+                        <h3 className="text-lg font-semibold mb-2">
+                          {vehicle.make} {vehicle.model} {vehicle.variant}
+                        </h3>
+
+                        <p className="opacity-80 font-bold text-[#FF6700]">
+                          R {vehicle.price?.toLocaleString()}
+                        </p>
+
+                        <div className="flex justify-between items-center mt-4">
+                          <span className="text-sm opacity-70">
+                            {vehicle.city}, {vehicle.province}
+                          </span>
+                          <span className="text-sm opacity-70">
+                            {vehicle.year} • {vehicle.mileage?.toLocaleString()} km
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </>
+          )}
+        </main>
+      </div>
+    </div>
   )
 }

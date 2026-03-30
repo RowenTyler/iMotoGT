@@ -47,18 +47,16 @@ interface DashboardProps {
 function getVehicleImage(vehicle: Vehicle | null | undefined): string {
   if (!vehicle) return "/placeholder.svg?height=400&width=600"
 
+  if (vehicle.coverImage && vehicle.coverImage.trim().length > 10) return vehicle.coverImage;
+  
+  if (vehicle.image && vehicle.image.trim().length > 10) return vehicle.image;
+
   // Check images array — filter empties
   if (Array.isArray(vehicle.images)) {
     const first = vehicle.images.find(
       (img) => img && typeof img === "string" && img.trim().length > 10
     )
     if (first) return first
-  }
-
-  // Legacy field
-  const legacy = (vehicle as any).image
-  if (legacy && typeof legacy === "string" && legacy.trim().length > 10) {
-    return legacy
   }
 
   return "/placeholder.svg?height=400&width=600"
