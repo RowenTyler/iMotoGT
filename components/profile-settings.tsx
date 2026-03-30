@@ -81,10 +81,10 @@ export default function ProfileSettings({
   // We do NOT convert the file to base64 here — that happens in the parent.
   // This component only needs the preview URL for display purposes.
 
-  const [profileImagePreview, setProfileImagePreview] = useState
+  const [profileImagePreview, setProfileImagePreview] = useState<
     string | undefined
   >(user.profilePic || undefined)
-  const [profilePictureFile, setProfilePictureFile] = useState
+  const [profilePictureFile, setProfilePictureFile] = useState<
     File | undefined
   >(undefined)
 
