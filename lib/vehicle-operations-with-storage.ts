@@ -44,8 +44,6 @@ const VEHICLE_LIST_QUERY = `
   province,
   city,
   images,
-  image,
-  cover_image,
   status,
   contact_privacy_enabled,
   created_at,
@@ -77,8 +75,6 @@ const VEHICLE_DETAIL_QUERY = `
   city,
   description,
   images,
-  image,
-  cover_image,
   status,
   contact_privacy_enabled,
   created_at,
@@ -114,8 +110,6 @@ function mapDatabaseToVehicle(data: any): Vehicle {
     description: data.description || "",
     // images will be [] for list rows, populated for detail rows
     images: data.images || [],
-    image: data.image,
-    coverImage: data.cover_image,
     status: data.status || "active",
     contactPrivacyEnabled: data.contact_privacy_enabled ?? false,
     sellerName:
