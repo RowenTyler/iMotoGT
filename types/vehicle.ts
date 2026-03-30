@@ -29,6 +29,7 @@ export interface Vehicle {
   createdAt?: string
   updatedAt?: string
   contactPrivacyEnabled?: boolean
+  isDeleted?: boolean
 }
 
 export interface VehicleFormData {
