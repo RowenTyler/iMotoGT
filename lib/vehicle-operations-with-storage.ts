@@ -406,7 +406,8 @@ export async function updateVehicleWithStorage(
  */
 export async function deleteVehicleWithStorage(
   id: string,
-  userId: string
+  userId: string,
+  reason?: string
 ): Promise<boolean> {
   try {
     // Fetch vehicle to verify ownership and get image list
@@ -439,7 +440,8 @@ export async function deleteVehicleWithStorage(
         is_deleted: true,
         deleted_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-      })
+        deletion_reason: reason || null,
+      } as any)
       .eq("id", id)
 
     if (error) {

@@ -186,9 +186,10 @@ const updateVehicle = async (
 
 const deleteVehicle = async (
   id: string,
-  userId?: string
+  userId?: string,
+  reason?: string
 ): Promise<boolean> => {
-  const success = await deleteVehicleWithStorage(id, userId || "")
+  const success = await deleteVehicleWithStorage(id, userId || "", reason)
 
   if (success) {
     CacheManager.delete(`imoto_vehicle_details_${id}`)
