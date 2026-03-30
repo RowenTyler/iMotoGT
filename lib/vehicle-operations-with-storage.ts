@@ -91,25 +91,36 @@ const VEHICLE_DETAIL_QUERY = `
 function mapDatabaseToVehicle(data: any): Vehicle {
   const user = data.users || {}
 
-  return {
-    id: data.id,
-    userId: data.user_id,
-    make: data.make,
-    model: data.model,
-    variant: data.variant || "",
-    year: data.year,
-    price: data.price,
-    mileage: data.mileage,
-    transmission: data.transmission,
-    fuel: data.fuel,
-    fuelType: data.fuel,
-    engineCapacity: data.engine_capacity || "",
-    bodyType: data.body_type || "",
-    province: data.province,
-    city: data.city,
-    description: data.description || "",
-    // images will be [] for list rows, populated for detail rows
-    images: data.images || [],
+    let parsedImages: string[] = []
+    if (Array.isArray(data.images)) {
+      parsedImages = data.images
+    } else if (typeof data.images === "string") {
+      try {
+        parsedImages = JSON.parse(data.images)
+        if (!Array.isArray(parsedImages)) parsedImages = []
+      } catch (e) {
+        parsedImages = []
+      }
+    }
+
+    return {
+      id: data.id,
+      userId: data.user_id,
+      make: data.make,
+      model: data.model,
+      variant: data.variant || "",
+      year: data.year,
+      price: data.price,
+      mileage: data.mileage,
+      transmission: data.transmission,
+      fuel: data.fuel,
+      fuelType: data.fuel,
+      engineCapacity: data.engine_capacity || "",
+      bodyType: data.body_type || "",
+      province: data.province,
+      city: data.city,
+      description: data.description || "",
+      images: parsedImages,
     status: data.status || "active",
     contactPrivacyEnabled: data.contact_privacy_enabled ?? false,
     sellerName:
