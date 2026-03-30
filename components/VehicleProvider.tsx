@@ -198,26 +198,54 @@ export const useVehicleContext = () => {
 };
 
 export const useVehicleList = (cacheKey: string, fetchFn: () => Promise<VehicleListResponse>, options?: { enabled?: boolean; forceRefresh?: boolean; maxAge?: number; }) => {
-  const [data, setData] = useState<VehicleListResponse | null>(null);
-  const [loading, setLoading] = useState(true);
   const { getVehicleList, getCachedList, isFresh } = useVehicleContext();
 
+  // 1. Synchronous Cache Initialization for Zero-Latency SPA Navigation
+  const [data, setData] = useState<VehicleListResponse | null>(() => {
+    if (options?.enabled === false || options?.forceRefresh) return null;
+    const cached = getCachedList(cacheKey);
+    // Stale-While-Revalidate: Return immediately even if stale so UI snaps into place
+    return cached || null;
+  });
+
+  // 2. We only 'load' if we actually have no background data to show the user
+  const [loading, setLoading] = useState<boolean>(!data);
+
   useEffect(() => {
-    if (options?.enabled === false) return;
+    if (options?.enabled === false) {
+      if (loading) setLoading(false);
+      return;
+    }
+
     const load = async () => {
-      setLoading(true);
       const cached = getCachedList(cacheKey);
-      if (cached && isFresh(cacheKey, options?.maxAge) && !options?.forceRefresh) {
-        setData(cached);
+      const fresh = isFresh(cacheKey, options?.maxAge);
+
+      // Scenario A: Data is fresh and ready. Exit silently.
+      if (cached && fresh && !options?.forceRefresh) {
+        setData(cached); // Ensure state is synced
         setLoading(false);
         return;
       }
-      const resp = await getVehicleList(cacheKey, fetchFn);
-      setData(resp);
-      setLoading(false);
+
+      // Scenario B: Data is stale, empty, or forcefully bypassed.
+      // If we don't have ANY data yet, trigger the UI spinner. 
+      // If we *do* have stale data, KEEP loading=false to prevent UI layout flash!
+      if (!cached) setLoading(true);
+
+      try {
+        const resp = await getVehicleList(cacheKey, fetchFn);
+        setData(resp); // Silently swap in new data
+      } catch (error) {
+        console.error("❌ [useVehicleList] Background fetch failed:", error);
+      } finally {
+        setLoading(false);
+      }
     };
+    
     load();
-  }, [cacheKey, options?.enabled, options?.forceRefresh, getVehicleList, getCachedList, isFresh, options?.maxAge]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cacheKey, options?.enabled, options?.forceRefresh, options?.maxAge, getVehicleList, getCachedList, isFresh]);
 
   return { data, loading };
 };
