@@ -174,7 +174,7 @@ export const VehicleProvider = ({ children }: { children: React.ReactNode }) => 
     getVehicleList,
     getCachedVehicle: (id: string) => {
       if (cacheRef.current.byId[id]) return cacheRef.current.byId[id];
-      // Fallback: search within all cached lists synchronously
+      // Fallback: search within all cached lists
       for (const list of Object.values(cacheRef.current.lists)) {
         if (list && Array.isArray(list.vehicles)) {
           const found = list.vehicles.find(v => v.id === id);
@@ -183,7 +183,6 @@ export const VehicleProvider = ({ children }: { children: React.ReactNode }) => 
       }
       return null;
     },
-    getCachedList: (key: string) => cacheRef.current.lists[key] || null,
     isFresh,
     updateVehicleInCache: (v: Vehicle) => setCache(p => ({ ...p, byId: { ...p.byId, [v.id]: v } })),
     preloadCache: (key: string, data: VehicleListResponse) => setCache(p => ({ ...p, lists: { ...p.lists, [key]: data }, timestamps: { ...p.timestamps, [key]: Date.now() } })),
