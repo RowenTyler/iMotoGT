@@ -95,24 +95,24 @@ const bodyTypeOptionsList: {
   label: string
   IconComponent: ElementType
 }[] = [
-  { value: "Sedan", label: "Sedan", IconComponent: Car },
-  { value: "SUV", label: "SUV (Sport Utility Vehicle)", IconComponent: Car },
-  { value: "Hatchback", label: "Hatchback", IconComponent: Car },
-  { value: "Bakkie", label: "Bakkie / Pick-up", IconComponent: Truck },
-  { value: "Double Cab", label: "Double Cab Bakkie", IconComponent: Truck },
-  { value: "Extended Cab", label: "Extended Cab Bakkie", IconComponent: Truck },
-  { value: "Single Cab", label: "Single Cab Bakkie", IconComponent: Truck },
-  { value: "Coupe", label: "Coupe", IconComponent: Car },
-  { value: "Convertible", label: "Convertible / Cabriolet", IconComponent: Car },
-  { value: "Minivan", label: "Minivan / MPV", IconComponent: Car },
-  { value: "Panel Van", label: "Panel Van", IconComponent: Truck },
-  { value: "Minibus", label: "Minibus / Kombi", IconComponent: Car },
-  { value: "Bus", label: "Bus", IconComponent: Car },
-  { value: "Motorcycle", label: "Motorcycle", IconComponent: Bike },
-  { value: "Scooter", label: "Scooter", IconComponent: Bike },
-  { value: "Off-road", label: "Off-road / 4x4 Vehicle", IconComponent: Car },
-  { value: "Station Wagon", label: "Station Wagon", IconComponent: Car },
-]
+    { value: "Sedan", label: "Sedan", IconComponent: Car },
+    { value: "SUV", label: "SUV (Sport Utility Vehicle)", IconComponent: Car },
+    { value: "Hatchback", label: "Hatchback", IconComponent: Car },
+    { value: "Bakkie", label: "Bakkie / Pick-up", IconComponent: Truck },
+    { value: "Double Cab", label: "Double Cab Bakkie", IconComponent: Truck },
+    { value: "Extended Cab", label: "Extended Cab Bakkie", IconComponent: Truck },
+    { value: "Single Cab", label: "Single Cab Bakkie", IconComponent: Truck },
+    { value: "Coupe", label: "Coupe", IconComponent: Car },
+    { value: "Convertible", label: "Convertible / Cabriolet", IconComponent: Car },
+    { value: "Minivan", label: "Minivan / MPV", IconComponent: Car },
+    { value: "Panel Van", label: "Panel Van", IconComponent: Truck },
+    { value: "Minibus", label: "Minibus / Kombi", IconComponent: Car },
+    { value: "Bus", label: "Bus", IconComponent: Car },
+    { value: "Motorcycle", label: "Motorcycle", IconComponent: Bike },
+    { value: "Scooter", label: "Scooter", IconComponent: Bike },
+    { value: "Off-road", label: "Off-road / 4x4 Vehicle", IconComponent: Car },
+    { value: "Station Wagon", label: "Station Wagon", IconComponent: Car },
+  ]
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
@@ -215,9 +215,9 @@ export default function UploadVehicle({
       profile?.firstName && profile?.lastName
         ? `${profile.firstName} ${profile.lastName}`
         : profile?.firstName ||
-          profile?.lastName ||
-          profile?.email?.split("@")[0] ||
-          "",
+        profile?.lastName ||
+        profile?.email?.split("@")[0] ||
+        "",
     sellerEmail: profile?.email || "",
     sellerPhone: profile?.phone || "",
     sellerSuburb: profile?.suburb || "",
@@ -500,12 +500,12 @@ export default function UploadVehicle({
       inputValue.trim() === ""
         ? makesList
         : makesList.filter(
-            (make) =>
-              make.displayName
-                .toLowerCase()
-                .includes(inputValue.toLowerCase()) ||
-              make.key.toLowerCase().includes(inputValue.toLowerCase())
-          )
+          (make) =>
+            make.displayName
+              .toLowerCase()
+              .includes(inputValue.toLowerCase()) ||
+            make.key.toLowerCase().includes(inputValue.toLowerCase())
+        )
     )
     setShowMakeDropdown(true)
   }
@@ -535,8 +535,8 @@ export default function UploadVehicle({
       inputValue.trim() === "" || !modelsList.length
         ? modelsList
         : modelsList.filter((model) =>
-            model.name.toLowerCase().includes(inputValue.toLowerCase())
-          )
+          model.name.toLowerCase().includes(inputValue.toLowerCase())
+        )
     )
     setShowModelDropdown(true)
   }
@@ -550,7 +550,7 @@ export default function UploadVehicle({
   // ─── Form Input Handlers ──────────────────────────────────────────────────
 
   const handleInputChange = (
-    event: React.ChangeEvent
+    event: React.ChangeEvent<
       HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
     >
   ) => {
@@ -861,7 +861,7 @@ export default function UploadVehicle({
   const handlePointerDown = useCallback(
     (index: number, e: React.PointerEvent<HTMLDivElement>) => {
       e.preventDefault()
-      ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
+        ; (e.target as HTMLElement).setPointerCapture(e.pointerId)
       setIsDragging(true)
       setDraggedIndex(index)
       setDropTargetIndex(null)
@@ -903,7 +903,7 @@ export default function UploadVehicle({
 
   const handlePointerUp = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
-      ;(e.target as HTMLElement).releasePointerCapture(e.pointerId)
+      ; (e.target as HTMLElement).releasePointerCapture(e.pointerId)
       if (
         draggedIndex !== null &&
         dropTargetIndex !== null &&
@@ -924,7 +924,7 @@ export default function UploadVehicle({
 
   const handlePointerCancel = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
-      ;(e.target as HTMLElement).releasePointerCapture(e.pointerId)
+      ; (e.target as HTMLElement).releasePointerCapture(e.pointerId)
       setIsDragging(false)
       setDraggedIndex(null)
       setDropTargetIndex(null)
@@ -1213,13 +1213,11 @@ export default function UploadVehicle({
                       <div
                         key={index}
                         data-drag-index={index}
-                        className={`relative w-full aspect-square overflow-hidden rounded-lg group cursor-move select-none ${
-                          draggedIndex === index ? "opacity-50 scale-95" : ""
-                        } ${
-                          dropTargetIndex === index
+                        className={`relative w-full aspect-square overflow-hidden rounded-lg group cursor-move select-none ${draggedIndex === index ? "opacity-50 scale-95" : ""
+                          } ${dropTargetIndex === index
                             ? "ring-2 ring-[#FF6700]"
                             : ""
-                        }`}
+                          }`}
                         style={{ touchAction: "none" }}
                         onPointerDown={(e) => handlePointerDown(index, e)}
                         onPointerMove={(e) =>
@@ -1348,15 +1346,13 @@ export default function UploadVehicle({
                         <div
                           key={index}
                           data-drag-index={index}
-                          className={`relative aspect-square overflow-hidden rounded-lg group cursor-move select-none ${
-                            draggedIndex === index
+                          className={`relative aspect-square overflow-hidden rounded-lg group cursor-move select-none ${draggedIndex === index
                               ? "opacity-50 scale-95"
                               : ""
-                          } ${
-                            dropTargetIndex === index
+                            } ${dropTargetIndex === index
                               ? "ring-2 ring-[#FF6700]"
                               : ""
-                          }`}
+                            }`}
                           style={{ touchAction: "none" }}
                           onPointerDown={(e) => handlePointerDown(index, e)}
                           onPointerMove={(e) =>
@@ -1430,18 +1426,16 @@ export default function UploadVehicle({
                         contactPrivacyEnabled: newValue,
                       }))
                     }}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                      contactPrivacyEnabled
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${contactPrivacyEnabled
                         ? "bg-[#FF6700] dark:bg-[#FF7D33]"
                         : "bg-gray-300 dark:bg-gray-600"
-                    }`}
+                      }`}
                   >
                     <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                        contactPrivacyEnabled
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${contactPrivacyEnabled
                           ? "translate-x-6"
                           : "translate-x-1"
-                      }`}
+                        }`}
                     />
                   </button>
                 </div>
@@ -1859,12 +1853,12 @@ export default function UploadVehicle({
                               setEngineCapacityFiltered(
                                 engineCapacitySearch
                                   ? engineCapacityOptionsList.filter((o) =>
-                                      o.label
-                                        .toLowerCase()
-                                        .includes(
-                                          engineCapacitySearch.toLowerCase()
-                                        )
-                                    )
+                                    o.label
+                                      .toLowerCase()
+                                      .includes(
+                                        engineCapacitySearch.toLowerCase()
+                                      )
+                                  )
                                   : engineCapacityOptionsList
                               )
                             }}
@@ -1906,10 +1900,10 @@ export default function UploadVehicle({
                               setBodyTypeFiltered(
                                 bodyTypeSearch
                                   ? bodyTypeOptionsList.filter((o) =>
-                                      o.label
-                                        .toLowerCase()
-                                        .includes(bodyTypeSearch.toLowerCase())
-                                    )
+                                    o.label
+                                      .toLowerCase()
+                                      .includes(bodyTypeSearch.toLowerCase())
+                                  )
                                   : bodyTypeOptionsList
                               )
                             }}
@@ -1998,8 +1992,8 @@ export default function UploadVehicle({
                           ? "Updating..."
                           : "Submitting..."
                         : editMode
-                        ? "Update Vehicle"
-                        : "List Vehicle"}
+                          ? "Update Vehicle"
+                          : "List Vehicle"}
                     </Button>
                   </div>
                 </div>
