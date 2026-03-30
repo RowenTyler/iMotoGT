@@ -38,13 +38,23 @@ export default function VehicleDetailsClientPage({ params }: VehicleDetailsPageP
     addToCache
   } = useVehicleContext()
   
-  // Local state
-  const [vehicle, setVehicle] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
+  // Local state initialized securely with synchronous cache extraction!
+  const [vehicle, setVehicle] = useState<any>(() => {
+    // Attempt rapid hydration via our context
+    const ctxCached = getCachedVehicle?.(resolvedParams.id)
+    if (ctxCached) {
+      console.log(`⚡ [VehicleDetailsPage] Synchronous hydration for ${resolvedParams.id}`)
+      // Fire it instantly into DOM before layout
+      return ctxCached
+    }
+    return null
+  })
+
+  // Start with loading true only if we found no vehicle instantly
+  const [loading, setLoading] = useState(!vehicle)
   const [error, setError] = useState<string | null>(null)
 
   const isInitialMountRef = useRef(true)
-
   // ------------------------------------------------------------------
   // 1. Fetch vehicle data (replaces broken useVehicle)
   // ------------------------------------------------------------------
