@@ -183,6 +183,7 @@ export const VehicleProvider = ({ children }: { children: React.ReactNode }) => 
       }
       return null;
     },
+    getCachedList: (key: string) => cacheRef.current.lists[key] || null,
     isFresh,
     updateVehicleInCache: (v: Vehicle) => setCache(p => ({ ...p, byId: { ...p.byId, [v.id]: v } })),
     preloadCache: (key: string, data: VehicleListResponse) => setCache(p => ({ ...p, lists: { ...p.lists, [key]: data }, timestamps: { ...p.timestamps, [key]: Date.now() } })),
