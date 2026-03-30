@@ -456,7 +456,7 @@ export default function Dashboard({
                             : "Saved vehicle"
                         }
                         fill
-                        unoptimized={carouselImageIsBase64}
+                        unoptimized={true}
                         className="object-cover"
                         onError={(e) => {
                           console.warn("⚠️ Dashboard carousel image failed to load")
@@ -579,7 +579,7 @@ export default function Dashboard({
                                 src={imgSrc}
                                 alt={`${vehicle.make} ${vehicle.model}`}
                                 fill
-                                unoptimized={isBase64(imgSrc)}
+                                unoptimized={true}
                                 className="object-cover"
                                 onError={(e) => {
                                   ;(e.target as HTMLImageElement).src =
@@ -823,7 +823,7 @@ export default function Dashboard({
                             src={imgSrc}
                             alt={`${vehicle.make} ${vehicle.model}`}
                             fill
-                            unoptimized={isBase64(imgSrc)}
+                            unoptimized={true}
                             className="object-cover"
                             onError={(e) => {
                               ;(e.target as HTMLImageElement).src =

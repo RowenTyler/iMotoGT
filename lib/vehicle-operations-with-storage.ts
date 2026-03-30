@@ -43,6 +43,7 @@ const VEHICLE_LIST_QUERY = `
   body_type,
   province,
   city,
+  images,
   status,
   contact_privacy_enabled,
   created_at,
