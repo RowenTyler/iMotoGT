@@ -135,6 +135,7 @@ function mapDatabaseToVehicle(data: any): Vehicle {
     sellerProfilePic: user.profile_pic || "",
     createdAt: data.created_at,
     updatedAt: data.updated_at,
+    isDeleted: typeof data.is_deleted === "boolean" ? data.is_deleted : false,
   }
 }
 
