@@ -21,7 +21,7 @@ interface UserContextType {
   forceLogoutAll: () => Promise<void>
   addListedVehicle: (vehicle: VehicleFormData) => Promise<void>
   updateListedVehicle: (vehicleId: string, vehicleData: Partial<VehicleFormData>) => Promise<void>
-  deleteListedVehicle: (vehicleId: string) => Promise<void>
+  deleteListedVehicle: (vehicleId: string, reason?: string) => Promise<void>
   toggleSaveVehicle: (vehicle: Vehicle) => Promise<void>
   refreshVehicles: () => Promise<void>
   refreshUserProfile: () => Promise<void>
@@ -326,7 +326,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const deleteListedVehicle = async (vehicleId: string) => {
+  const deleteListedVehicle = async (vehicleId: string, reason?: string) => {
     if (!user) {
       console.error("❌ Cannot delete vehicle: No user logged in")
       throw new Error("User not authenticated")
@@ -340,7 +340,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         return prevArray.filter((v) => v.id !== vehicleId)
       })
 
-      const success = await vehicleService.deleteVehicle(vehicleId, user.id)
+      const success = await vehicleService.deleteVehicle(vehicleId, user.id, reason)
 
       if (!success) {
         console.error("❌ Failed to delete vehicle")
