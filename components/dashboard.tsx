@@ -32,6 +32,48 @@ interface DashboardProps {
   onNavigateToUpload: () => void
 }
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/**
+ * Get a usable image src for a vehicle.
+ *
+ * Priority:
+ * 1. First image in images[] array (base64 or Supabase Storage URL)
+ * 2. Legacy single `image` field (some old records)
+ * 3. Placeholder
+ *
+ * Filters out empty strings that would cause broken <img> tags.
+ */
+function getVehicleImage(vehicle: Vehicle | null | undefined): string {
+  if (!vehicle) return "/placeholder.svg?height=400&width=600"
+
+  // Check images array — filter empties
+  if (Array.isArray(vehicle.images)) {
+    const first = vehicle.images.find(
+      (img) => img && typeof img === "string" && img.trim().length > 10
+    )
+    if (first) return first
+  }
+
+  // Legacy field
+  const legacy = (vehicle as any).image
+  if (legacy && typeof legacy === "string" && legacy.trim().length > 10) {
+    return legacy
+  }
+
+  return "/placeholder.svg?height=400&width=600"
+}
+
+/**
+ * Returns true if src is a base64 data URI.
+ * Used to set unoptimized={true} on Next.js <Image> for base64 sources.
+ */
+function isBase64(src: string): boolean {
+  return src.startsWith("data:")
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
+
 export default function Dashboard({
   user,
   onSignOut,
@@ -57,23 +99,28 @@ export default function Dashboard({
   const [deleteReason, setDeleteReason] = useState("")
   const [customDeleteReason, setCustomDeleteReason] = useState("")
   const [isDeleting, setIsDeleting] = useState(false)
-  const [isLoadingSavedCars, setIsLoadingSavedCars] = useState(true)
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   const [uploadBlocked, setUploadBlocked] = useState(false)
 
-  // Ensure arrays are properly initialized and filter out soft-deleted vehicles
-  const safeSavedCars = Array.isArray(savedCars) ? savedCars.filter((car) => !car.isDeleted) : []
-  const safeListedCars = Array.isArray(listedCars) ? listedCars.filter((car) => !car.isDeleted) : []
+  // Filter soft-deleted vehicles
+  const safeSavedCars = Array.isArray(savedCars)
+    ? savedCars.filter((car) => !car.isDeleted)
+    : []
+  const safeListedCars = Array.isArray(listedCars)
+    ? listedCars.filter((car) => !car.isDeleted)
+    : []
 
-  // Debug logging
+  // Debug
   useEffect(() => {
-    console.log("🔄 Dashboard: safeSavedCars updated", safeSavedCars)
-    console.log("🔄 Dashboard: safeListedCars updated", safeListedCars)
+    console.log("📊 Dashboard: savedCars received:", safeSavedCars.length)
     if (safeSavedCars.length > 0) {
-      console.log("📊 Dashboard: First saved car data", safeSavedCars[0])
+      const first = safeSavedCars[0]
+      const imgSrc = getVehicleImage(first)
+      console.log("📊 Dashboard: first saved car image src (truncated):",
+        imgSrc.substring(0, 80),
+        "| isBase64:", isBase64(imgSrc))
     }
-    setIsLoadingSavedCars(false)
-  }, [safeSavedCars, safeListedCars])
+  }, [safeSavedCars])
 
   // Auto-rotate carousel
   useEffect(() => {
@@ -84,7 +131,8 @@ export default function Dashboard({
     return () => clearInterval(interval)
   }, [safeSavedCars.length])
 
-  // Handle profile settings navigation
+  // ── Navigation helpers ──────────────────────────────────────────────────────
+
   const handleProfileClick = () => {
     if (onViewProfileSettings) {
       onViewProfileSettings()
@@ -93,15 +141,12 @@ export default function Dashboard({
     }
   }
 
-  // Handle upload vehicle navigation with upgrade check
   const handleUploadClick = () => {
-    // Check if user has reached the free listing limit
     if (totalListings >= maxFreeListings) {
       setShowUpgradeModal(true)
       setUploadBlocked(true)
       return
     }
-
     if (onViewUploadVehicle) {
       onViewUploadVehicle()
     } else {
@@ -109,26 +154,20 @@ export default function Dashboard({
     }
   }
 
-  // Handle upgrade modal actions
   const handleUpgradeAction = (action: "contact" | "upgrade") => {
     setShowUpgradeModal(false)
     if (action === "contact") {
-      // Open email client for contact
       window.location.href =
         "mailto:support@imoto.com?subject=Upgrade%20Request&body=Hello,%20I%20would%20like%20to%20upgrade%20my%20account%20to%20list%20more%20vehicles."
     } else if (action === "upgrade") {
-      // Navigate to upgrade page (you can create this later)
       router.push("/upgrade")
     }
     setUploadBlocked(false)
   }
 
-  // Handle viewing vehicle details - FIXED: Better error handling
   const handleViewDetails = (vehicle: Vehicle) => {
     try {
-      console.log("🔄 Dashboard: Handling view details for vehicle:", vehicle?.id)
       const isOwner = user && vehicle.userId === user.id
-
       if (isOwner) {
         router.push(`/vehicle-details/${vehicle.id}?edit=true`)
       } else if (onViewDetails) {
@@ -138,14 +177,10 @@ export default function Dashboard({
       }
     } catch (error) {
       console.error("❌ Dashboard: Error in handleViewDetails:", error)
-      // Fallback to direct navigation
-      if (vehicle?.id) {
-        router.push(`/vehicle-details/${vehicle.id}`)
-      }
+      if (vehicle?.id) router.push(`/vehicle-details/${vehicle.id}`)
     }
   }
 
-  // Handle browse cars navigation
   const handleBrowseCars = () => {
     if (onShowAllCars) {
       onShowAllCars()
@@ -163,13 +198,14 @@ export default function Dashboard({
     router.push(`/vehicle/${vehicle.id}/edit`)
   }
 
-  // UPDATED: Enhanced soft delete function with better error handling and validation
   const confirmDeleteVehicle = async () => {
     if (!vehicleToDelete || !onDeleteListedCar) return
 
-    const finalReason = deleteReason === "other" ? customDeleteReason.trim() || "No reason provided" : deleteReason
+    const finalReason =
+      deleteReason === "other"
+        ? customDeleteReason.trim() || "No reason provided"
+        : deleteReason
 
-    // Validate that a reason is provided
     if (!finalReason) {
       alert("Please provide a reason for deletion")
       return
@@ -177,21 +213,11 @@ export default function Dashboard({
 
     try {
       setIsDeleting(true)
-      console.log("🗑️ Dashboard: Soft deleting vehicle with reason:", {
-        vehicleId: vehicleToDelete.id,
-        reason: finalReason,
-      })
-
       await onDeleteListedCar(vehicleToDelete.id, finalReason)
-
-      // Reset modal state
       setShowDeleteModal(false)
       setVehicleToDelete(null)
       setDeleteReason("")
       setCustomDeleteReason("")
-
-      // Show success message
-      console.log("✅ Dashboard: Vehicle soft deleted successfully")
     } catch (error) {
       console.error("❌ Dashboard: Error deleting vehicle:", error)
       alert("Failed to delete vehicle. Please try again.")
@@ -200,18 +226,16 @@ export default function Dashboard({
     }
   }
 
-  // Get image URL with clean logic (no singular 'image' field)
-  const getVehicleImage = (vehicle: Vehicle) => {
-    if (!vehicle) return "/placeholder.svg?height=400&width=600"
-    return vehicle.images?.[0] ?? "/placeholder.svg?height=400&width=600"
-  }
-
   const totalListings = safeListedCars.length
-  const maxFreeListings = 3 // Updated from 5 to 3
+  const maxFreeListings = 3
   const freeListingsRemaining = Math.max(0, maxFreeListings - totalListings)
 
   if (!user) {
-    return <div className="min-h-screen flex items-center justify-center text-xl">User not logged in.</div>
+    return (
+      <div className="min-h-screen flex items-center justify-center text-xl">
+        User not logged in.
+      </div>
+    )
   }
 
   if (selectedVehicle) {
@@ -226,9 +250,13 @@ export default function Dashboard({
     )
   }
 
+  // ── Saved car carousel image ──────────────────────────────────────────────
+  const currentSavedCar = safeSavedCars[currentCarIndex] ?? null
+  const carouselImageSrc = getVehicleImage(currentSavedCar)
+  const carouselImageIsBase64 = isBase64(carouselImageSrc)
+
   return (
     <div className="h-screen w-full bg-white flex flex-col overflow-hidden">
-      {/* Top Header Section */}
       <Header
         user={user}
         onLoginClick={() => {}}
@@ -238,18 +266,21 @@ export default function Dashboard({
         onGoToSellPage={handleUploadClick}
       />
 
-      {/* Main Content Area */}
       <main className="flex-1 flex flex-col min-h-0 pt-20 bg-white">
-        {/* DESKTOP LAYOUT (LARGE SCREENS ONLY - lg:block) */}
+
+        {/* ── DESKTOP LAYOUT ─────────────────────────────────────────────── */}
         <div className="hidden lg:block w-full mx-auto h-full px-6 pb-6 overflow-hidden">
           <div className="flex flex-col h-full">
-            <h1 className="text-4xl font-bold mb-6 flex-shrink-0">Welcome, {user.firstName}</h1>
+            <h1 className="text-4xl font-bold mb-6 flex-shrink-0">
+              Welcome, {user.firstName}
+            </h1>
 
-            {/* Grid Container — 12 col, fixed height fills remaining space */}
             <div className="grid grid-cols-12 gap-4 flex-grow min-h-0">
-              {/* LEFT COLUMN — 9 cols, split into 2 equal rows */}
+
+              {/* LEFT — 9 cols */}
               <div className="col-span-9 grid grid-rows-2 gap-4 h-full min-h-0">
-                {/* ROW 1: Profile, Metrics, Upload — 3 equal cols */}
+
+                {/* ROW 1: Profile / Metrics / Upload */}
                 <div className="grid grid-cols-3 gap-4 min-h-0">
                   {/* Profile Card */}
                   <div className="col-span-1 block min-w-0 h-full">
@@ -260,16 +291,18 @@ export default function Dashboard({
                       <div className="relative w-full h-full">
                         {user.profilePic ? (
                           <Image
-                            src={user.profilePic || "/placeholder.svg"}
+                            src={user.profilePic}
                             alt={`${user.firstName}'s profile`}
-                            layout="fill"
-                            objectFit="cover"
+                            fill
+                            unoptimized={isBase64(user.profilePic)}
                             className="object-cover"
                           />
                         ) : (
                           <div className="w-full h-full bg-[#2E933C] flex items-center justify-center text-white">
                             <div className="text-center">
-                              <div className="text-5xl font-bold mb-2">{user.firstName?.[0]?.toUpperCase() || "U"}</div>
+                              <div className="text-5xl font-bold mb-2">
+                                {user.firstName?.[0]?.toUpperCase() || "U"}
+                              </div>
                               <div className="text-sm">{user.firstName}</div>
                             </div>
                           </div>
@@ -286,7 +319,7 @@ export default function Dashboard({
                     </Card>
                   </div>
 
-                  {/* Progress Card */}
+                  {/* Metrics Card */}
                   <Card className="col-span-1 rounded-3xl p-5 w-full h-full flex flex-col justify-between bg-gradient-to-br from-white to-gray-50">
                     <div className="flex justify-between items-center">
                       <h3 className="text-xl font-semibold">Metrics</h3>
@@ -300,8 +333,10 @@ export default function Dashboard({
                       <div className="w-full bg-gray-200 rounded-full h-2 mt-3">
                         <div
                           className="bg-[#3E5641] h-2 rounded-full"
-                          style={{ width: `${(totalListings / maxFreeListings) * 100}%` }}
-                        ></div>
+                          style={{
+                            width: `${Math.min((totalListings / maxFreeListings) * 100, 100)}%`,
+                          }}
+                        />
                       </div>
                     </div>
                     <div className="flex justify-between items-center text-sm text-gray-500">
@@ -310,7 +345,7 @@ export default function Dashboard({
                     </div>
                   </Card>
 
-                  {/* Vehicle Uploads Card */}
+                  {/* Upload Card */}
                   <Card
                     className={`col-span-1 rounded-3xl p-5 w-full h-full flex flex-col justify-between bg-gradient-to-br from-[#FF6700] to-[#FF9248] text-white cursor-pointer hover:shadow-lg transition-all ${
                       totalListings >= maxFreeListings ? "opacity-90" : ""
@@ -320,7 +355,9 @@ export default function Dashboard({
                     <div className="flex justify-between items-center">
                       <h3 className="text-xl font-semibold">Vehicle Uploads</h3>
                       {totalListings >= maxFreeListings && (
-                        <span className="bg-white/20 text-xs px-2 py-1 rounded-full">Limit Reached</span>
+                        <span className="bg-white/20 text-xs px-2 py-1 rounded-full">
+                          Limit Reached
+                        </span>
                       )}
                       <Car className="w-6 h-6" />
                     </div>
@@ -330,38 +367,45 @@ export default function Dashboard({
                       </div>
                       <div className="text-center">
                         <p className="text-lg font-bold">
-                          {totalListings >= maxFreeListings ? "Upgrade to List More" : "List a New Vehicle"}
+                          {totalListings >= maxFreeListings
+                            ? "Upgrade to List More"
+                            : "List a New Vehicle"}
                         </p>
                         <p className="text-sm opacity-80">
-                          {totalListings >= maxFreeListings ? "Unlock unlimited listings" : "Quick and easy process"}
+                          {totalListings >= maxFreeListings
+                            ? "Unlock unlimited listings"
+                            : "Quick and easy process"}
                         </p>
                       </div>
                     </div>
                   </Card>
                 </div>
 
-                {/* ROW 2: Subscription + Saved Cars — must fill row height exactly */}
+                {/* ROW 2: Subscription + Saved Cars carousel */}
                 <div className="grid grid-cols-9 gap-4 min-h-0 h-full">
-                  {/* ---------- Subscription Card (compact, fits without scroll) ---------- */}
+
+                  {/* Subscription Card */}
                   <Card className="col-span-3 rounded-3xl w-full h-full flex flex-col overflow-hidden bg-white dark:bg-[#2A352A]">
-                    {/* Header - minimal */}
                     <div className="px-3 pt-3 pb-1.5 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-                      <h3 className="text-sm font-semibold text-[#3E5641] dark:text-white">Subscription</h3>
+                      <h3 className="text-sm font-semibold text-[#3E5641] dark:text-white">
+                        Subscription
+                      </h3>
                       <Package className="h-3.5 w-3.5 text-[#FF6700]" />
                     </div>
-
-                    {/* Content - tightly packed, no scroll */}
                     <div className="px-3 py-2 space-y-2 flex-1 flex flex-col justify-between">
-                      {/* Free Plan Section */}
                       <div className="bg-gray-50 dark:bg-[#1F2B20] rounded-lg p-2">
                         <div className="flex justify-between items-center mb-0.5">
-                          <h4 className="text-xs font-semibold text-[#3E5641] dark:text-white">Free Plan</h4>
+                          <h4 className="text-xs font-semibold text-[#3E5641] dark:text-white">
+                            Free Plan
+                          </h4>
                           <span className="text-[10px] bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 px-1.5 py-0.5 rounded-full">
                             Active
                           </span>
                         </div>
                         <div className="flex justify-between items-center text-[10px] mb-0.5">
-                          <span className="text-gray-600 dark:text-gray-400">Vehicle Listings</span>
+                          <span className="text-gray-600 dark:text-gray-400">
+                            Vehicle Listings
+                          </span>
                           <span className="font-medium text-[#3E5641] dark:text-white">
                             {totalListings}/{maxFreeListings} Used
                           </span>
@@ -369,17 +413,21 @@ export default function Dashboard({
                         <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1 mb-0.5">
                           <div
                             className="bg-[#FF6700] h-1 rounded-full"
-                            style={{ width: `${(totalListings / maxFreeListings) * 100}%` }}
+                            style={{
+                              width: `${Math.min((totalListings / maxFreeListings) * 100, 100)}%`,
+                            }}
                           />
                         </div>
                         <p className="text-[10px] text-gray-500 dark:text-gray-400">
-                          {freeListingsRemaining} free {freeListingsRemaining === 1 ? "listing" : "listings"} remaining
+                          {freeListingsRemaining} free{" "}
+                          {freeListingsRemaining === 1 ? "listing" : "listings"}{" "}
+                          remaining
                         </p>
                       </div>
-
-                      {/* Premium Plans Section */}
                       <div className="border border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-2">
-                        <h4 className="text-xs font-semibold mb-0.5 text-[#3E5641] dark:text-white">Premium Plans</h4>
+                        <h4 className="text-xs font-semibold mb-0.5 text-[#3E5641] dark:text-white">
+                          Premium Plans
+                        </h4>
                         <p className="text-[10px] text-gray-500 dark:text-gray-400 mb-1.5">
                           Unlock unlimited listings and premium features
                         </p>
@@ -394,28 +442,32 @@ export default function Dashboard({
                     </div>
                   </Card>
 
-                  {/* ---------- Saved Cars Card (with working image) ---------- */}
+                  {/* Saved Cars Carousel */}
                   <Card className="col-span-6 rounded-3xl overflow-hidden w-full h-full relative">
-                    <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-transparent z-10"></div>
+                    <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-transparent z-10" />
 
-                    {isLoadingSavedCars ? (
-                      <div className="absolute inset-0 w-full h-full bg-gray-200 flex items-center justify-center">
-                        <div className="text-white text-center">
-                          <Car className="w-12 h-12 mx-auto mb-3 opacity-50 animate-pulse" />
-                          <p>Loading saved cars...</p>
-                        </div>
-                      </div>
-                    ) : (
-                      <img
-                        src={getVehicleImage(safeSavedCars[currentCarIndex]) || "/placeholder.svg?height=400&width=600"}
-                        alt="Saved Car"
-                        className="absolute inset-0 w-full h-full object-cover"
+                    {/* Vehicle image — handles both base64 and Supabase Storage URLs */}
+                    {carouselImageSrc !== "/placeholder.svg?height=400&width=600" ? (
+                      <Image
+                        src={carouselImageSrc}
+                        alt={
+                          currentSavedCar
+                            ? `${currentSavedCar.make} ${currentSavedCar.model}`
+                            : "Saved vehicle"
+                        }
+                        fill
+                        unoptimized={carouselImageIsBase64}
+                        className="object-cover"
                         onError={(e) => {
-                          console.error("❌ Dashboard: Image failed to load, using placeholder");
-                          const target = e.target as HTMLImageElement;
-                          target.src = "/placeholder.svg?height=400&width=600";
+                          console.warn("⚠️ Dashboard carousel image failed to load")
+                          ;(e.target as HTMLImageElement).src =
+                            "/placeholder.svg?height=400&width=600"
                         }}
                       />
+                    ) : (
+                      <div className="absolute inset-0 bg-gray-800 flex items-center justify-center">
+                        <Car className="w-16 h-16 text-gray-600" />
+                      </div>
                     )}
 
                     <div className="relative z-20 h-full flex flex-col justify-between p-6">
@@ -428,48 +480,51 @@ export default function Dashboard({
                         </span>
                         {safeSavedCars.length > 0 && (
                           <span className="bg-white/20 backdrop-blur-sm text-white px-3 py-1 rounded-full text-sm">
-                            {safeSavedCars.length} saved {safeSavedCars.length === 1 ? "car" : "cars"}
+                            {safeSavedCars.length} saved{" "}
+                            {safeSavedCars.length === 1 ? "car" : "cars"}
                           </span>
                         )}
                       </div>
 
                       <div className="flex justify-between items-end">
-                        {safeSavedCars.length > 0 ? (
+                        {currentSavedCar ? (
                           <>
                             <div
                               className="text-white cursor-pointer"
-                              onClick={() => {
-                                console.log("🔄 Dashboard: Clicking on saved car:", safeSavedCars[currentCarIndex]?.id);
-                                handleViewDetails(safeSavedCars[currentCarIndex]);
-                              }}
+                              onClick={() => handleViewDetails(currentSavedCar)}
                             >
                               <h3 className="text-2xl font-bold mb-1">
-                                {safeSavedCars[currentCarIndex]?.year} {safeSavedCars[currentCarIndex]?.make}{" "}
-                                {safeSavedCars[currentCarIndex]?.model}
+                                {currentSavedCar.year} {currentSavedCar.make}{" "}
+                                {currentSavedCar.model}
                               </h3>
                               <p className="text-white/80 mb-2">
-                                {safeSavedCars[currentCarIndex]?.variant} •{" "}
-                                {safeSavedCars[currentCarIndex]?.mileage?.toLocaleString()} km
+                                {currentSavedCar.variant} •{" "}
+                                {currentSavedCar.mileage?.toLocaleString()} km
                               </p>
                               <p className="text-xl font-bold text-[#FF6700]">
-                                R{safeSavedCars[currentCarIndex]?.price?.toLocaleString()}
+                                R{currentSavedCar.price?.toLocaleString()}
                               </p>
                             </div>
                             <Button
                               className="bg-white text-[#3E5641] hover:bg-white/90"
                               onClick={(e) => {
-                                e.stopPropagation();
-                                console.log("📧 Contact seller clicked");
+                                e.stopPropagation()
+                                handleViewDetails(currentSavedCar)
                               }}
                             >
-                              Contact Seller
+                              View Details
                             </Button>
                           </>
                         ) : (
                           <div className="text-white text-center w-full">
                             <Car className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                            <h3 className="text-xl font-bold mb-1">No Saved Cars</h3>
-                            <Button className="bg-white text-[#3E5641] hover:bg-white/90" onClick={handleBrowseCars}>
+                            <h3 className="text-xl font-bold mb-1">
+                              No Saved Cars
+                            </h3>
+                            <Button
+                              className="bg-white text-[#3E5641] hover:bg-white/90"
+                              onClick={handleBrowseCars}
+                            >
                               Browse Cars
                             </Button>
                           </div>
@@ -482,11 +537,13 @@ export default function Dashboard({
                             <button
                               key={index}
                               className={`w-2 h-2 rounded-full transition-all ${
-                                currentCarIndex === index ? "bg-white w-4" : "bg-white/40"
+                                currentCarIndex === index
+                                  ? "bg-white w-4"
+                                  : "bg-white/40"
                               }`}
                               onClick={(e) => {
-                                e.stopPropagation();
-                                setCurrentCarIndex(index);
+                                e.stopPropagation()
+                                setCurrentCarIndex(index)
                               }}
                             />
                           ))}
@@ -497,7 +554,7 @@ export default function Dashboard({
                 </div>
               </div>
 
-              {/* RIGHT COLUMN — 3 of 12 cols, full height */}
+              {/* RIGHT — 3 cols: Recently Listed */}
               <div className="col-span-3 h-full min-h-0">
                 <Card className="rounded-3xl w-full h-full flex flex-col overflow-hidden">
                   <div className="p-5 border-b flex justify-between items-center flex-shrink-0">
@@ -509,62 +566,66 @@ export default function Dashboard({
 
                   <div className="flex-grow overflow-auto p-3 scrollbar-thin">
                     {safeListedCars.length > 0 ? (
-                      safeListedCars.map((vehicle) => (
-                        <div
-                          key={vehicle.id}
-                          className="flex items-center gap-3 p-3 mb-2 rounded-xl hover:bg-gray-50 transition-colors cursor-pointer"
-                          onClick={() => {
-                            console.log("🔄 Dashboard: Clicking on listed car:", vehicle.id);
-                            handleViewDetails(vehicle);
-                          }}
-                        >
-                          <div className="w-16 h-12 rounded-lg overflow-hidden bg-gray-200 flex-shrink-0">
-                            <img
-                              src={getVehicleImage(vehicle) || "/placeholder.svg"}
-                              alt="car"
-                              className="w-full h-full object-cover"
-                              onError={(e) => {
-                                const target = e.target as HTMLImageElement;
-                                target.src = "/placeholder.svg";
-                              }}
-                            />
-                          </div>
-                          <div className="flex-grow min-w-0">
-                            <div className="font-medium truncate">
-                              {vehicle.year} {vehicle.make} {vehicle.model}
+                      safeListedCars.map((vehicle) => {
+                        const imgSrc = getVehicleImage(vehicle)
+                        return (
+                          <div
+                            key={vehicle.id}
+                            className="flex items-center gap-3 p-3 mb-2 rounded-xl hover:bg-gray-50 transition-colors cursor-pointer"
+                            onClick={() => handleViewDetails(vehicle)}
+                          >
+                            <div className="w-16 h-12 rounded-lg overflow-hidden bg-gray-200 flex-shrink-0 relative">
+                              <Image
+                                src={imgSrc}
+                                alt={`${vehicle.make} ${vehicle.model}`}
+                                fill
+                                unoptimized={isBase64(imgSrc)}
+                                className="object-cover"
+                                onError={(e) => {
+                                  ;(e.target as HTMLImageElement).src =
+                                    "/placeholder.svg"
+                                }}
+                              />
                             </div>
-                            <div className="text-sm text-gray-500">R{vehicle.price?.toLocaleString()}</div>
+                            <div className="flex-grow min-w-0">
+                              <div className="font-medium truncate">
+                                {vehicle.year} {vehicle.make} {vehicle.model}
+                              </div>
+                              <div className="text-sm text-gray-500">
+                                R{vehicle.price?.toLocaleString()}
+                              </div>
+                            </div>
+                            <div className="flex items-center ml-2">
+                              {onEditListedCar && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="flex-shrink-0"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleEditListedCar(vehicle)
+                                  }}
+                                >
+                                  <Edit className="h-4 w-4 text-blue-500" />
+                                </Button>
+                              )}
+                              {onDeleteListedCar && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="flex-shrink-0"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleDeleteVehicle(vehicle)
+                                  }}
+                                >
+                                  <Trash2 className="h-4 w-4 text-red-500" />
+                                </Button>
+                              )}
+                            </div>
                           </div>
-                          <div className="flex items-center ml-2">
-                            {onEditListedCar && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="flex-shrink-0"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleEditListedCar(vehicle);
-                                }}
-                              >
-                                <Edit className="h-4 w-4 text-blue-500" />
-                              </Button>
-                            )}
-                            {onDeleteListedCar && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="flex-shrink-0"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteVehicle(vehicle);
-                                }}
-                              >
-                                <Trash2 className="h-4 w-4 text-red-500" />
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                      ))
+                        )
+                      })
                     ) : (
                       <div className="text-center text-gray-500 py-8">
                         <Car className="w-12 h-12 mx-auto mb-3 opacity-50" />
@@ -581,7 +642,9 @@ export default function Dashboard({
                       disabled={uploadBlocked}
                     >
                       <Plus className="mr-2 h-4 w-4" />
-                      {totalListings >= maxFreeListings ? "Upgrade to List More" : "Add New Listing"}
+                      {totalListings >= maxFreeListings
+                        ? "Upgrade to List More"
+                        : "Add New Listing"}
                     </Button>
                   </div>
                 </Card>
@@ -590,28 +653,30 @@ export default function Dashboard({
           </div>
         </div>
 
-        {/* MOBILE / TABLET / LANDSCAPE LAYOUT (lg:hidden) */}
+        {/* ── MOBILE LAYOUT ──────────────────────────────────────────────── */}
         <div className="lg:hidden w-full mx-auto h-full overflow-y-auto px-6 pb-6">
           <div className="max-w-4xl mx-auto">
             <h1 className="text-3xl font-bold mb-4">Welcome, {user.firstName}</h1>
 
-            {/* Metrics Grid */}
+            {/* Metric row */}
             <div className="grid grid-cols-4 gap-2 mb-4">
               <div className="col-span-1" onClick={handleProfileClick}>
-                <Card className="rounded-xl overflow-hidden aspect-square transition-transform hover:scale-105 cursor-pointer flex flex-col justify-end">
+                <Card className="rounded-xl overflow-hidden aspect-square transition-transform hover:scale-105 cursor-pointer">
                   <div className="relative w-full h-full">
                     {user.profilePic ? (
                       <Image
-                        src={user.profilePic || "/placeholder.svg"}
+                        src={user.profilePic}
                         alt={`${user.firstName}'s profile`}
-                        layout="fill"
-                        objectFit="cover"
+                        fill
+                        unoptimized={isBase64(user.profilePic)}
                         className="object-cover"
                       />
                     ) : (
                       <div className="w-full h-full bg-[#2E933C] flex items-center justify-center text-white">
                         <div className="text-center">
-                          <div className="text-3xl font-bold">{user.firstName?.[0]?.toUpperCase() || "U"}</div>
+                          <div className="text-3xl font-bold">
+                            {user.firstName?.[0]?.toUpperCase() || "U"}
+                          </div>
                           <div className="text-xs">{user.firstName}</div>
                         </div>
                       </div>
@@ -621,7 +686,7 @@ export default function Dashboard({
               </div>
 
               <Card className="col-span-1 rounded-xl p-2 flex flex-col items-center justify-center">
-                <div className="flex justify-between items-center mb-2">
+                <div className="flex justify-between items-center mb-2 w-full">
                   <h3 className="text-xs font-semibold text-[#3E5641]">Metrics</h3>
                   <Eye className="w-3 h-3 text-[#FF6700]" />
                 </div>
@@ -637,12 +702,12 @@ export default function Dashboard({
               >
                 <Plus className="w-5 h-5" />
                 <span className="text-xs font-semibold mt-1">
-                  {totalListings >= maxFreeListings ? "Upgrade to List More" : "Upload"}
+                  {totalListings >= maxFreeListings ? "Upgrade" : "Upload"}
                 </span>
               </Card>
 
               <Card className="col-span-1 rounded-xl p-2 flex flex-col items-center justify-center">
-                <div className="flex justify-between items-center mb-2">
+                <div className="flex justify-between items-center mb-2 w-full">
                   <h3 className="text-xs font-semibold text-[#3E5641]">Plan</h3>
                   <Package className="h-3 w-3 text-[#FF6700]" />
                 </div>
@@ -653,25 +718,28 @@ export default function Dashboard({
 
             {/* Mobile Saved Cars */}
             <Card className="rounded-lg overflow-hidden w-full h-40 relative mb-4">
-              <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-transparent z-10"></div>
+              <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-transparent z-10" />
 
-              {isLoadingSavedCars ? (
-                <div className="absolute inset-0 w-full h-full bg-gray-200 flex items-center justify-center">
-                  <div className="text-white text-center">
-                    <Car className="w-8 h-8 mx-auto mb-2 opacity-50 animate-pulse" />
-                    <p className="text-sm">Loading...</p>
-                  </div>
-                </div>
-              ) : (
-                <img
-                  src={getVehicleImage(safeSavedCars[currentCarIndex]) || "/placeholder.svg"}
-                  alt="Saved Car"
-                  className="absolute inset-0 w-full h-full object-cover"
+              {carouselImageSrc !== "/placeholder.svg?height=400&width=600" ? (
+                <Image
+                  src={carouselImageSrc}
+                  alt={
+                    currentSavedCar
+                      ? `${currentSavedCar.make} ${currentSavedCar.model}`
+                      : "Saved vehicle"
+                  }
+                  fill
+                  unoptimized={carouselImageIsBase64}
+                  className="object-cover"
                   onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.src = "/placeholder.svg";
+                    ;(e.target as HTMLImageElement).src =
+                      "/placeholder.svg?height=400&width=600"
                   }}
                 />
+              ) : (
+                <div className="absolute inset-0 bg-gray-800 flex items-center justify-center">
+                  <Car className="w-10 h-10 text-gray-600" />
+                </div>
               )}
 
               <div className="relative z-20 h-full flex flex-col justify-between p-4">
@@ -689,25 +757,23 @@ export default function Dashboard({
                   )}
                 </div>
                 <div className="flex justify-between items-end">
-                  {safeSavedCars.length > 0 ? (
-                    <>
-                      <div
-                        className="text-white cursor-pointer"
-                        onClick={() => handleViewDetails(safeSavedCars[currentCarIndex])}
-                      >
-                        <h3 className="text-lg font-bold">
-                          {safeSavedCars[currentCarIndex]?.year} {safeSavedCars[currentCarIndex]?.make}{" "}
-                          {safeSavedCars[currentCarIndex]?.model}
-                        </h3>
-                        <p className="text-white/80 text-xs mb-1">
-                          {safeSavedCars[currentCarIndex]?.variant} •{" "}
-                          {safeSavedCars[currentCarIndex]?.mileage?.toLocaleString()} km
-                        </p>
-                        <p className="text-lg font-bold text-[#FF6700]">
-                          R{safeSavedCars[currentCarIndex]?.price?.toLocaleString()}
-                        </p>
-                      </div>
-                    </>
+                  {currentSavedCar ? (
+                    <div
+                      className="text-white cursor-pointer"
+                      onClick={() => handleViewDetails(currentSavedCar)}
+                    >
+                      <h3 className="text-lg font-bold">
+                        {currentSavedCar.year} {currentSavedCar.make}{" "}
+                        {currentSavedCar.model}
+                      </h3>
+                      <p className="text-white/80 text-xs mb-1">
+                        {currentSavedCar.variant} •{" "}
+                        {currentSavedCar.mileage?.toLocaleString()} km
+                      </p>
+                      <p className="text-lg font-bold text-[#FF6700]">
+                        R{currentSavedCar.price?.toLocaleString()}
+                      </p>
+                    </div>
                   ) : (
                     <div className="text-white text-center w-full">
                       <Car className="w-8 h-8 mx-auto mb-2 opacity-50" />
@@ -744,60 +810,66 @@ export default function Dashboard({
               </div>
               <div className="p-2">
                 {safeListedCars.length > 0 ? (
-                  safeListedCars.map((vehicle) => (
-                    <div
-                      key={vehicle.id}
-                      className="flex items-center gap-2 p-2 mb-1 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
-                      onClick={() => handleViewDetails(vehicle)}
-                    >
-                      <div className="w-12 h-9 rounded-md overflow-hidden bg-gray-200 flex-shrink-0">
-                        <img
-                          src={getVehicleImage(vehicle) || "/placeholder.svg"}
-                          alt="car"
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement;
-                            target.src = "/placeholder.svg";
-                          }}
-                        />
-                      </div>
-                      <div className="flex-grow min-w-0">
-                        <div className="font-medium text-sm truncate">
-                          {vehicle.year} {vehicle.make} {vehicle.model}
+                  safeListedCars.map((vehicle) => {
+                    const imgSrc = getVehicleImage(vehicle)
+                    return (
+                      <div
+                        key={vehicle.id}
+                        className="flex items-center gap-2 p-2 mb-1 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+                        onClick={() => handleViewDetails(vehicle)}
+                      >
+                        <div className="w-12 h-9 rounded-md overflow-hidden bg-gray-200 flex-shrink-0 relative">
+                          <Image
+                            src={imgSrc}
+                            alt={`${vehicle.make} ${vehicle.model}`}
+                            fill
+                            unoptimized={isBase64(imgSrc)}
+                            className="object-cover"
+                            onError={(e) => {
+                              ;(e.target as HTMLImageElement).src =
+                                "/placeholder.svg"
+                            }}
+                          />
                         </div>
-                        <div className="text-xs text-gray-500">R{vehicle.price?.toLocaleString()}</div>
+                        <div className="flex-grow min-w-0">
+                          <div className="font-medium text-sm truncate">
+                            {vehicle.year} {vehicle.make} {vehicle.model}
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            R{vehicle.price?.toLocaleString()}
+                          </div>
+                        </div>
+                        <div className="flex items-center ml-1">
+                          {onEditListedCar && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="flex-shrink-0 h-8 w-8"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleEditListedCar(vehicle)
+                              }}
+                            >
+                              <Edit className="h-4 w-4 text-blue-500" />
+                            </Button>
+                          )}
+                          {onDeleteListedCar && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="flex-shrink-0 h-8 w-8"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleDeleteVehicle(vehicle)
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4 text-red-500" />
+                            </Button>
+                          )}
+                        </div>
                       </div>
-
-                      <div className="flex items-center ml-1">
-                        {onEditListedCar && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="flex-shrink-0 h-8 w-8"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleEditListedCar(vehicle);
-                            }}
-                          >
-                            <Edit className="h-4 w-4 text-blue-500" />
-                          </Button>
-                        )}
-                        {onDeleteListedCar && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="flex-shrink-0 h-8 w-8"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteVehicle(vehicle);
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4 text-red-500" />
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  ))
+                    )
+                  })
                 ) : (
                   <div className="text-center text-gray-500 py-6">
                     <Car className="w-8 h-8 mx-auto mb-2 opacity-50" />
@@ -813,7 +885,9 @@ export default function Dashboard({
                   disabled={uploadBlocked}
                 >
                   <Plus className="mr-1 h-3 w-3" />
-                  {totalListings >= maxFreeListings ? "Upgrade to List More" : "Add New Listing"}
+                  {totalListings >= maxFreeListings
+                    ? "Upgrade to List More"
+                    : "Add New Listing"}
                 </Button>
               </div>
             </Card>
@@ -821,52 +895,49 @@ export default function Dashboard({
         </div>
       </main>
 
-      {/* Delete Confirmation Modal */}
+      {/* ── Delete Modal ─────────────────────────────────────────────────── */}
       {showDeleteModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
             <h3 className="text-lg font-semibold mb-4">Delete Vehicle Listing</h3>
             <p className="text-gray-600 mb-4">
-              Are you sure you want to delete your {vehicleToDelete?.year} {vehicleToDelete?.make}{" "}
-              {vehicleToDelete?.model} listing?
+              Are you sure you want to delete your {vehicleToDelete?.year}{" "}
+              {vehicleToDelete?.make} {vehicleToDelete?.model} listing?
             </p>
-
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Reason for deletion:
-                <span className="text-red-500 ml-1">*</span>
+                Reason for deletion:<span className="text-red-500 ml-1">*</span>
               </label>
               <select
                 value={deleteReason}
                 onChange={(e) => setDeleteReason(e.target.value)}
-                className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#FF6700] focus:border-transparent"
+                className="w-full p-2 border border-gray-300 rounded-md"
                 disabled={isDeleting}
               >
                 <option value="">Select a reason</option>
                 <option value="sold">Vehicle has been sold</option>
                 <option value="no_longer_selling">No longer selling</option>
-                <option value="no_longer_need_service">No longer need the service</option>
+                <option value="no_longer_need_service">
+                  No longer need the service
+                </option>
                 <option value="other">Other</option>
               </select>
             </div>
-
             {deleteReason === "other" && (
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Please specify:
-                  <span className="text-red-500 ml-1">*</span>
+                  Please specify:<span className="text-red-500 ml-1">*</span>
                 </label>
                 <textarea
                   value={customDeleteReason}
                   onChange={(e) => setCustomDeleteReason(e.target.value)}
                   placeholder="Please provide your reason..."
-                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[#FF6700] focus:border-transparent"
+                  className="w-full p-2 border border-gray-300 rounded-md"
                   rows={3}
                   disabled={isDeleting}
                 />
               </div>
             )}
-
             <div className="flex gap-3 justify-end">
               <Button
                 variant="outline"
@@ -882,7 +953,11 @@ export default function Dashboard({
               </Button>
               <Button
                 onClick={confirmDeleteVehicle}
-                disabled={!deleteReason || (deleteReason === "other" && !customDeleteReason.trim()) || isDeleting}
+                disabled={
+                  !deleteReason ||
+                  (deleteReason === "other" && !customDeleteReason.trim()) ||
+                  isDeleting
+                }
                 className="bg-red-500 hover:bg-red-600 text-white"
               >
                 {isDeleting ? "Deleting..." : "Delete Listing"}
@@ -892,66 +967,30 @@ export default function Dashboard({
         </div>
       )}
 
-      {/* Upgrade Plan Modal */}
+      {/* ── Upgrade Modal ─────────────────────────────────────────────────── */}
       {showUpgradeModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4 shadow-xl">
+          <div className="bg-white rounded-2xl p-8 max-w-md w-full mx-4 shadow-xl relative">
+            <button
+              onClick={() => {
+                setShowUpgradeModal(false)
+                setUploadBlocked(false)
+              }}
+              className="absolute top-4 right-4 text-[#6F7F69] hover:text-[#3E5641]"
+            >
+              <X className="w-5 h-5" />
+            </button>
             <div className="text-center mb-6">
               <div className="w-16 h-16 bg-[#FF6700] rounded-full flex items-center justify-center mx-auto mb-4">
                 <Package className="w-8 h-8 text-white" />
               </div>
-              <h3 className="text-2xl font-bold text-[#3E5641] mb-2">Upgrade Your Plan</h3>
-              <p className="text-[#6F7F69]">You've reached your free listing limit of {maxFreeListings} vehicles.</p>
+              <h3 className="text-2xl font-bold text-[#3E5641] mb-2">
+                Upgrade Your Plan
+              </h3>
+              <p className="text-[#6F7F69]">
+                You've reached your free listing limit of {maxFreeListings} vehicles.
+              </p>
             </div>
-
-            <div className="bg-[#FFF8E0] border border-[#FF6700]/20 rounded-xl p-4 mb-6">
-              <h4 className="font-semibold text-[#3E5641] mb-2">Current Usage</h4>
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-sm text-[#6F7F69]">Listings Used</span>
-                <span className="font-bold">
-                  {totalListings}/{maxFreeListings}
-                </span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
-                <div
-                  className="bg-[#FF6700] h-2 rounded-full transition-all duration-300"
-                  style={{ width: `${(totalListings / maxFreeListings) * 100}%` }}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-4 mb-6">
-              <div className="flex items-start space-x-3">
-                <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <span className="text-green-600 text-sm">✓</span>
-                </div>
-                <div>
-                  <h5 className="font-semibold text-[#3E5641]">Unlimited Listings</h5>
-                  <p className="text-sm text-[#6F7F69]">List as many vehicles as you want</p>
-                </div>
-              </div>
-
-              <div className="flex items-start space-x-3">
-                <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <span className="text-green-600 text-sm">✓</span>
-                </div>
-                <div>
-                  <h5 className="font-semibold text-[#3E5641]">Premium Placement</h5>
-                  <p className="text-sm text-[#6F7F69]">Get featured at the top of search results</p>
-                </div>
-              </div>
-
-              <div className="flex items-start space-x-3">
-                <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <span className="text-green-600 text-sm">✓</span>
-                </div>
-                <div>
-                  <h5 className="font-semibold text-[#3E5641]">Priority Support</h5>
-                  <p className="text-sm text-[#6F7F69]">Dedicated support team and faster response times</p>
-                </div>
-              </div>
-            </div>
-
             <div className="flex gap-3">
               <Button
                 variant="outline"
@@ -967,16 +1006,6 @@ export default function Dashboard({
                 Upgrade Plan
               </Button>
             </div>
-
-            <button
-              onClick={() => {
-                setShowUpgradeModal(false)
-                setUploadBlocked(false)
-              }}
-              className="absolute top-4 right-4 text-[#6F7F69] hover:text-[#3E5641]"
-            >
-              <X className="w-5 h-5" />
-            </button>
           </div>
         </div>
       )}

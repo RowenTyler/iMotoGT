@@ -81,6 +81,12 @@ const VEHICLE_DETAIL_QUERY = `
 function mapDatabaseToVehicle(data: any): Vehicle {
   const user = data.users || {}
 
+  // Ensure images is always a clean array of non-empty strings
+  const rawImages = Array.isArray(data.images) ? data.images : []
+  const images = rawImages.filter(
+    (img: any) => img && typeof img === "string" && img.trim().length > 0
+  )
+
   return {
     id: data.id,
     userId: data.user_id,
@@ -98,7 +104,7 @@ function mapDatabaseToVehicle(data: any): Vehicle {
     province: data.province,
     city: data.city,
     description: data.description || "",
-    images: Array.isArray(data.images) && data.images.length > 0 ? data.images : [],
+    images,
     status: data.status || "active",
     contactPrivacyEnabled: data.contact_privacy_enabled ?? false,
     sellerName:
@@ -355,15 +361,16 @@ export async function unsaveVehicle(
 }
 
 /**
- * Get all saved vehicles for a user.
+ * Get all saved vehicles for a user WITH full image data.
  *
  * Two-step query:
  * 1. Get vehicle IDs from saved_vehicles table
  * 2. Fetch full vehicle details (including images + seller info) using VEHICLE_DETAIL_QUERY
  *
- * Uses VEHICLE_DETAIL_QUERY so images and all seller fields are populated.
- * This is intentional — saved vehicles are displayed in the dashboard carousel
- * and liked-cars-page, both of which need the image and contact info.
+ * IMPORTANT: Does NOT filter by status='active' in step 2.
+ * A user may have saved a vehicle that has since been marked sold or inactive.
+ * We still want to show it in their saved list (they can remove it manually).
+ * Only hard-deleted (is_deleted=true) vehicles are excluded.
  */
 export async function getSavedVehicles(userId: string): Promise<Vehicle[]> {
   try {
@@ -383,15 +390,17 @@ export async function getSavedVehicles(userId: string): Promise<Vehicle[]> {
       return []
     }
 
-    const vehicleIds = savedRows.map((row) => row.vehicle_id)
+    const vehicleIds = savedRows.map((row: any) => row.vehicle_id)
     console.log(`[VehicleOps] Found ${vehicleIds.length} saved vehicle IDs`)
 
-    // Step 2: fetch full vehicle details including images and seller info
+    // Step 2: fetch full vehicle details including images and seller info.
+    // NOTE: No .eq("status", "active") filter — show all saved vehicles
+    // regardless of status. Soft-deleted ones (is_deleted=true) are excluded.
     const { data, error } = await supabase
       .from("vehicles")
       .select(VEHICLE_DETAIL_QUERY)
       .in("id", vehicleIds)
-      .eq("status", "active")
+      .not("is_deleted", "eq", true) // exclude soft-deleted only
       .order("created_at", { ascending: false })
 
     if (error) {
@@ -400,9 +409,12 @@ export async function getSavedVehicles(userId: string): Promise<Vehicle[]> {
     }
 
     const vehicles = (data || []).map(mapDatabaseToVehicle)
+
     console.log(
-      `[VehicleOps] Loaded ${vehicles.length} saved vehicles, ` +
-      `first has ${vehicles[0]?.images?.length ?? 0} images`
+      `[VehicleOps] ✅ Loaded ${vehicles.length} saved vehicles. ` +
+      `First vehicle: ${vehicles[0]?.make} ${vehicles[0]?.model}, ` +
+      `images: ${vehicles[0]?.images?.length ?? 0}, ` +
+      `first image type: ${vehicles[0]?.images?.[0]?.startsWith("data:") ? "base64" : vehicles[0]?.images?.[0]?.startsWith("http") ? "url" : "none"}`
     )
 
     return vehicles
@@ -434,4 +446,57 @@ export async function isVehicleSaved(
     console.error("[VehicleOps] isVehicleSaved exception:", error)
     return false
   }
+}
+
+// ─── Real-time subscriptions (referenced in hooks) ───────────────────────────
+
+export function subscribeToVehicles(callback: (payload: any) => void) {
+  const subscription = supabase
+    .channel("vehicles_changes")
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "vehicles" },
+      callback
+    )
+    .subscribe()
+
+  return {
+    unsubscribe: () => supabase.removeChannel(subscription),
+  }
+}
+
+export function subscribeToSavedVehicles(
+  userId: string,
+  callback: (payload: any) => void
+) {
+  const subscription = supabase
+    .channel(`saved_vehicles_${userId}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "saved_vehicles",
+        filter: `user_id=eq.${userId}`,
+      },
+      callback
+    )
+    .subscribe()
+
+  return {
+    unsubscribe: () => supabase.removeChannel(subscription),
+  }
+}
+
+export function toggleSaveVehicle(
+  userId: string,
+  vehicleId: string
+): Promise<boolean> {
+  return isVehicleSaved(userId, vehicleId).then((saved) => {
+    if (saved) {
+      return unsaveVehicle(userId, vehicleId).then(() => false)
+    } else {
+      return saveVehicle(userId, vehicleId).then(() => true)
+    }
+  })
 }
