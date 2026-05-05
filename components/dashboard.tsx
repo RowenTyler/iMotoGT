@@ -11,6 +11,7 @@ import { Header } from "./ui/header"
 import VehicleDetails from "./vehicle-details"
 import type { Vehicle } from "@/types/vehicle"
 import type { UserProfile } from "@/types/user"
+import { getListingLimit } from "@/lib/admin-config"
 
 interface DashboardProps {
   user: UserProfile
@@ -225,7 +226,7 @@ export default function Dashboard({
   }
 
   const totalListings = safeListedCars.length
-  const maxFreeListings = 3
+  const maxFreeListings = getListingLimit(user.email)
   const freeListingsRemaining = Math.max(0, maxFreeListings - totalListings)
 
   if (!user) {
