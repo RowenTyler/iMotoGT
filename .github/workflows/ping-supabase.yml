@@ -1,0 +1,34 @@
+name: Ping Supabase Tables
+
+on:
+  schedule:
+    - cron: "0 7 * * 1"   # Monday 09:00 JHB
+    - cron: "0 10 * * 3"  # Wednesday 12:00 JHB
+    - cron: "0 14 * * 6"  # Saturday 16:00 JHB
+
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Ping vehicles table
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" \
+            "${{ secrets.SUPABASE_URL }}/rest/v1/vehicles?select=id" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}")
+
+          echo "Vehicles status: $response"
+          if [ "$response" -ne 200 ]; then exit 1; fi
+
+      - name: Ping users table
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" \
+            "${{ secrets.SUPABASE_URL }}/rest/v1/users?select=id" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}")
+
+          echo "Users status: $response"
+          if [ "$response" -ne 200 ]; then exit 1; fi
