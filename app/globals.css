@@ -34,6 +34,9 @@ body {
     --input: 120 10% 85%;
     --ring: 24 100% 50%;
     --radius: 0.5rem;
+    --spacing-8: 2rem;
+    --cell-size: var(--spacing-8);
+}
   }
 }
 
