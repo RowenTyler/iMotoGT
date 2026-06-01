@@ -1,6 +1,14 @@
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: "Services - iMoto GT",
+  alternates: {
+    canonical: 'https://imoto-gt.co.za/services',
+  },
+}
 
 export default function ServicesPage() {
   return (

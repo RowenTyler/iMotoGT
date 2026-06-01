@@ -1,7 +1,21 @@
 /**
- * Optimized Cache Manager for Imoto
- * Implements smart caching with stale-while-revalidate strategy
+ * lib/cache-manager.ts
+ *
+ * localStorage cache with:
+ * - TTL-based expiry (5 minutes default)
+ * - Stale-while-revalidate threshold (2 minutes)
+ * - Automatic quota management (evicts oldest entries on overflow)
+ * - Size guard (refuses entries over 500KB to prevent single large items
+ *   from consuming the entire quota — base64 images used to cause this)
+ *
+ * Key change from previous version:
+ * MAX_CACHE_SIZE per entry reduced from 5MB → 500KB.
+ * Now that images are stored in Supabase Storage and only URLs are cached,
+ * no single cache entry should ever be anywhere near 500KB.
+ * The old 5MB limit was only needed because base64 images were being cached.
  */
+
+// ─── Config ───────────────────────────────────────────────────────────────────
 
 export interface CacheConfig {
   VEHICLES_KEY: string
@@ -15,302 +29,339 @@ export interface CacheConfig {
 }
 
 export const CACHE_CONFIG: CacheConfig = {
-  VEHICLES_KEY: 'imoto_vehicles_cache',
-  VEHICLES_TIMESTAMP_KEY: 'imoto_vehicles_timestamp',
-  USER_VEHICLES_KEY: 'imoto_user_vehicles_',
-  SAVED_VEHICLES_KEY: 'imoto_saved_vehicles_',
-  VEHICLE_DETAILS_KEY: 'imoto_vehicle_details_',
+  VEHICLES_KEY: "imoto_vehicles_cache",
+  VEHICLES_TIMESTAMP_KEY: "imoto_vehicles_timestamp",
+  USER_VEHICLES_KEY: "imoto_user_vehicles_",
+  SAVED_VEHICLES_KEY: "imoto_saved_vehicles_",
+  VEHICLE_DETAILS_KEY: "imoto_vehicle_details_",
+
+  // How long a cache entry is considered fresh
   CACHE_DURATION: 5 * 60 * 1000, // 5 minutes
-  BACKGROUND_REFRESH_THRESHOLD: 2 * 60 * 1000, // 2 minutes - refresh in background if older
-  MAX_CACHE_SIZE: 5 * 1024 * 1024, // 5MB per cache entry
+
+  // If older than this, trigger a background refresh even on cache hit
+  BACKGROUND_REFRESH_THRESHOLD: 2 * 60 * 1000, // 2 minutes
+
+  // Maximum size per cache entry
+  // Reduced from 5MB → 500KB now that images are URLs not base64
+  // A list of 200 vehicles with no images should be well under 100KB
+  MAX_CACHE_SIZE: 500 * 1024, // 500KB
 }
 
-interface CacheData<T> {
+// ─── Internal Types ───────────────────────────────────────────────────────────
+
+interface CacheEntry<T> {
   data: T
   timestamp: number
   version: string
-  compressed: boolean
 }
 
+// ─── CacheManager ─────────────────────────────────────────────────────────────
+
 export class CacheManager {
-  private static version = '1.0'
+  private static readonly VERSION = "2.0"
+  // Version bumped from 1.0 → 2.0 so all old base64-containing cache
+  // entries are automatically invalidated on first load after this update
+
+  // ─── Set ────────────────────────────────────────────────────────────────────
 
   /**
-   * Set data in cache with timestamp
+   * Store a value in localStorage with a timestamp.
+   * Returns true on success, false if the entry was too large or storage failed.
    */
-  static set<T>(key: string, data: T, options: { setTimestamp?: boolean } = {}): boolean {
+  static set<T>(key: string, data: T): boolean {
+    if (typeof window === "undefined") return false
+
     try {
-      const timestamp = Date.now()
-      const cacheData: CacheData<T> = {
+      const entry: CacheEntry<T> = {
         data,
-        timestamp,
-        version: this.version,
-        compressed: false,
+        timestamp: Date.now(),
+        version: this.VERSION,
       }
 
-      const serialized = JSON.stringify(cacheData)
+      const serialized = JSON.stringify(entry)
 
-      // Check size limit
+      // Guard: refuse entries that are too large
+      // With images stored in Storage (not base64), this should never trigger
       if (serialized.length > CACHE_CONFIG.MAX_CACHE_SIZE) {
-        console.warn(`[Cache] Size exceeds limit for ${key}: ${(serialized.length / 1024 / 1024).toFixed(2)}MB`)
+        console.warn(
+          `[Cache] Refusing oversized entry for "${key}": ` +
+            `${(serialized.length / 1024).toFixed(1)}KB > ` +
+            `${(CACHE_CONFIG.MAX_CACHE_SIZE / 1024).toFixed(0)}KB limit`
+        )
         return false
       }
 
-      // Try writing; if quota exceeded, attempt to free space and retry
-      const isQuotaError = (err: any) => {
-        if (!err) return false
-        const name = err.name || ''
-        const msg = err.message || ''
-        return (
-          name === 'QuotaExceededError' ||
-          name === 'NS_ERROR_DOM_QUOTA_REACHED' ||
-          msg.toLowerCase().includes('quota') ||
-          (err.code && (err.code === 22 || err.code === 1014))
-        )
-      }
-
+      // Attempt to write — if quota is exceeded, evict and retry
       try {
         localStorage.setItem(key, serialized)
+        localStorage.setItem(`${key}_ts`, String(Date.now()))
       } catch (err: any) {
-        console.error(`[Cache] Initial set failed for ${key}:`, err)
-        if (isQuotaError(err)) {
-          // Try progressively clearing oldest entries and retry
-          for (let attempt = 1; attempt <= 3; attempt++) {
-            try {
-              this.clearOldest(attempt * 5)
-              localStorage.setItem(key, serialized)
-              console.log(`[Cache] Set ${key} after clearing oldest (attempt ${attempt})`)
-              // write timestamp below
-              break
-            } catch (retryErr: any) {
-              console.warn(`[Cache] Retry ${attempt} failed for ${key}:`, retryErr)
-              if (attempt === 3) {
-                console.error(`[Cache] Failed to set ${key} after retries`) 
-                return false
-              }
-            }
+        if (this.isQuotaError(err)) {
+          console.warn(
+            `[Cache] Quota exceeded writing "${key}", evicting old entries...`
+          )
+          this.evictOldest(5)
+          try {
+            localStorage.setItem(key, serialized)
+            localStorage.setItem(`${key}_ts`, String(Date.now()))
+            console.log(`[Cache] Retry succeeded for "${key}"`)
+          } catch (retryErr) {
+            console.error(
+              `[Cache] Retry failed for "${key}" after eviction`
+            )
+            return false
           }
         } else {
-          console.error('[Cache] Set error (non-quota):', err)
+          console.error(`[Cache] Write error for "${key}":`, err)
           return false
         }
       }
 
-      // Safe timestamp write
-      try {
-        if (options.setTimestamp !== false) {
-          localStorage.setItem(`${key}_timestamp`, timestamp.toString())
-        }
-      } catch (tsErr) {
-        console.warn(`[Cache] Failed to write timestamp for ${key}:`, tsErr)
-      }
-
-      try {
-        console.log(`[Cache] Set ${key} (${(serialized.length / 1024).toFixed(2)}KB)`)
-      } catch {
-        /* ignore logging errors */
-      }
-
       return true
-    } catch (error) {
-      console.error('[Cache] Set error:', error)
-      // Try to clear some space as a last resort
-      try { this.clearOldest() } catch {}
+    } catch (err) {
+      console.error(`[Cache] set() exception for "${key}":`, err)
       return false
     }
   }
 
+  // ─── Get ────────────────────────────────────────────────────────────────────
+
   /**
-   * Get data from cache with age validation
+   * Retrieve a value from localStorage.
+   *
+   * Returns null if:
+   * - The key does not exist
+   * - The entry has expired (older than maxAge)
+   * - The entry was written by a different cache version
+   *   (version 2.0 automatically discards old base64-containing entries)
    */
-  static get<T>(key: string, maxAge: number = CACHE_CONFIG.CACHE_DURATION): T | null {
+  static get<T>(
+    key: string,
+    maxAge: number = CACHE_CONFIG.CACHE_DURATION
+  ): T | null {
+    if (typeof window === "undefined") return null
+
     try {
-      const cached = localStorage.getItem(key)
-      if (!cached) {
-        console.log(`[Cache] Miss: ${key}`)
-        return null
-      }
+      const raw = localStorage.getItem(key)
+      if (!raw) return null
 
-      const cacheData: CacheData<T> = JSON.parse(cached)
-      const age = Date.now() - cacheData.timestamp
+      const entry: CacheEntry<T> = JSON.parse(raw)
 
-      // Check version compatibility
-      if (cacheData.version !== this.version) {
-        console.warn(`[Cache] Version mismatch for ${key}`)
+      // Version check — discards entries from the old cache version
+      // This automatically clears all base64 image cache entries on first load
+      if (entry.version !== this.VERSION) {
+        console.log(
+          `[Cache] Version mismatch for "${key}" ` +
+            `(stored: ${entry.version}, current: ${this.VERSION}) — discarding`
+        )
         this.delete(key)
         return null
       }
 
-      // Check age
+      // TTL check
+      const age = Date.now() - entry.timestamp
       if (age > maxAge) {
-        console.log(`[Cache] Expired: ${key} (${(age / 1000 / 60).toFixed(1)}min old)`)
+        console.log(
+          `[Cache] Expired "${key}" ` +
+            `(${(age / 1000 / 60).toFixed(1)}min old)`
+        )
         this.delete(key)
         return null
       }
 
-      console.log(`[Cache] Hit: ${key} (${(age / 1000).toFixed(1)}s old)`)
-      return cacheData.data
-    } catch (error) {
-      console.error('[Cache] Get error:', error)
+      return entry.data
+    } catch (err) {
+      console.error(`[Cache] get() error for "${key}":`, err)
       this.delete(key)
       return null
     }
   }
 
-  /**
-   * Check if cache exists and is within stale threshold
-   */
-  static isStale(key: string, staleThreshold: number = CACHE_CONFIG.BACKGROUND_REFRESH_THRESHOLD): boolean {
-    try {
-      const timestamp = localStorage.getItem(`${key}_timestamp`)
-      if (!timestamp) return true
+  // ─── IsStale ────────────────────────────────────────────────────────────────
 
-      const age = Date.now() - parseInt(timestamp)
-      return age > staleThreshold
+  /**
+   * Returns true if the entry exists but is older than the background
+   * refresh threshold — meaning a background refresh should be triggered
+   * even though the data is still within the full TTL.
+   */
+  static isStale(
+    key: string,
+    threshold: number = CACHE_CONFIG.BACKGROUND_REFRESH_THRESHOLD
+  ): boolean {
+    if (typeof window === "undefined") return true
+
+    try {
+      const ts = localStorage.getItem(`${key}_ts`)
+      if (!ts) return true
+      return Date.now() - parseInt(ts, 10) > threshold
     } catch {
       return true
     }
   }
 
-  /**
-   * Get cache age in milliseconds
-   */
-  static getAge(key: string): number {
-    try {
-      const timestamp = localStorage.getItem(`${key}_timestamp`)
-      if (!timestamp) return Infinity
-
-      return Date.now() - parseInt(timestamp)
-    } catch {
-      return Infinity
-    }
-  }
+  // ─── Delete ─────────────────────────────────────────────────────────────────
 
   /**
-   * Delete a cache entry
+   * Remove a single cache entry and its timestamp key.
    */
   static delete(key: string): void {
+    if (typeof window === "undefined") return
+
     try {
       localStorage.removeItem(key)
-      localStorage.removeItem(`${key}_timestamp`)
-      console.log(`[Cache] Deleted: ${key}`)
-    } catch (error) {
-      console.error('[Cache] Delete error:', error)
+      localStorage.removeItem(`${key}_ts`)
+    } catch (err) {
+      console.error(`[Cache] delete() error for "${key}":`, err)
     }
   }
 
+  // ─── ClearAll ───────────────────────────────────────────────────────────────
+
   /**
-   * Clear all Imoto caches
+   * Remove all cache entries written by this app (prefixed with "imoto_").
+   * Does not touch unrelated localStorage keys (e.g. Supabase auth tokens).
    */
   static clearAll(): void {
-    try {
-      const keys = Object.keys(localStorage)
-      const imotoKeys = keys.filter(key => key.startsWith('imoto_') || key.startsWith('cached_'))
+    if (typeof window === "undefined") return
 
-      imotoKeys.forEach(key => localStorage.removeItem(key))
-      console.log(`[Cache] Cleared ${imotoKeys.length} entries`)
-    } catch (error) {
-      console.error('[Cache] Clear all error:', error)
+    try {
+      const keys = Object.keys(localStorage).filter(
+        (k) => k.startsWith("imoto_") || k.endsWith("_ts")
+      )
+      keys.forEach((k) => localStorage.removeItem(k))
+      console.log(`[Cache] Cleared ${keys.length} entries`)
+    } catch (err) {
+      console.error("[Cache] clearAll() error:", err)
     }
   }
 
+  // ─── ClearUserCache ──────────────────────────────────────────────────────────
+
   /**
-   * Clear user-specific caches
+   * Clear all cache entries for a specific user.
+   * Called after login, logout, or profile update.
    */
   static clearUserCache(userId: string): void {
+    if (typeof window === "undefined") return
+
     try {
       this.delete(`${CACHE_CONFIG.USER_VEHICLES_KEY}${userId}`)
       this.delete(`${CACHE_CONFIG.SAVED_VEHICLES_KEY}${userId}`)
-      console.log(`[Cache] Cleared user cache for: ${userId}`)
-    } catch (error) {
-      console.error('[Cache] Clear user cache error:', error)
+      console.log(`[Cache] Cleared user cache for ${userId}`)
+    } catch (err) {
+      console.error("[Cache] clearUserCache() error:", err)
     }
   }
 
-  /**
-   * Clear oldest cache entries to free space
-   */
-  private static clearOldest(count: number = 5): void {
-    try {
-      const keys = Object.keys(localStorage)
-      const timestampKeys = keys.filter(key => key.endsWith('_timestamp'))
-
-      const entries = timestampKeys
-        .map(key => ({
-          key: key.replace('_timestamp', ''),
-          timestamp: parseInt(localStorage.getItem(key) || '0'),
-        }))
-        .sort((a, b) => a.timestamp - b.timestamp)
-        .slice(0, count)
-
-      entries.forEach(entry => this.delete(entry.key))
-      console.log(`[Cache] Cleared ${entries.length} oldest entries`)
-    } catch (error) {
-      console.error('[Cache] Clear oldest error:', error)
-    }
-  }
+  // ─── GetStats ────────────────────────────────────────────────────────────────
 
   /**
-   * Get cache statistics
+   * Returns a summary of cache usage.
+   * Useful for debugging — call CacheManager.getStats() in the browser console.
    */
   static getStats(): {
     totalEntries: number
-    totalSize: number
-    oldestEntry: string | null
-    oldestAge: number
+    totalSizeKB: number
+    entries: Array<{ key: string; sizeKB: number; ageMinutes: number }>
   } {
+    if (typeof window === "undefined") {
+      return { totalEntries: 0, totalSizeKB: 0, entries: [] }
+    }
+
     try {
-      const keys = Object.keys(localStorage)
-      const imotoKeys = keys.filter(key => key.startsWith('imoto_') && !key.endsWith('_timestamp'))
+      const imotoKeys = Object.keys(localStorage).filter(
+        (k) => k.startsWith("imoto_") && !k.endsWith("_ts")
+      )
 
-      let totalSize = 0
-      let oldestTimestamp = Date.now()
-      let oldestEntry: string | null = null
+      let totalBytes = 0
+      const entries = imotoKeys.map((key) => {
+        const value = localStorage.getItem(key) || ""
+        const sizeBytes = value.length
+        totalBytes += sizeBytes
 
-      imotoKeys.forEach(key => {
-        const value = localStorage.getItem(key)
-        if (value) {
-          totalSize += value.length
+        let ageMinutes = 0
+        try {
+          const entry = JSON.parse(value)
+          ageMinutes = Math.round(
+            (Date.now() - entry.timestamp) / 1000 / 60
+          )
+        } catch {
+          // Could not parse — skip age
+        }
 
-          const timestamp = parseInt(localStorage.getItem(`${key}_timestamp`) || '0')
-          if (timestamp && timestamp < oldestTimestamp) {
-            oldestTimestamp = timestamp
-            oldestEntry = key
-          }
+        return {
+          key,
+          sizeKB: Math.round(sizeBytes / 1024),
+          ageMinutes,
         }
       })
 
       return {
         totalEntries: imotoKeys.length,
-        totalSize,
-        oldestEntry,
-        oldestAge: oldestEntry ? Date.now() - oldestTimestamp : 0,
+        totalSizeKB: Math.round(totalBytes / 1024),
+        entries: entries.sort((a, b) => b.sizeKB - a.sizeKB),
       }
-    } catch (error) {
-      console.error('[Cache] Get stats error:', error)
-      return {
-        totalEntries: 0,
-        totalSize: 0,
-        oldestEntry: null,
-        oldestAge: 0,
-      }
+    } catch (err) {
+      console.error("[Cache] getStats() error:", err)
+      return { totalEntries: 0, totalSizeKB: 0, entries: [] }
+    }
+  }
+
+  // ─── Private Helpers ─────────────────────────────────────────────────────────
+
+  /**
+   * Detect localStorage quota exceeded errors across browsers.
+   */
+  private static isQuotaError(err: any): boolean {
+    if (!err) return false
+    const name = err.name || ""
+    const msg = (err.message || "").toLowerCase()
+    return (
+      name === "QuotaExceededError" ||
+      name === "NS_ERROR_DOM_QUOTA_REACHED" ||
+      msg.includes("quota") ||
+      err.code === 22 ||
+      err.code === 1014
+    )
+  }
+
+  /**
+   * Evict the N oldest cache entries to free up space.
+   * Only evicts imoto_ prefixed keys — never touches auth or other app data.
+   */
+  private static evictOldest(count: number = 3): void {
+    if (typeof window === "undefined") return
+
+    try {
+      const entries = Object.keys(localStorage)
+        .filter((k) => k.startsWith("imoto_") && !k.endsWith("_ts"))
+        .map((key) => {
+          const ts = localStorage.getItem(`${key}_ts`)
+          return {
+            key,
+            timestamp: ts ? parseInt(ts, 10) : 0,
+          }
+        })
+        .sort((a, b) => a.timestamp - b.timestamp) // oldest first
+        .slice(0, count)
+
+      entries.forEach(({ key }) => {
+        this.delete(key)
+        console.log(`[Cache] Evicted "${key}"`)
+      })
+    } catch (err) {
+      console.error("[Cache] evictOldest() error:", err)
     }
   }
 }
 
+// ─── Preload (stub) ───────────────────────────────────────────────────────────
+
 /**
- * Preload cache on app startup
+ * Called from layout.tsx (previously).
+ * Now a no-op — preloading is handled by VehicleProvider on first render.
+ * Kept to avoid breaking any imports.
  */
 export async function preloadCache(): Promise<void> {
-  console.log('[Cache] Preloading critical data...')
-  
-  // This will be called when the app loads to preemptively cache data
-  // Implementation depends on your vehicle service
-  try {
-    // Example: const { vehicleService } = await import('./vehicle-service')
-    // await vehicleService.getVehicles() // This will cache the data
-    console.log('[Cache] Preload complete')
-  } catch (error) {
-    console.error('[Cache] Preload failed:', error)
-  }
+  // No-op — VehicleProvider handles cache warming
 }

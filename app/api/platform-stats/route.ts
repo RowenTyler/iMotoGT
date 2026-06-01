@@ -41,7 +41,8 @@ export async function GET() {
     const [vehiclesResult, usersResult] = await Promise.all([
       supabase
         .from('vehicles')
-        .select('*', { count: 'exact', head: true }),
+        .select('*', { count: 'exact', head: true })
+        .or('is_deleted.eq.false,is_deleted.is.null'),
 
       supabase
         .from('users')   // ✅ correct table name

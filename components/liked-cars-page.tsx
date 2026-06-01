@@ -1,21 +1,22 @@
-"use client";
+"use client"
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { Heart, Search, ArrowLeft } from "lucide-react";
-import type { Vehicle } from "@/types/vehicle";
-import { Header } from "./ui/header";
-import type { UserProfile } from "@/types/user";
+import { useState } from "react"
+import { useRouter } from "next/navigation"
+import { Heart, Search, ArrowLeft } from "lucide-react"
+import type { Vehicle } from "@/types/vehicle"
+import { Header } from "./ui/header"
+import type { UserProfile } from "@/types/user"
+import Image from "next/image"
 
 interface LikedCarsPageProps {
-  likedVehicles: Vehicle[];
-  onBack: () => void;
-  user: UserProfile | null;
-  onSignOut?: () => void;
-  onGoHome: () => void;
-  onShowAllCars: () => void;
-  onNavigateToUpload: () => void;
-  onViewDetails: (vehicle: Vehicle) => void;  // required and used
+  likedVehicles: Vehicle[]
+  onBack: () => void
+  user: UserProfile | null
+  onSignOut?: () => void
+  onGoHome: () => void
+  onShowAllCars: () => void
+  onNavigateToUpload: () => void
+  onViewDetails: (vehicle: Vehicle) => void
 }
 
 export default function LikedCarsPage({
@@ -28,43 +29,42 @@ export default function LikedCarsPage({
   onNavigateToUpload,
   onViewDetails,
 }: LikedCarsPageProps) {
-  const [searchTerm, setSearchTerm] = useState("");
-  const router = useRouter();
+  const [searchTerm, setSearchTerm] = useState("")
+  const router = useRouter()
 
   const filteredVehicles = likedVehicles.filter((vehicle) =>
-    `${vehicle.make} ${vehicle.model} ${vehicle.variant}`
+    `${vehicle.make} ${vehicle.model} ${vehicle.variant || ""}`
       .toLowerCase()
       .includes(searchTerm.toLowerCase())
-  );
+  )
 
   const handleLogin = () => {
-    router.push("/login");
-  };
+    router.push("/login")
+  }
 
   const handleGoToSellPage = () => {
     if (!user) {
-      router.push(`/login?next=/upload-vehicle`);
-      return;
+      router.push(`/login?next=/upload-vehicle`)
+      return
     }
-    onNavigateToUpload();
-  };
+    onNavigateToUpload()
+  }
 
   const handleSignOutClick = () => {
-    if (onSignOut) onSignOut();
-    router.push("/login");
-  };
+    if (onSignOut) onSignOut()
+    router.push("/login")
+  }
 
   const handleBrowseRedirect = () => {
-    router.push("/results");
-  };
+    router.push("/results")
+  }
 
   const getPrimaryImage = (vehicle: Vehicle) => {
-    return (
-      vehicle.images?.[0] ||
-      vehicle.image ||
-      "/placeholder.svg"
-    );
-  };
+    if (vehicle.coverImage && vehicle.coverImage.trim().length > 10) return vehicle.coverImage;
+    if (vehicle.image && vehicle.image.trim().length > 10) return vehicle.image;
+    if (vehicle.images?.[0]) return vehicle.images[0];
+    return "/placeholder.svg?height=400&width=600";
+  }
 
   return (
     <div className="min-h-screen">
@@ -134,51 +134,65 @@ export default function LikedCarsPage({
 
               {/* Vehicle Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredVehicles.map((vehicle) => (
-                  <div
-                    key={vehicle.id}
-                    className="bg-white dark:bg-[#1F2B20] border border-[#9FA791]/20 dark:border-[#4A4D45]/20 rounded-lg shadow hover:shadow-md transition-shadow cursor-pointer relative"
-                    onClick={() => onViewDetails(vehicle)}
-                  >
-                    {/* Heart Icon */}
-                    <div className="absolute top-3 right-3 z-10">
-                      <Heart
-                        className="w-6 h-6 text-[#FF6700] dark:text-[#FF7D33]"
-                        fill="currentColor"
-                      />
-                    </div>
+                {filteredVehicles.map((vehicle) => {
+                  const imgSrc = getPrimaryImage(vehicle)
+                  const isBase64 = imgSrc.startsWith("data:")
+                  return (
+                    <div
+                      key={vehicle.id}
+                      className="bg-white dark:bg-[#1F2B20] border border-[#9FA791]/20 dark:border-[#4A4D45]/20 rounded-lg shadow hover:shadow-md transition-shadow cursor-pointer relative"
+                      onClick={() => onViewDetails(vehicle)}
+                    >
+                      {/* Heart Icon */}
+                      <div className="absolute top-3 right-3 z-20">
+                        <Heart
+                          className="w-6 h-6 text-[#FF6700] dark:text-[#FF7D33]"
+                          fill="currentColor"
+                        />
+                      </div>
 
-                    {/* Image */}
-                    <img
-                      src={getPrimaryImage(vehicle)}
-                      alt={`${vehicle.make} ${vehicle.model} ${vehicle.variant}`}
-                      className="w-full h-48 object-cover rounded-t-lg"
-                    />
+                      {/* Image */}
+                      <div className="w-full h-48 relative overflow-hidden rounded-t-lg bg-gray-100">
+                        <Image
+                          src={imgSrc}
+                          alt={`${vehicle.make} ${vehicle.model}`}
+                          fill
+                          unoptimized={true}
+                          className="object-cover"
+                          onError={(e) => {
+                            ;(e.target as HTMLImageElement).src =
+                              "/placeholder.svg?height=400&width=600"
+                          }}
+                        />
+                      </div>
 
-                    {/* Text Info */}
-                    <div className="p-4">
-                      <h3 className="text-lg font-semibold mb-2">
-                        {vehicle.make} {vehicle.model} {vehicle.variant}
-                      </h3>
+                      {/* Text Info */}
+                      <div className="p-4">
+                        <h3 className="text-lg font-semibold mb-2">
+                          {vehicle.make} {vehicle.model} {vehicle.variant}
+                        </h3>
 
-                      <p className="opacity-80">{vehicle.price}</p>
+                        <p className="opacity-80 font-bold text-[#FF6700]">
+                          R {vehicle.price?.toLocaleString()}
+                        </p>
 
-                      <div className="flex justify-between items-center mt-4">
-                        <span className="text-sm opacity-70">
-                          {vehicle.city}, {vehicle.province}
-                        </span>
-                        <span className="text-sm opacity-70">
-                          {vehicle.year} • {vehicle.mileage} km
-                        </span>
+                        <div className="flex justify-between items-center mt-4">
+                          <span className="text-sm opacity-70">
+                            {vehicle.city}, {vehicle.province}
+                          </span>
+                          <span className="text-sm opacity-70">
+                            {vehicle.year} • {vehicle.mileage?.toLocaleString()} km
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             </>
           )}
         </main>
       </div>
     </div>
-  );
+  )
 }
