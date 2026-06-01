@@ -1,4 +1,3 @@
-
 import { Suspense } from "react"
 import ResultsPage from "@/components/results-page"
 import type { Metadata } from 'next'

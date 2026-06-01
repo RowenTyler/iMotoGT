@@ -25,21 +25,31 @@ export async function getServerAdminSession(): Promise<AdminSession | null> {
     return null
   }
 
-  const { data: roleData, error: roleError } = await supabase
+  const { data: roleData } = await supabase
     .from("admin_roles")
     .select("role")
     .eq("user_id", user.id)
-    .single()
+    .maybeSingle()
 
-  if (roleError || !roleData?.role) {
-    return null
+  if (roleData?.role) {
+    return {
+      userId: user.id,
+      email: user.email || "",
+      role: roleData.role,
+    }
   }
 
-  return {
-    userId: user.id,
-    email: user.email || "",
-    role: roleData.role,
+  // Fallback: users on the hard-coded super-admin allowlist are always admins,
+  // even if their admin_roles row has not been provisioned yet.
+  if (isAllowedSuperAdminEmail(user.email)) {
+    return {
+      userId: user.id,
+      email: user.email || "",
+      role: "SUPER_ADMIN",
+    }
   }
+
+  return null
 }
 
 export async function requireAdminSession(): Promise<AdminSession> {

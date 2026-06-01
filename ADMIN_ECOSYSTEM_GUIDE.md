@@ -36,14 +36,14 @@ This document outlines the complete admin ecosystem implementation for the iMoto
 - `hooks/use-admin.tsx` - Admin checking hooks and HOCs
 
 **Permissions by Role:**
-```
+\`\`\`
 SUPER_ADMIN: Full platform access (unrestricted)
 ADMIN: User management, blog, reviews, content approval, analytics
 DEALER_OWNER: Manage own dealer, add employees, manage inventory
 DEALER_MANAGER: Edit vehicles, view metrics
 DEALER_EMPLOYEE: Add/edit vehicles only
 USER: Standard user, can list and browse vehicles
-```
+\`\`\`
 
 ### 2. Blog Management System
 **Files:**
@@ -154,20 +154,20 @@ When vehicle owned by dealer, display:
 
 ## Database Migration
 Execute in Supabase:
-```bash
+\`\`\`bash
 1. scripts/admin_ecosystem_migrations.sql
 2. scripts/admin_rls_policies.sql
 3. scripts/storage_buckets_setup.sql
-```
+\`\`\`
 
 ## Environment Setup
 
 ### Required Environment Variables
-```
+\`\`\`
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
-```
+\`\`\`
 
 ### Dependencies
 All dependencies already installed:
@@ -179,7 +179,7 @@ All dependencies already installed:
 ## Usage Examples
 
 ### Creating a Blog Post
-```typescript
+\`\`\`typescript
 import { createBlog } from '@/lib/blog-service'
 
 const result = await createBlog({
@@ -191,20 +191,20 @@ const result = await createBlog({
   seo_title: 'SEO Title',
   seo_description: 'SEO Description'
 })
-```
+\`\`\`
 
 ### Tracking Analytics
-```typescript
+\`\`\`typescript
 import { trackAnalyticsEvent } from '@/lib/admin-service'
 
 await trackAnalyticsEvent('blog_view', 'blog', blogId, {
   readingTime: 5,
   source: 'dashboard'
 })
-```
+\`\`\`
 
 ### Approving a Dealer
-```typescript
+\`\`\`typescript
 import { approveDealerApplication } from '@/lib/admin-service'
 
 const result = await approveDealerApplication(
@@ -212,10 +212,10 @@ const result = await approveDealerApplication(
   'Business Name',
   ownerId
 )
-```
+\`\`\`
 
 ### Adding Dealer Employee
-```typescript
+\`\`\`typescript
 import { addDealerEmployee } from '@/lib/admin-service'
 
 const result = await addDealerEmployee(
@@ -223,7 +223,7 @@ const result = await addDealerEmployee(
   userId,
   'DEALER_MANAGER'
 )
-```
+\`\`\`
 
 ## Security Considerations
 
