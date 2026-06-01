@@ -35,13 +35,13 @@ export default function HomePage() {
               <h4 className="font-semibold mb-4 text-gray-200">About Us</h4>
               <ul className="space-y-2">
                 <li>
-                  <a href="#" className="text-sm text-gray-300 hover:text-[#FF7D33]">Our Story</a>
+                  <a href="/about" className="text-sm text-gray-300 hover:text-[#FF7D33]">Our Story</a>
                 </li>
                 <li>
                   <a href="#" className="text-sm text-gray-300 hover:text-[#FF7D33]">Careers</a>
                 </li>
                 <li>
-                  <a href="#" className="text-sm text-gray-300 hover:text-[#FF7D33]">Press</a>
+                  <a href="/blog" className="text-sm text-gray-300 hover:text-[#FF7D33]">Blog & Articles</a>
                 </li>
                 <li>
                   <a href="#" className="text-sm text-[#FF7D33]">Contact Us</a>

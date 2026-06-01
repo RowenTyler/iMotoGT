@@ -24,8 +24,8 @@ export const viewport = {
 
 export const metadata: Metadata = {
   title: {
-    default: "Buy & Sell Affordable Cars in South Africa | iMoto GT",
-    template: "%s | iMoto GT",
+    default: "Buy & Sell Affordable Cars in South Africa - iMoto GT",
+    template: "%s - iMoto GT",
   },
   description:
     "Buy and sell affordable cars across South Africa on a trusted local marketplace. Transparent listings, real people, fair prices, & a simpler way to trade cars.",
@@ -34,7 +34,7 @@ export const metadata: Metadata = {
   keywords: ["cars", "South Africa", "buy cars", "sell cars", "used cars", "car marketplace"],
   authors: [{ name: "iMoto GT" }],
   openGraph: {
-    title: "Buy & Sell Affordable Cars in South Africa | iMoto GT",
+    title: "Buy & Sell Affordable Cars in South Africa - iMoto GT",
     description: "Buy and sell affordable cars across South Africa on a trusted local marketplace.",
     type: "website",
     locale: "en_ZA",
@@ -42,7 +42,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "Buy & Sell Affordable Cars in South Africa | iMoto GT",
+    title: "Buy & Sell Affordable Cars in South Africa - iMoto GT",
     description: "Buy and sell affordable cars across South Africa on a trusted local marketplace.",
   },
   robots: {
