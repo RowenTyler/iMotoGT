@@ -44,7 +44,7 @@ export default function HomePage() {
               <h4 className="font-semibold mb-4 text-gray-200">About Us</h4>
               <ul className="space-y-2">
                 <li>
-                  <a href="#" className="text-sm text-gray-300 hover:text-[#FF7D33]">Our Story</a>
+                  <a href="/about" className="text-sm text-gray-300 hover:text-[#FF7D33]">Our Story</a>
                 </li>
                 <li>
                   <a href="#" className="text-sm text-gray-300 hover:text-[#FF7D33]">Careers</a>
