@@ -16,6 +16,8 @@ export interface Vehicle {
   city: string
   description?: string
   images: string[]
+  image?: string
+  coverImage?: string
   status?: string
   sellerName?: string
   sellerEmail?: string
@@ -27,6 +29,7 @@ export interface Vehicle {
   createdAt?: string
   updatedAt?: string
   contactPrivacyEnabled?: boolean
+  isDeleted?: boolean
 }
 
 export interface VehicleFormData {

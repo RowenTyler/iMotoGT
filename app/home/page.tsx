@@ -1,6 +1,15 @@
+import type { Metadata } from 'next'
 import CarMarketplace from "@/components/car-marketplace"
 import PlatformStats from "@/components/platform-stats"
 import { Facebook, Instagram, Twitter } from "lucide-react"
+
+export const metadata: Metadata = {
+  title: "Buy & Sell Affordable Cars in South Africa - iMoto GT",
+  description: "Buy and sell affordable cars across South Africa on a trusted local marketplace. Transparent listings, real people, fair prices.",
+  alternates: {
+    canonical: 'https://imoto-gt.co.za/home',
+  },
+}
 
 export default function HomePage() {
   return (
@@ -41,7 +50,7 @@ export default function HomePage() {
                   <a href="#" className="text-sm text-gray-300 hover:text-[#FF7D33]">Careers</a>
                 </li>
                 <li>
-                  <a href="/blog" className="text-sm text-gray-300 hover:text-[#FF7D33]">Blog & Articles</a>
+                  <a href="#" className="text-sm text-gray-300 hover:text-[#FF7D33]">Blogs & Articles</a>
                 </li>
                 <li>
                   <a href="#" className="text-sm text-[#FF7D33]">Contact Us</a>

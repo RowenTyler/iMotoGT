@@ -1,6 +1,15 @@
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: "About Us - iMoto GT",
+  description: "Learn about iMoto GT, South Africa's trusted vehicle marketplace.",
+  alternates: {
+    canonical: 'https://imoto-gt.co.za/about',
+  },
+}
 
 export default function AboutPage() {
   return (

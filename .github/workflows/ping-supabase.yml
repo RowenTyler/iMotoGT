@@ -1,0 +1,86 @@
+name: Ping Supabase Tables (Debug Enabled)
+
+on:
+  schedule:
+    - cron: "0 7 * * 1"   # Monday 09:00 JHB
+    - cron: "0 10 * * 3"  # Wednesday 12:00 JHB
+    - cron: "0 14 * * 6"  # Saturday 16:00 JHB
+
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Debug Secrets Presence
+        run: |
+          echo "Checking if secrets exist..."
+
+          if [ -z "${{ secrets.SUPABASE_URL }}" ]; then
+            echo "ERROR: SUPABASE_URL is EMPTY"
+            exit 1
+          else
+            echo "SUPABASE_URL is set"
+          fi
+
+          if [ -z "${{ secrets.SUPABASE_ANON_KEY }}" ]; then
+            echo "ERROR: SUPABASE_ANON_KEY is EMPTY"
+            exit 1
+          else
+            echo "SUPABASE_ANON_KEY is set"
+          fi
+
+      - name: Debug URL Construction
+        run: |
+          URL="${{ secrets.SUPABASE_URL }}/rest/v1/vehicles?select=id"
+          echo "Constructed URL:"
+          echo "$URL"
+
+      - name: Ping vehicles table
+        run: |
+          URL="${{ secrets.SUPABASE_URL }}/rest/v1/vehicles?select=id"
+
+          echo "---- VEHICLES REQUEST ----"
+          echo "Calling: $URL"
+
+          response=$(curl -s -w "\nHTTP_STATUS:%{http_code}" \
+            "$URL" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}")
+
+          body=$(echo "$response" | sed -n '1,/HTTP_STATUS:/p' | sed '$d')
+          status=$(echo "$response" | tr -d '\n' | sed -e 's/.*HTTP_STATUS://')
+
+          echo "Response Body:"
+          echo "$body"
+          echo "Status Code: $status"
+
+          if [ "$status" -ne 200 ]; then
+            echo "ERROR: Vehicles request failed"
+            exit 1
+          fi
+
+      - name: Ping users table
+        run: |
+          URL="${{ secrets.SUPABASE_URL }}/rest/v1/users?select=id"
+
+          echo "---- USERS REQUEST ----"
+          echo "Calling: $URL"
+
+          response=$(curl -s -w "\nHTTP_STATUS:%{http_code}" \
+            "$URL" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}")
+
+          body=$(echo "$response" | sed -n '1,/HTTP_STATUS:/p' | sed '$d')
+          status=$(echo "$response" | tr -d '\n' | sed -e 's/.*HTTP_STATUS://')
+
+          echo "Response Body:"
+          echo "$body"
+          echo "Status Code: $status"
+
+          if [ "$status" -ne 200 ]; then
+            echo "ERROR: Users request failed"
+            exit 1
+          fi
