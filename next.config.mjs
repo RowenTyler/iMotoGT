@@ -1,15 +1,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
   typescript: {
     ignoreBuildErrors: true,
   },
 
   // ─── Image Optimisation ─────────────────────────────────────────────────────
   images: {
-    // Enable Next.js image optimisation (was disabled with unoptimized: false)
+    // Enable Next.js image optimisation
     // This serves images as WebP/AVIF via the /_next/image endpoint
     // and applies proper cache headers automatically
     unoptimized: false,
@@ -46,7 +43,7 @@ const nextConfig = {
   // Remove X-Powered-By header (minor security + tiny response size improvement)
   poweredByHeader: false,
 
-  // ─── Bundle Size ─────────────────────────────────────────────────────────────
+  // ─── Bundle Size ────────────────────────────────────────────────────────────
   experimental: {
     // Tree-shake these packages so only the icons/components you use
     // are included in the bundle — not the entire library
