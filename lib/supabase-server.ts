@@ -1,13 +1,15 @@
 import { createServerClient as createServerClientSSR } from "@supabase/ssr"
 import type { Database } from "@/types/supabase"
 import { cookies } from "next/headers"
+import { getSupabaseConfig } from "@/lib/supabase-config"
 
 export function createServerClient() {
   const cookieStore = cookies()
+  const { url, anonKey } = getSupabaseConfig()
 
   return createServerClientSSR<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || "https://mwzrrrnmtyiyrwdqhcqb.supabase.co",
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
+    url,
+    anonKey,
     {
       cookies: {
         getAll() {
