@@ -283,7 +283,7 @@ This document lists all production-ready code delivered for the iMoto Admin, Blo
   - Professional design
 
 ### Component Hierarchy:
-```
+\`\`\`
 AdminDashboard
 ├── MetricsOverview
 ├── BlogManagement
@@ -319,7 +319,7 @@ ReviewsDisplay
 DealerBranding
 ├── CompactBadge
 └── FullProfile
-```
+\`\`\`
 
 ---
 
@@ -419,12 +419,12 @@ DealerBranding
 ## 🎯 NEXT STEPS FOR INTEGRATION
 
 ### 1. Database Setup (10 minutes)
-```bash
+\`\`\`bash
 # Run migrations in order:
 1. admin_ecosystem_migrations.sql
 2. admin_rls_policies.sql
 3. storage_buckets_setup.sql
-```
+\`\`\`
 
 ### 2. Dashboard Integration (30 minutes)
 - Add BlogsDisplay component to dashboard

@@ -20,13 +20,13 @@ All admin pages (`/admin/*`) are protected by the `useSuperAdminCheck()` hook wh
 
 Located in: `/lib/admin-service.ts`
 
-```typescript
+\`\`\`typescript
 const SUPER_ADMIN_EMAILS = [
   'rowenrichardson@gmail.com',
   'richardson.rowen@gmail.com',
   'tyler.rowend@gmail.com',
 ]
-```
+\`\`\`
 
 These emails automatically receive unrestricted super admin access. Add/remove emails as needed.
 
@@ -142,7 +142,7 @@ The main dashboard at `/dashboard` does NOT currently display:
 ### Safe Integration Options
 
 **Option 1: Show to All Users (Recommended for Content)**
-```typescript
+\`\`\`typescript
 // app/components/dashboard.tsx - add this section:
 import BlogsDisplay from '@/components/blogs-display'
 import ReviewsDisplay from '@/components/reviews-display'
@@ -158,10 +158,10 @@ export default function Dashboard() {
     </div>
   )
 }
-```
+\`\`\`
 
 **Option 2: Show Only to Admins**
-```typescript
+\`\`\`typescript
 import { useAdminCheck } from '@/hooks/use-admin'
 
 export function AdminMetrics() {
@@ -172,7 +172,7 @@ export function AdminMetrics() {
   
   return <AdminDashboardCard />
 }
-```
+\`\`\`
 
 ---
 
@@ -286,7 +286,7 @@ export function AdminMetrics() {
 ## Common Admin Tasks
 
 ### Task 1: Add New Super Admin Email
-```typescript
+\`\`\`typescript
 // In lib/admin-service.ts
 const SUPER_ADMIN_EMAILS = [
   'rowenrichardson@gmail.com',
@@ -295,35 +295,35 @@ const SUPER_ADMIN_EMAILS = [
   'newemail@example.com'  // ← Add here
 ]
 // Redeploy application
-```
+\`\`\`
 
 ### Task 2: Create Regular Admin
-```typescript
+\`\`\`typescript
 // In Supabase Dashboard:
 1. Go to admin_roles table
 2. Insert new row:
    - user_id: (user's UUID)
    - role: 'ADMIN'
    - granted_at: now()
-```
+\`\`\`
 
 ### Task 3: Check User Permissions
-```typescript
+\`\`\`typescript
 import { userHasPermission } from '@/lib/admin-service'
 
 const canCreateBlog = await userHasPermission(userId, 'create_blog')
 if (!canCreateBlog) {
   return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 }
-```
+\`\`\`
 
 ### Task 4: Revoke Admin Access
-```typescript
+\`\`\`typescript
 import { revokeAdminRole } from '@/lib/admin-service'
 
 await revokeAdminRole(userId)
 // User loses all admin permissions immediately
-```
+\`\`\`
 
 ---
 
@@ -331,30 +331,30 @@ await revokeAdminRole(userId)
 
 ### 403 Forbidden
 When user lacks required permissions:
-```
+\`\`\`
 - Redirects to /403 page
 - Displays "Access Denied" message
 - Offers navigation options
 - Logs attempt for audit trail
-```
+\`\`\`
 
 ### 401 Unauthorized
 When user not authenticated:
-```
+\`\`\`
 - API returns 401 status
 - Requests redirect to /login
 - Session tokens refreshed
 - Re-authentication required
-```
+\`\`\`
 
 ### 500 Server Error
 When something goes wrong:
-```
+\`\`\`
 - Error logged to console
 - Generic error message shown
 - No sensitive details exposed
 - Admin notified via monitoring
-```
+\`\`\`
 
 ---
 

@@ -15,7 +15,7 @@
 
 ### Option B: Using Terminal (If installed)
 
-```bash
+\`\`\`bash
 # Install Supabase CLI if not already
 npm install -g supabase
 
@@ -27,7 +27,7 @@ cd /workspaces/iMotoGT
 
 # Run migrations
 supabase db push
-```
+\`\`\`
 
 ---
 
@@ -172,33 +172,33 @@ These emails are hardcoded as super admins:
 The system stores role info in multiple places:
 
 **Option 1:** User created as Admin via API
-```typescript
+\`\`\`typescript
 // Run in admin context
 const { error } = await supabase
   .from('admin_roles')
   .insert({ user_id: userId, role: 'ADMIN' })
-```
+\`\`\`
 
 **Option 2:** Update Admin via Dashboard
 1. Go to **Authentication** → **Users**
 2. Click user's settings
 3. Add to `Raw App Metadata`:
-```json
+\`\`\`json
 {
   "role": "ADMIN"
 }
-```
+\`\`\`
 
 ### 2. Configure Blog Categories
 Edit the list in `/app/admin/blog/new/page.tsx`:
-```typescript
+\`\`\`typescript
 const BLOG_CATEGORIES = [
   'Automotive News',
   'Vehicle Reviews',
   'Buying Guides',
   // Add your categories
 ]
-```
+\`\`\`
 
 ### 3. Configure Dealer Application Workflow
 Customize in `/app/admin/dealers/page.tsx`:
@@ -212,11 +212,11 @@ Customize in `/app/admin/dealers/page.tsx`:
 
 Make sure these are set in `.env.local`:
 
-```bash
+\`\`\`bash
 NEXT_PUBLIC_SUPABASE_URL=https://xxx.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGc...
 SUPABASE_SERVICE_ROLE_KEY=eyJhbGc... (Optional, for server functions)
-```
+\`\`\`
 
 ---
 

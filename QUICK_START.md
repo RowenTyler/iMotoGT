@@ -3,39 +3,39 @@
 ## 🚀 Getting Started
 
 ### 1. Setup (5 minutes)
-```bash
+\`\`\`bash
 # Copy SQL files to Supabase
 # Go to Supabase Dashboard > SQL Editor
 # Run scripts in this order:
 1. scripts/admin_ecosystem_migrations.sql
 2. scripts/admin_rls_policies.sql
 3. scripts/storage_buckets_setup.sql
-```
+\`\`\`
 
 ### 2. Configure Super Admins (2 minutes)
 Edit `lib/admin-service.ts`:
-```typescript
+\`\`\`typescript
 const SUPER_ADMIN_EMAILS = [
   'rowenrichardson@gmail.com',
   'richardson.rowen@gmail.com',
   'tyler.rowend@gmail.com',
 ]
-```
+\`\`\`
 
 ### 3. Deploy & Test (10 minutes)
-```bash
+\`\`\`bash
 npm run build
 npm run start
 # Visit http://localhost:3000
 # Login with super admin email
 # Navigate to /admin
-```
+\`\`\`
 
 ---
 
 ## 📁 File Structure
 
-```
+\`\`\`
 /scripts
   ├── admin_ecosystem_migrations.sql       (Tables, indexes)
   ├── admin_rls_policies.sql              (RLS + helper functions)
@@ -70,7 +70,7 @@ npm run start
 
 /app
   └── 403/page.tsx                         (Access denied)
-```
+\`\`\`
 
 ---
 
@@ -117,7 +117,7 @@ npm run start
 ## 🎯 Usage Examples
 
 ### Create a Blog Post
-```typescript
+\`\`\`typescript
 import { createBlog } from '@/lib/blog-service'
 
 const blog = await createBlog({
@@ -129,10 +129,10 @@ const blog = await createBlog({
   seo_title: 'SEO Title',
   seo_description: 'SEO Description'
 })
-```
+\`\`\`
 
 ### Check Admin Permission
-```typescript
+\`\`\`typescript
 import { useAdminCheck } from '@/hooks/use-admin'
 
 export default function MyComponent() {
@@ -143,24 +143,24 @@ export default function MyComponent() {
   
   return <div>Admin Content</div>
 }
-```
+\`\`\`
 
 ### Track Analytics Event
-```typescript
+\`\`\`typescript
 import { trackAnalyticsEvent } from '@/lib/admin-service'
 
 await trackAnalyticsEvent('blog_view', 'blog', blogId, {
   readingTime: 5,
   source: 'dashboard'
 })
-```
+\`\`\`
 
 ### Get Blog Metrics
-```typescript
+\`\`\`typescript
 const response = await fetch('/api/analytics')
 const metrics = await response.json()
 console.log(metrics.blogs) // { total, published, draft, totalViews }
-```
+\`\`\`
 
 ---
 
@@ -289,40 +289,40 @@ console.log(metrics.blogs) // { total, published, draft, totalViews }
 
 ### POST /api/analytics
 Track an event
-```json
+\`\`\`json
 {
   "eventType": "blog_view",
   "entityType": "blog",
   "entityId": "uuid",
   "metadata": { "readingTime": 5 }
 }
-```
+\`\`\`
 
 ### GET /api/analytics
 Retrieve metrics (admin only)
-```json
+\`\`\`json
 {
   "blogs": { "total": 5, "published": 3, "draft": 2 },
   "reviews": { "total": 12, "videoReviews": 3 },
   "vehicles": { "total": 100, "active": 80 },
   "dealers": { "total": 10, "approved": 8 }
 }
-```
+\`\`\`
 
 ### POST /api/dealers/applications
 Submit dealer application
-```json
+\`\`\`json
 {
   "businessName": "My Dealership",
   "businessType": "dealer"
 }
-```
+\`\`\`
 
 ### GET /api/dealers/applications
 Retrieve applications
-```
+\`\`\`
 ?status=pending (optional)
-```
+\`\`\`
 
 ---
 

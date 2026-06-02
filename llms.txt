@@ -29,7 +29,7 @@ contact privacy controls, GDPR cookie consent, and a smart caching layer for per
 
 ## Repository Structure
 
-```
+\`\`\`
 /app
   /api
     /auth/callback          OAuth callback (exchanges code for session)
@@ -108,7 +108,7 @@ contact privacy controls, GDPR cookie consent, and a smart caching layer for per
 /public
   sitemap.xml   Static sitemap
   robots.txt    Crawl directives
-```
+\`\`\`
 
 ---
 
@@ -253,13 +253,13 @@ contact privacy controls, GDPR cookie consent, and a smart caching layer for per
 
 ## Environment Variables
 
-```bash
+\`\`\`bash
 NEXT_PUBLIC_SUPABASE_URL=https://mwzrrrnmtyiyrwdqhcqb.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGci...
 SUPABASE_SERVICE_ROLE_KEY=eyJhbGci...  # Server-only, used in API routes
 NEXT_PUBLIC_APP_URL=https://imoto-gt.co.za
 NODE_ENV=production
-```
+\`\`\`
 
 ---
 
