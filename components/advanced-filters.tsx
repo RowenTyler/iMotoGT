@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -17,8 +17,14 @@ interface AdvancedFiltersProps {
   onFilterChange: (filters: any) => void
   onResetFilters?: () => void
   vehicleCount?: number
-  availableMakes?: string[]
-  availableModels?: Record<string, string[]>
+  /** Full list of all makes (unfiltered) – keeps checkboxes visible after filtering */
+  allMakes?: string[]
+  /** Full model hierarchy (unfiltered) */
+  allModels?: Record<string, string[]>
+  /** List of cities grouped by province (for location dropdowns) */
+  citiesByProvince?: Record<string, string[]>
+  /** List of suburbs grouped by city */
+  suburbsByCity?: Record<string, string[]>
 }
 
 const bodyTypes = ["Sedan", "SUV", "Truck", "Motorcycle", "Hatchback", "Convertible"]
@@ -41,56 +47,87 @@ export default function AdvancedFilters({
   onFilterChange,
   onResetFilters,
   vehicleCount,
-  availableMakes = [],
-  availableModels = {},
+  allMakes = [],
+  allModels = {},
+  citiesByProvince = {},
+  suburbsByCity = {},
 }: AdvancedFiltersProps) {
-  // Helper to convert empty strings from props to "any" for Select display
-  const getSelectValue = (value: string | undefined, defaultValue = "any") => {
-    if (value === undefined || value === null || value === "") return defaultValue
-    return value
-  }
+  // Helper for Select components – never return empty string
+  const toSelectValue = (val: string | undefined) => (val && val !== "" ? val : "any")
 
-  // State for hierarchical make/model selection
+  // --------------------------------------------------------------
+  // Make / Model hierarchical selection (using full, unfiltered lists)
+  // --------------------------------------------------------------
   const [selectedTerms, setSelectedTerms] = useState<string[]>(() => {
     if (!filters.query) return []
-    return filters.query.split(',').map((t: string) => t.trim()).filter(Boolean)
+    return filters.query.split(",").map((t: string) => t.trim()).filter(Boolean)
   })
-  const [makeSearch, setMakeSearch] = useState('')
+  const [makeSearch, setMakeSearch] = useState("")
   const [expandedMakes, setExpandedMakes] = useState<Set<string>>(new Set())
-  
-  // Province and city selection
+
+  // --------------------------------------------------------------
+  // Location hierarchical selection (province → city → suburb)
+  // --------------------------------------------------------------
   const [selectedProvinces, setSelectedProvinces] = useState<string[]>(() => {
     if (!filters.province) return []
-    return filters.province.split(',').map((p: string) => p.trim()).filter(Boolean)
+    return filters.province.split(",").map((p: string) => p.trim()).filter(Boolean)
   })
   const [selectedCities, setSelectedCities] = useState<string[]>(() => {
     if (!filters.city) return []
-    return filters.city.split(',').map((c: string) => c.trim()).filter(Boolean)
+    return filters.city.split(",").map((c: string) => c.trim()).filter(Boolean)
   })
-  const [cityInputs, setCityInputs] = useState<Record<string, string>>(() => {
-    const initial: Record<string, string> = {}
-    selectedProvinces.forEach((province, idx) => {
-      if (selectedCities[idx]) initial[province] = selectedCities[idx]
-    })
-    return initial
+  const [selectedSuburbs, setSelectedSuburbs] = useState<string[]>(() => {
+    if (!filters.suburb) return []
+    return filters.suburb.split(",").map((s: string) => s.trim()).filter(Boolean)
   })
-  
-  // Other filter values – convert empty strings to "any" for Select components
+  // UI expansion states for location hierarchy
+  const [expandedProvinces, setExpandedProvinces] = useState<Set<string>>(new Set())
+  const [expandedCities, setExpandedCities] = useState<Set<string>>(new Set())
+
+  // --------------------------------------------------------------
+  // Other filters
+  // --------------------------------------------------------------
   const [localFilters, setLocalFilters] = useState({
-    minPrice: filters.minPrice || '',
-    maxPrice: filters.maxPrice || '',
-    minYear: getSelectValue(filters.minYear),
-    maxYear: getSelectValue(filters.maxYear),
-    minMileage: filters.minMileage || '',
-    maxMileage: filters.maxMileage || '',
+    minPrice: filters.minPrice || "",
+    maxPrice: filters.maxPrice || "",
+    minYear: toSelectValue(filters.minYear),
+    maxYear: toSelectValue(filters.maxYear),
+    minMileage: filters.minMileage || "",
+    maxMileage: filters.maxMileage || "",
     fuelType: filters.fuelType || [],
-    transmission: getSelectValue(filters.transmission),
-    engineCapacityMin: filters.engineCapacityMin || '1.0',
-    engineCapacityMax: filters.engineCapacityMax || '8.0',
+    transmission: toSelectValue(filters.transmission),
+    engineCapacityMin: filters.engineCapacityMin || "1.0",
+    engineCapacityMax: filters.engineCapacityMax || "8.0",
     bodyType: filters.bodyType || [],
-    model: filters.model || '',
+    model: filters.model || "",
   })
 
+  // Sync local state when external filters change (e.g., browser back/forward)
+  useEffect(() => {
+    setLocalFilters((prev) => ({
+      ...prev,
+      minPrice: filters.minPrice || "",
+      maxPrice: filters.maxPrice || "",
+      minYear: toSelectValue(filters.minYear),
+      maxYear: toSelectValue(filters.maxYear),
+      minMileage: filters.minMileage || "",
+      maxMileage: filters.maxMileage || "",
+      fuelType: filters.fuelType || [],
+      transmission: toSelectValue(filters.transmission),
+      engineCapacityMin: filters.engineCapacityMin || "1.0",
+      engineCapacityMax: filters.engineCapacityMax || "8.0",
+      bodyType: filters.bodyType || [],
+      model: filters.model || "",
+    }))
+    setSelectedTerms(filters.query ? filters.query.split(",").map((t: string) => t.trim()).filter(Boolean) : [])
+    setSelectedProvinces(filters.province ? filters.province.split(",").map((p: string) => p.trim()).filter(Boolean) : [])
+    setSelectedCities(filters.city ? filters.city.split(",").map((c: string) => c.trim()).filter(Boolean) : [])
+    setSelectedSuburbs(filters.suburb ? filters.suburb.split(",").map((s: string) => s.trim()).filter(Boolean) : [])
+  }, [filters])
+
+  // --------------------------------------------------------------
+  // Handlers
+  // --------------------------------------------------------------
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
     setLocalFilters((prev: any) => ({ ...prev, [name]: value }))
@@ -116,22 +153,57 @@ export default function AdvancedFilters({
     }))
   }
 
-  // Apply filters – convert "any" values to empty string for backend
+  // Location hierarchical handlers
+  const toggleProvinceSelection = (province: string) => {
+    setSelectedProvinces((prev) =>
+      prev.includes(province) ? prev.filter((p) => p !== province) : [...prev, province]
+    )
+  }
+
+  const toggleCitySelection = (city: string) => {
+    setSelectedCities((prev) =>
+      prev.includes(city) ? prev.filter((c) => c !== city) : [...prev, city]
+    )
+  }
+
+  const toggleSuburbSelection = (suburb: string) => {
+    setSelectedSuburbs((prev) =>
+      prev.includes(suburb) ? prev.filter((s) => s !== suburb) : [...prev, suburb]
+    )
+  }
+
+  const toggleProvinceExpansion = (province: string) => {
+    setExpandedProvinces((prev) => {
+      const next = new Set(prev)
+      next.has(province) ? next.delete(province) : next.add(province)
+      return next
+    })
+  }
+
+  const toggleCityExpansion = (city: string) => {
+    setExpandedCities((prev) => {
+      const next = new Set(prev)
+      next.has(city) ? next.delete(city) : next.add(city)
+      return next
+    })
+  }
+
+  // Apply filters – build query string and location strings
   const handleApplyFilters = () => {
-    const allCities = Object.values(cityInputs).filter(Boolean)
     const updatedFilters = {
-      query: selectedTerms.length > 0 ? selectedTerms.join(',') : '',
+      query: selectedTerms.length > 0 ? selectedTerms.join(",") : "",
       minPrice: localFilters.minPrice,
       maxPrice: localFilters.maxPrice,
-      province: selectedProvinces.join(','),
-      city: allCities.join(','),
+      province: selectedProvinces.join(","),
+      city: selectedCities.join(","),
+      suburb: selectedSuburbs.join(","),
       bodyType: localFilters.bodyType,
-      minYear: localFilters.minYear === 'any' ? '' : localFilters.minYear,
-      maxYear: localFilters.maxYear === 'any' ? '' : localFilters.maxYear,
+      minYear: localFilters.minYear === "any" ? "" : localFilters.minYear,
+      maxYear: localFilters.maxYear === "any" ? "" : localFilters.maxYear,
       minMileage: localFilters.minMileage,
       maxMileage: localFilters.maxMileage,
       fuelType: localFilters.fuelType,
-      transmission: localFilters.transmission === 'any' ? '' : localFilters.transmission,
+      transmission: localFilters.transmission === "any" ? "" : localFilters.transmission,
       engineCapacityMin: localFilters.engineCapacityMin,
       engineCapacityMax: localFilters.engineCapacityMax,
       model: localFilters.model,
@@ -142,37 +214,55 @@ export default function AdvancedFilters({
   const handleResetFilters = () => {
     setSelectedTerms([])
     setSelectedProvinces([])
-    setCityInputs({})
-    setMakeSearch('')
+    setSelectedCities([])
+    setSelectedSuburbs([])
+    setExpandedProvinces(new Set())
+    setExpandedCities(new Set())
+    setMakeSearch("")
     setExpandedMakes(new Set())
-    const resetState = {
-      minPrice: '',
-      maxPrice: '',
-      province: '',
-      city: '',
-      bodyType: [],
-      minYear: 'any',
-      maxYear: 'any',
-      minMileage: '',
-      maxMileage: '',
+    setLocalFilters({
+      minPrice: "",
+      maxPrice: "",
+      minYear: "any",
+      maxYear: "any",
+      minMileage: "",
+      maxMileage: "",
       fuelType: [],
-      transmission: 'any',
-      engineCapacityMin: '1.0',
-      engineCapacityMax: '8.0',
-      model: '',
-    }
-    setLocalFilters(resetState)
+      transmission: "any",
+      engineCapacityMin: "1.0",
+      engineCapacityMax: "8.0",
+      bodyType: [],
+      model: "",
+    })
     if (onResetFilters) {
       onResetFilters()
     } else {
       onFilterChange({
-        query: '',
-        ...resetState,
-        province: '',
-        city: '',
+        query: "",
+        minPrice: "",
+        maxPrice: "",
+        province: "",
+        city: "",
+        suburb: "",
+        bodyType: [],
+        minYear: "",
+        maxYear: "",
+        minMileage: "",
+        maxMileage: "",
+        fuelType: [],
+        transmission: "",
+        engineCapacityMin: "1.0",
+        engineCapacityMax: "8.0",
+        model: "",
       })
     }
   }
+
+  const safeSelectValue = (value: string) => (value === undefined || value === null || value === "" ? "any" : value)
+
+  // Use full lists for makes/models (keep checkboxes visible even after filtering)
+  const displayMakes = allMakes.length ? allMakes : (filters.availableMakes || [])
+  const displayModels = Object.keys(allModels).length ? allModels : (filters.availableModels || {})
 
   return (
     <div className="p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg">
@@ -181,25 +271,23 @@ export default function AdvancedFilters({
         <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{vehicleCount} vehicle(s) found</p>
       )}
       <Accordion type="multiple" defaultValue={["item-1", "item-2", "item-3", "item-4", "item-5", "item-6"]}>
-        {/* KEYWORDS – hierarchical make/model selection */}
+        {/* KEYWORDS - Make/Model (persistent) */}
         <AccordionItem value="item-1">
           <AccordionTrigger>Keywords</AccordionTrigger>
           <AccordionContent className="space-y-3">
             <Input
               placeholder="Search makes..."
               value={makeSearch}
-              onChange={e => setMakeSearch(e.target.value)}
+              onChange={(e) => setMakeSearch(e.target.value)}
               className="w-full"
             />
-            
             <div className="max-h-64 overflow-y-auto space-y-1 border rounded-md p-2">
-              {availableMakes
-                .filter(make => make.toLowerCase().includes(makeSearch.toLowerCase()))
-                .map(make => {
+              {displayMakes
+                .filter((make) => make.toLowerCase().includes(makeSearch.toLowerCase()))
+                .map((make) => {
                   const isMakeSelected = selectedTerms.includes(make)
                   const isExpanded = expandedMakes.has(make)
-                  const makeModels = availableModels[make] || []
-                  
+                  const makeModels = displayModels[make] || []
                   return (
                     <div key={make}>
                       <div className="flex items-center justify-between py-1 px-1 hover:bg-gray-50 dark:hover:bg-gray-700 rounded">
@@ -209,9 +297,11 @@ export default function AdvancedFilters({
                             checked={isMakeSelected}
                             onCheckedChange={(checked) => {
                               if (checked) {
-                                setSelectedTerms(prev => [...prev.filter(t => !t.startsWith(make + ' ')), make])
+                                setSelectedTerms((prev) => [...prev.filter((t) => !t.startsWith(make + " ")), make])
                               } else {
-                                setSelectedTerms(prev => prev.filter(t => t !== make && !t.startsWith(make + ' ')))
+                                setSelectedTerms((prev) =>
+                                  prev.filter((t) => t !== make && !t.startsWith(make + " "))
+                                )
                               }
                             }}
                           />
@@ -222,40 +312,47 @@ export default function AdvancedFilters({
                         {makeModels.length > 0 && (
                           <button
                             type="button"
-                            onClick={() => setExpandedMakes(prev => {
-                              const next = new Set(prev)
-                              next.has(make) ? next.delete(make) : next.add(make)
-                              return next
-                            })}
+                            onClick={() =>
+                              setExpandedMakes((prev) => {
+                                const next = new Set(prev)
+                                next.has(make) ? next.delete(make) : next.add(make)
+                                return next
+                              })
+                            }
                             className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1"
                           >
                             {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                           </button>
                         )}
                       </div>
-                      
                       {isExpanded && makeModels.length > 0 && (
                         <div className="ml-6 space-y-1 mt-1">
-                          {makeModels.map(model => {
+                          {makeModels.map((model) => {
                             const term = `${make} ${model}`
                             const isModelSelected = selectedTerms.includes(term)
                             return (
-                              <div key={model} className="flex items-center gap-2 py-0.5 px-1 hover:bg-gray-50 dark:hover:bg-gray-700 rounded">
+                              <div
+                                key={model}
+                                className="flex items-center gap-2 py-0.5 px-1 hover:bg-gray-50 dark:hover:bg-gray-700 rounded"
+                              >
                                 <Checkbox
                                   id={`model-${make}-${model}`}
                                   checked={isModelSelected}
                                   onCheckedChange={(checked) => {
                                     if (checked) {
-                                      setSelectedTerms(prev => {
-                                        const withoutMakeOnly = prev.filter(t => t !== make)
+                                      setSelectedTerms((prev) => {
+                                        const withoutMakeOnly = prev.filter((t) => t !== make)
                                         return [...withoutMakeOnly, term]
                                       })
                                     } else {
-                                      setSelectedTerms(prev => prev.filter(t => t !== term))
+                                      setSelectedTerms((prev) => prev.filter((t) => t !== term))
                                     }
                                   }}
                                 />
-                                <Label htmlFor={`model-${make}-${model}`} className="cursor-pointer text-sm text-gray-700 dark:text-gray-300">
+                                <Label
+                                  htmlFor={`model-${make}-${model}`}
+                                  className="cursor-pointer text-sm text-gray-700 dark:text-gray-300"
+                                >
                                   {model}
                                 </Label>
                               </div>
@@ -266,11 +363,10 @@ export default function AdvancedFilters({
                     </div>
                   )
                 })}
-              {availableMakes.length === 0 && (
+              {displayMakes.length === 0 && (
                 <p className="text-sm text-gray-400 text-center py-4">Loading makes...</p>
               )}
             </div>
-            
             <Input
               name="model"
               placeholder="Search model (free text)..."
@@ -302,41 +398,89 @@ export default function AdvancedFilters({
           </AccordionContent>
         </AccordionItem>
 
-        {/* LOCATION – province checkboxes with city inputs */}
+        {/* LOCATION - hierarchical dropdown checkboxes */}
         <AccordionItem value="item-3">
           <AccordionTrigger>Location</AccordionTrigger>
           <AccordionContent className="space-y-3">
-            <p className="text-xs text-gray-500 dark:text-gray-400">Select provinces (expand for cities)</p>
-            <div className="space-y-2">
-              {allProvinces.map(province => {
-                const isChecked = selectedProvinces.includes(province)
+            <p className="text-xs text-gray-500 dark:text-gray-400">Select provinces, then cities, then suburbs</p>
+            <div className="max-h-96 overflow-y-auto space-y-1 border rounded-md p-2">
+              {allProvinces.map((province) => {
+                const isProvinceSelected = selectedProvinces.includes(province)
+                const isProvinceExpanded = expandedProvinces.has(province)
+                const cities = citiesByProvince[province] || []
+                const hasCities = cities.length > 0
                 return (
                   <div key={province}>
-                    <div className="flex items-center gap-2 py-1">
-                      <Checkbox
-                        id={`province-${province}`}
-                        checked={isChecked}
-                        onCheckedChange={(checked) => {
-                          if (checked) {
-                            setSelectedProvinces(prev => [...prev, province])
-                          } else {
-                            setSelectedProvinces(prev => prev.filter(p => p !== province))
-                            setCityInputs(prev => { const n = { ...prev }; delete n[province]; return n })
-                          }
-                        }}
-                      />
-                      <Label htmlFor={`province-${province}`} className="cursor-pointer font-medium text-sm">
-                        {province}
-                      </Label>
-                    </div>
-                    {isChecked && (
-                      <div className="ml-6 mt-1">
-                        <Input
-                          placeholder={`City in ${province}...`}
-                          value={cityInputs[province] || ''}
-                          onChange={e => setCityInputs(prev => ({ ...prev, [province]: e.target.value }))}
-                          className="text-sm h-8"
+                    <div className="flex items-center justify-between py-1 px-1 hover:bg-gray-50 dark:hover:bg-gray-700 rounded">
+                      <div className="flex items-center gap-2">
+                        <Checkbox
+                          id={`loc-province-${province}`}
+                          checked={isProvinceSelected}
+                          onCheckedChange={() => toggleProvinceSelection(province)}
                         />
+                        <Label htmlFor={`loc-province-${province}`} className="cursor-pointer font-medium text-sm">
+                          {province}
+                        </Label>
+                      </div>
+                      {hasCities && (
+                        <button
+                          type="button"
+                          onClick={() => toggleProvinceExpansion(province)}
+                          className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1"
+                        >
+                          {isProvinceExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                        </button>
+                      )}
+                    </div>
+                    {isProvinceExpanded && hasCities && (
+                      <div className="ml-6 space-y-1 mt-1">
+                        {cities.map((city) => {
+                          const isCitySelected = selectedCities.includes(city)
+                          const isCityExpanded = expandedCities.has(city)
+                          const suburbs = suburbsByCity[city] || []
+                          const hasSuburbs = suburbs.length > 0
+                          return (
+                            <div key={city}>
+                              <div className="flex items-center justify-between py-1 px-1 hover:bg-gray-50 dark:hover:bg-gray-700 rounded">
+                                <div className="flex items-center gap-2">
+                                  <Checkbox
+                                    id={`loc-city-${city}`}
+                                    checked={isCitySelected}
+                                    onCheckedChange={() => toggleCitySelection(city)}
+                                  />
+                                  <Label htmlFor={`loc-city-${city}`} className="cursor-pointer text-sm text-gray-700 dark:text-gray-300">
+                                    {city}
+                                  </Label>
+                                </div>
+                                {hasSuburbs && (
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleCityExpansion(city)}
+                                    className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1"
+                                  >
+                                    {isCityExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                                  </button>
+                                )}
+                              </div>
+                              {isCityExpanded && hasSuburbs && (
+                                <div className="ml-6 space-y-1 mt-1">
+                                  {suburbs.map((suburb) => (
+                                    <div key={suburb} className="flex items-center gap-2 py-0.5 px-1 hover:bg-gray-50 dark:hover:bg-gray-700 rounded">
+                                      <Checkbox
+                                        id={`loc-suburb-${suburb}`}
+                                        checked={selectedSuburbs.includes(suburb)}
+                                        onCheckedChange={() => toggleSuburbSelection(suburb)}
+                                      />
+                                      <Label htmlFor={`loc-suburb-${suburb}`} className="cursor-pointer text-sm text-gray-700 dark:text-gray-300">
+                                        {suburb}
+                                      </Label>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })}
                       </div>
                     )}
                   </div>
@@ -368,7 +512,10 @@ export default function AdvancedFilters({
           <AccordionTrigger>Year & Mileage</AccordionTrigger>
           <AccordionContent className="space-y-4">
             <div className="flex gap-2">
-              <Select value={localFilters.minYear} onValueChange={(value) => handleSelectChange("minYear", value)}>
+              <Select
+                value={safeSelectValue(localFilters.minYear)}
+                onValueChange={(value) => handleSelectChange("minYear", value)}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Min Year" />
                 </SelectTrigger>
@@ -381,7 +528,10 @@ export default function AdvancedFilters({
                   ))}
                 </SelectContent>
               </Select>
-              <Select value={localFilters.maxYear} onValueChange={(value) => handleSelectChange("maxYear", value)}>
+              <Select
+                value={safeSelectValue(localFilters.maxYear)}
+                onValueChange={(value) => handleSelectChange("maxYear", value)}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Max Year" />
                 </SelectTrigger>
@@ -436,7 +586,7 @@ export default function AdvancedFilters({
             <div>
               <Label className="font-semibold">Transmission</Label>
               <Select
-                value={localFilters.transmission}
+                value={safeSelectValue(localFilters.transmission)}
                 onValueChange={(value) => handleSelectChange("transmission", value)}
               >
                 <SelectTrigger className="mt-2">
