@@ -1,5 +1,4 @@
 import * as React from "react"
-import * as TextAreaPrimitive from "@radix-ui/react-textarea"
 
 import { cn } from "@/lib/utils"
 
