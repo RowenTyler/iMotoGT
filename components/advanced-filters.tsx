@@ -44,6 +44,12 @@ export default function AdvancedFilters({
   availableMakes = [],
   availableModels = {},
 }: AdvancedFiltersProps) {
+  // Helper to convert empty strings from props to "any" for Select display
+  const getSelectValue = (value: string | undefined, defaultValue = "any") => {
+    if (value === undefined || value === null || value === "") return defaultValue
+    return value
+  }
+
   // State for hierarchical make/model selection
   const [selectedTerms, setSelectedTerms] = useState<string[]>(() => {
     if (!filters.query) return []
@@ -52,7 +58,7 @@ export default function AdvancedFilters({
   const [makeSearch, setMakeSearch] = useState('')
   const [expandedMakes, setExpandedMakes] = useState<Set<string>>(new Set())
   
-  // Province and city selection (multi-province with city inputs)
+  // Province and city selection
   const [selectedProvinces, setSelectedProvinces] = useState<string[]>(() => {
     if (!filters.province) return []
     return filters.province.split(',').map((p: string) => p.trim()).filter(Boolean)
@@ -69,8 +75,21 @@ export default function AdvancedFilters({
     return initial
   })
   
-  // Other filter values
-  const [localFilters, setLocalFilters] = useState(filters)
+  // Other filter values – convert empty strings to "any" for Select components
+  const [localFilters, setLocalFilters] = useState({
+    minPrice: filters.minPrice || '',
+    maxPrice: filters.maxPrice || '',
+    minYear: getSelectValue(filters.minYear),
+    maxYear: getSelectValue(filters.maxYear),
+    minMileage: filters.minMileage || '',
+    maxMileage: filters.maxMileage || '',
+    fuelType: filters.fuelType || [],
+    transmission: getSelectValue(filters.transmission),
+    engineCapacityMin: filters.engineCapacityMin || '1.0',
+    engineCapacityMax: filters.engineCapacityMax || '8.0',
+    bodyType: filters.bodyType || [],
+    model: filters.model || '',
+  })
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -97,15 +116,25 @@ export default function AdvancedFilters({
     }))
   }
 
-  // Apply filters – build query from selectedTerms, province from selectedProvinces, city from cityInputs
+  // Apply filters – convert "any" values to empty string for backend
   const handleApplyFilters = () => {
     const allCities = Object.values(cityInputs).filter(Boolean)
     const updatedFilters = {
-      ...localFilters,
       query: selectedTerms.length > 0 ? selectedTerms.join(',') : '',
+      minPrice: localFilters.minPrice,
+      maxPrice: localFilters.maxPrice,
       province: selectedProvinces.join(','),
       city: allCities.join(','),
-      model: localFilters.model || '',
+      bodyType: localFilters.bodyType,
+      minYear: localFilters.minYear === 'any' ? '' : localFilters.minYear,
+      maxYear: localFilters.maxYear === 'any' ? '' : localFilters.maxYear,
+      minMileage: localFilters.minMileage,
+      maxMileage: localFilters.maxMileage,
+      fuelType: localFilters.fuelType,
+      transmission: localFilters.transmission === 'any' ? '' : localFilters.transmission,
+      engineCapacityMin: localFilters.engineCapacityMin,
+      engineCapacityMax: localFilters.engineCapacityMax,
+      model: localFilters.model,
     }
     onFilterChange(updatedFilters)
   }
@@ -117,18 +146,17 @@ export default function AdvancedFilters({
     setMakeSearch('')
     setExpandedMakes(new Set())
     const resetState = {
-      query: '',
       minPrice: '',
       maxPrice: '',
       province: '',
       city: '',
       bodyType: [],
-      minYear: '',
-      maxYear: '',
+      minYear: 'any',
+      maxYear: 'any',
       minMileage: '',
       maxMileage: '',
       fuelType: [],
-      transmission: '',
+      transmission: 'any',
       engineCapacityMin: '1.0',
       engineCapacityMax: '8.0',
       model: '',
@@ -137,7 +165,12 @@ export default function AdvancedFilters({
     if (onResetFilters) {
       onResetFilters()
     } else {
-      onFilterChange(resetState)
+      onFilterChange({
+        query: '',
+        ...resetState,
+        province: '',
+        city: '',
+      })
     }
   }
 
@@ -152,7 +185,6 @@ export default function AdvancedFilters({
         <AccordionItem value="item-1">
           <AccordionTrigger>Keywords</AccordionTrigger>
           <AccordionContent className="space-y-3">
-            {/* Make search */}
             <Input
               placeholder="Search makes..."
               value={makeSearch}
@@ -160,7 +192,6 @@ export default function AdvancedFilters({
               className="w-full"
             />
             
-            {/* Makes checklist with expandable models */}
             <div className="max-h-64 overflow-y-auto space-y-1 border rounded-md p-2">
               {availableMakes
                 .filter(make => make.toLowerCase().includes(makeSearch.toLowerCase()))
@@ -240,11 +271,10 @@ export default function AdvancedFilters({
               )}
             </div>
             
-            {/* Model search (free text) */}
             <Input
               name="model"
               placeholder="Search model (free text)..."
-              value={localFilters.model || ''}
+              value={localFilters.model}
               onChange={handleInputChange}
               className="w-full"
             />
@@ -343,7 +373,7 @@ export default function AdvancedFilters({
                   <SelectValue placeholder="Min Year" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Any</SelectItem>
+                  <SelectItem value="any">Any</SelectItem>
                   {years.map((y) => (
                     <SelectItem key={y} value={String(y)}>
                       {y}
@@ -356,7 +386,7 @@ export default function AdvancedFilters({
                   <SelectValue placeholder="Max Year" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Any</SelectItem>
+                  <SelectItem value="any">Any</SelectItem>
                   {years.map((y) => (
                     <SelectItem key={y} value={String(y)}>
                       {y}
@@ -413,7 +443,7 @@ export default function AdvancedFilters({
                   <SelectValue placeholder="Any" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Any</SelectItem>
+                  <SelectItem value="any">Any</SelectItem>
                   <SelectItem value="Automatic">Automatic</SelectItem>
                   <SelectItem value="Manual">Manual</SelectItem>
                 </SelectContent>
