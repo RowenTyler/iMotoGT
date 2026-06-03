@@ -21,19 +21,19 @@ export default function ResultsPage() {
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null)
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false)
 
-  // Parse filters from URL
-  // ✅ A: query remains comma-separated string, province supports multiple via getAll+join, city added
+  // Parse filters from URL (including suburb)
   const filters = useMemo(() => {
     const params = new URLSearchParams(searchParams.toString())
     const allProvinces = params.getAll("province")
     const provinceValue = allProvinces.length > 1 ? allProvinces.join(",") : (params.get("province") || "")
     
     return {
-      query: params.get("query") || "",               // comma-separated terms
+      query: params.get("query") || "",
       minPrice: params.get("minPrice") ? Number(params.get("minPrice")) : undefined,
       maxPrice: params.get("maxPrice") ? Number(params.get("maxPrice")) : undefined,
-      province: provinceValue,                        // comma-separated if multiple
-      city: params.get("city") || "",                 // NEW: city filter
+      province: provinceValue,
+      city: params.get("city") || "",
+      suburb: params.get("suburb") || "",
       bodyType: params.getAll("bodyType") || [],
       minYear: params.get("minYear") || "",
       maxYear: params.get("maxYear") || "",
@@ -46,18 +46,113 @@ export default function ResultsPage() {
     }
   }, [searchParams])
 
-  // Generate cache key based on filters
+  // -----------------------------------------------------------------
+  // 1. Fetch FULL vehicle list (unfiltered) for persistent hierarchy
+  // -----------------------------------------------------------------
+  const fetchAllVehicles = useCallback(async () => {
+    try {
+      const { vehicleService } = await import("@/lib/vehicle-service")
+      const data = await vehicleService.getVehicles()
+      const vehicles = Array.isArray(data) ? data : data.vehicles || []
+      // Build hierarchy and location data from all vehicles
+      const modelsMap: Record<string, string[]> = {}
+      const citiesMap: Record<string, string[]> = {}
+      const suburbsMap: Record<string, string[]> = {}
+      
+      vehicles.forEach((v: Vehicle) => {
+        // Makes & models
+        if (v.make && v.model) {
+          if (!modelsMap[v.make]) modelsMap[v.make] = []
+          if (!modelsMap[v.make].includes(v.model)) modelsMap[v.make].push(v.model)
+        }
+        // Cities by province
+        if (v.province && v.city) {
+          if (!citiesMap[v.province]) citiesMap[v.province] = []
+          if (!citiesMap[v.province].includes(v.city)) citiesMap[v.province].push(v.city)
+        }
+        // Suburbs by city (from seller data if available, or from vehicle city)
+        if (v.city && v.sellerSuburb) {
+          if (!suburbsMap[v.city]) suburbsMap[v.city] = []
+          if (!suburbsMap[v.city].includes(v.sellerSuburb)) suburbsMap[v.city].push(v.sellerSuburb)
+        }
+      })
+      
+      // Sort all arrays
+      Object.keys(modelsMap).forEach(make => modelsMap[make].sort())
+      Object.keys(citiesMap).forEach(prov => citiesMap[prov].sort())
+      Object.keys(suburbsMap).forEach(city => suburbsMap[city].sort())
+      
+      return {
+        vehicles,
+        hierarchy: { makes: Object.keys(modelsMap).sort(), models: modelsMap },
+        citiesByProvince: citiesMap,
+        suburbsByCity: suburbsMap,
+        timestamp: Date.now()
+      }
+    } catch (error) {
+      console.error("Error fetching all vehicles for hierarchy:", error)
+      return {
+        vehicles: [],
+        hierarchy: { makes: [], models: {} },
+        citiesByProvince: {},
+        suburbsByCity: {},
+        timestamp: Date.now()
+      }
+    }
+  }, [])
+
+  // Cache the full list with a global key (no filters)
+  const { data: fullVehicleData, loading: fullLoading } = useVehicleList(
+    "all-vehicles-master",
+    fetchAllVehicles,
+    { enabled: true, maxAge: 5 * 60 * 1000, forceRefresh: false }
+  )
+
+  // Derive allMakes, allModels, citiesByProvince, suburbsByCity from the full dataset
+  const { allMakes, allModels, citiesByProvince, suburbsByCity } = useMemo(() => {
+    const vehicles = fullVehicleData?.vehicles || []
+    const modelsMap: Record<string, string[]> = {}
+    const citiesMap: Record<string, string[]> = {}
+    const suburbsMap: Record<string, string[]> = {}
+    
+    vehicles.forEach((v: Vehicle) => {
+      if (v.make && v.model) {
+        if (!modelsMap[v.make]) modelsMap[v.make] = []
+        if (!modelsMap[v.make].includes(v.model)) modelsMap[v.make].push(v.model)
+      }
+      if (v.province && v.city) {
+        if (!citiesMap[v.province]) citiesMap[v.province] = []
+        if (!citiesMap[v.province].includes(v.city)) citiesMap[v.province].push(v.city)
+      }
+      if (v.city && v.sellerSuburb) {
+        if (!suburbsMap[v.city]) suburbsMap[v.city] = []
+        if (!suburbsMap[v.city].includes(v.sellerSuburb)) suburbsMap[v.city].push(v.sellerSuburb)
+      }
+    })
+    
+    Object.keys(modelsMap).forEach(make => modelsMap[make].sort())
+    Object.keys(citiesMap).forEach(prov => citiesMap[prov].sort())
+    Object.keys(suburbsMap).forEach(city => suburbsMap[city].sort())
+    
+    return {
+      allMakes: Object.keys(modelsMap).sort(),
+      allModels: modelsMap,
+      citiesByProvince: citiesMap,
+      suburbsByCity: suburbsMap,
+    }
+  }, [fullVehicleData])
+
+  // -----------------------------------------------------------------
+  // 2. Fetch FILTERED vehicles based on current filters
+  // -----------------------------------------------------------------
   const cacheKey = useMemo(() => {
     const filterString = JSON.stringify(filters, (key, value) => {
-      if (Array.isArray(value)) {
-        return value.sort()
-      }
+      if (Array.isArray(value)) return value.sort()
       return value
     })
     return `results:${filterString}`
   }, [filters])
 
-  // Create fetch function for filtered vehicles
   const fetchFilteredVehicles = useCallback(async () => {
     try {
       const { vehicleService } = await import("@/lib/vehicle-service")
@@ -89,39 +184,15 @@ export default function ResultsPage() {
     }
   }, [filters])
 
-  // Use the vehicle list hook with caching
   const { 
     data: vehicleData, 
-    loading, 
+    loading: resultsLoading, 
     error 
   } = useVehicleList(
     cacheKey,
     fetchFilteredVehicles,
-    {
-      enabled: true,
-      maxAge: 5 * 60 * 1000,
-      forceRefresh: false,
-    }
+    { enabled: true, maxAge: 5 * 60 * 1000, forceRefresh: false }
   )
-
-  // ✅ B: Derive available makes and models hierarchy from loaded vehicles
-  const { availableMakes, availableModels } = useMemo(() => {
-    const vehicles = vehicleData?.vehicles || []
-    const modelsMap: Record<string, string[]> = {}
-    vehicles.forEach(v => {
-      if (v.make) {
-        if (!modelsMap[v.make]) modelsMap[v.make] = []
-        if (v.model && !modelsMap[v.make].includes(v.model)) {
-          modelsMap[v.make].push(v.model)
-        }
-      }
-    })
-    Object.keys(modelsMap).forEach(make => modelsMap[make].sort())
-    return {
-      availableMakes: Object.keys(modelsMap).sort(),
-      availableModels: modelsMap,
-    }
-  }, [vehicleData])
 
   const hasActiveFilters = useMemo(() => {
     return Object.entries(filters).some(([key, value]) => {
@@ -136,7 +207,7 @@ export default function ResultsPage() {
     return vehicleData?.vehicles || []
   }, [vehicleData])
 
-  // ✅ C: handleFilterChange – generic, supports all fields (including city and comma-separated province)
+  // Handle filter changes (include suburb)
   const handleFilterChange = useCallback(
     (newFilters: any) => {
       const params = new URLSearchParams()
@@ -196,6 +267,8 @@ export default function ResultsPage() {
     router.push(`/vehicle-details/${vehicle.id}`)
   }
 
+  const loading = resultsLoading || fullLoading
+
   return (
     <div className="bg-gray-50 dark:bg-gray-900 min-h-screen">
       <Header user={user} {...navigationHandlers} />
@@ -203,13 +276,14 @@ export default function ResultsPage() {
         <div className="lg:grid lg:grid-cols-4 lg:gap-8">
           <aside className="hidden lg:block lg:col-span-1">
             <div className="sticky top-24">
-              {/* ✅ D: Pass availableMakes and availableModels */}
               <AdvancedFilters 
                 filters={filters} 
                 onFilterChange={handleFilterChange} 
                 vehicleCount={filteredVehicles.length}
-                availableMakes={availableMakes}
-                availableModels={availableModels}
+                allMakes={allMakes}
+                allModels={allModels}
+                citiesByProvince={citiesByProvince}
+                suburbsByCity={suburbsByCity}
               />
             </div>
           </aside>
@@ -229,7 +303,17 @@ export default function ResultsPage() {
                     )}
                     {filters.province && (
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-                        Location: {filters.province}
+                        Province: {filters.province}
+                      </span>
+                    )}
+                    {filters.city && (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+                        City: {filters.city}
+                      </span>
+                    )}
+                    {filters.suburb && (
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
+                        Suburb: {filters.suburb}
                       </span>
                     )}
                   </div>
@@ -320,8 +404,10 @@ export default function ResultsPage() {
                 onFilterChange={handleApplyMobileFilters}
                 onResetFilters={handleResetMobileFilters}
                 vehicleCount={filteredVehicles.length}
-                availableMakes={availableMakes}
-                availableModels={availableModels}
+                allMakes={allMakes}
+                allModels={allModels}
+                citiesByProvince={citiesByProvince}
+                suburbsByCity={suburbsByCity}
               />
             </div>
           </SheetContent>
