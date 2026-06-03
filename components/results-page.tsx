@@ -21,7 +21,7 @@ export default function ResultsPage() {
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null)
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false)
 
-  // Parse filters from URL (including suburb)
+  // Parse filters from URL (includes province, city, suburb)
   const filters = useMemo(() => {
     const params = new URLSearchParams(searchParams.toString())
     const allProvinces = params.getAll("province")
@@ -54,6 +54,7 @@ export default function ResultsPage() {
       const { vehicleService } = await import("@/lib/vehicle-service")
       const data = await vehicleService.getVehicles()
       const vehicles = Array.isArray(data) ? data : data.vehicles || []
+      
       // Build hierarchy and location data from all vehicles
       const modelsMap: Record<string, string[]> = {}
       const citiesMap: Record<string, string[]> = {}
@@ -65,12 +66,12 @@ export default function ResultsPage() {
           if (!modelsMap[v.make]) modelsMap[v.make] = []
           if (!modelsMap[v.make].includes(v.model)) modelsMap[v.make].push(v.model)
         }
-        // Cities by province
+        // Cities by province (from vehicles)
         if (v.province && v.city) {
           if (!citiesMap[v.province]) citiesMap[v.province] = []
           if (!citiesMap[v.province].includes(v.city)) citiesMap[v.province].push(v.city)
         }
-        // Suburbs by city (from seller data if available, or from vehicle city)
+        // Suburbs by city (from sellerSuburb)
         if (v.city && v.sellerSuburb) {
           if (!suburbsMap[v.city]) suburbsMap[v.city] = []
           if (!suburbsMap[v.city].includes(v.sellerSuburb)) suburbsMap[v.city].push(v.sellerSuburb)
@@ -101,7 +102,6 @@ export default function ResultsPage() {
     }
   }, [])
 
-  // Cache the full list with a global key (no filters)
   const { data: fullVehicleData, loading: fullLoading } = useVehicleList(
     "all-vehicles-master",
     fetchAllVehicles,
@@ -143,7 +143,7 @@ export default function ResultsPage() {
   }, [fullVehicleData])
 
   // -----------------------------------------------------------------
-  // 2. Fetch FILTERED vehicles based on current filters
+  // 2. Fetch FILTERED vehicles (excluding suburb, which is client-side)
   // -----------------------------------------------------------------
   const cacheKey = useMemo(() => {
     const filterString = JSON.stringify(filters, (key, value) => {
@@ -158,6 +158,7 @@ export default function ResultsPage() {
       const { vehicleService } = await import("@/lib/vehicle-service")
       
       const hasActiveFilters = Object.entries(filters).some(([key, value]) => {
+        if (key === "suburb") return false // suburb filtered client-side
         if (Array.isArray(value)) return value.length > 0
         if (typeof value === "string") return value.trim() !== "" && value !== "1.0" && value !== "8.0"
         if (typeof value === "number") return value > 0
@@ -166,7 +167,10 @@ export default function ResultsPage() {
 
       let data
       if (hasActiveFilters) {
-        data = await vehicleService.filterVehicles(filters)
+        // Build DB filters without suburb
+        const dbFilters = { ...filters }
+        delete dbFilters.suburb
+        data = await vehicleService.filterVehicles(dbFilters)
       } else {
         data = await vehicleService.getVehicles()
       }
@@ -184,15 +188,27 @@ export default function ResultsPage() {
     }
   }, [filters])
 
-  const { 
-    data: vehicleData, 
-    loading: resultsLoading, 
-    error 
-  } = useVehicleList(
+  const { data: vehicleData, loading: resultsLoading, error } = useVehicleList(
     cacheKey,
     fetchFilteredVehicles,
     { enabled: true, maxAge: 5 * 60 * 1000, forceRefresh: false }
   )
+
+  // -----------------------------------------------------------------
+  // 3. Apply client-side suburb filter (since suburb lives on users table)
+  // -----------------------------------------------------------------
+  const filteredVehicles = useMemo(() => {
+    let vehicles = vehicleData?.vehicles || []
+    if (filters.suburb && filters.suburb.trim()) {
+      const suburbTerms = filters.suburb.split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
+      if (suburbTerms.length > 0) {
+        vehicles = vehicles.filter(v => 
+          v.sellerSuburb && suburbTerms.some(term => v.sellerSuburb.toLowerCase().includes(term))
+        )
+      }
+    }
+    return vehicles
+  }, [vehicleData, filters.suburb])
 
   const hasActiveFilters = useMemo(() => {
     return Object.entries(filters).some(([key, value]) => {
@@ -203,11 +219,6 @@ export default function ResultsPage() {
     })
   }, [filters])
 
-  const filteredVehicles = useMemo(() => {
-    return vehicleData?.vehicles || []
-  }, [vehicleData])
-
-  // Handle filter changes (include suburb)
   const handleFilterChange = useCallback(
     (newFilters: any) => {
       const params = new URLSearchParams()

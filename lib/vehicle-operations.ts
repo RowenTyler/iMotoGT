@@ -24,6 +24,7 @@ import type { Vehicle } from "@/types/vehicle"
  * Query for list/search/filter views.
  * Includes images so card thumbnails work correctly.
  * No description — only needed on the detail page.
+ * ✅ ADDED suburb to users join
  */
 const VEHICLE_LIST_QUERY = `
   id,
@@ -45,12 +46,13 @@ const VEHICLE_LIST_QUERY = `
   contact_privacy_enabled,
   created_at,
   updated_at,
-  users(id, first_name, last_name, profile_pic, city, province)
+  users(id, first_name, last_name, profile_pic, city, province, suburb)
 `
 
 /**
  * Full detail query used for vehicle detail pages and saved vehicles.
  * Includes full images array and complete seller contact information.
+ * ✅ ADDED suburb to users join
  */
 const VEHICLE_DETAIL_QUERY = `
   id,
@@ -214,7 +216,6 @@ export async function filterVehicles(
           if (spaceIdx > -1) {
             const makePart = term.slice(0, spaceIdx).trim()
             const modelPart = term.slice(spaceIdx + 1).trim()
-            // AND condition for make AND model
             return `make.ilike.%${makePart}%,model.ilike.%${modelPart}%`
           }
           return `make.ilike.%${term}%`
