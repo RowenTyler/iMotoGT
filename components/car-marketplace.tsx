@@ -477,7 +477,7 @@ export default function CarMarketplace() {
 
     const queryParams = new URLSearchParams()
 
-    if (selectedTerms.length > 0) queryParams.set("query", selectedTerms.join(" "))
+    if (selectedTerms.length > 0) queryParams.set("query", selectedTerms.join(","))
     if (minPriceInputRef.current?.value) queryParams.set("minPrice", minPriceInputRef.current.value.replace(/\D/g, ""))
     if (maxPriceInputRef.current?.value) queryParams.set("maxPrice", maxPriceInputRef.current.value.replace(/\D/g, ""))
     if (locationSelectRef.current?.value) queryParams.set("province", locationSelectRef.current.value)
