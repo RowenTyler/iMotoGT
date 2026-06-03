@@ -11,7 +11,7 @@ import { Header } from "./ui/header"
 import VehicleDetails from "./vehicle-details"
 import type { Vehicle } from "@/types/vehicle"
 import type { UserProfile } from "@/types/user"
-import { getListingLimit } from "@/lib/admin-config"
+import { getListingLimit, isPrivilegedUser } from "@/lib/admin-config"
 
 interface DashboardProps {
   user: UserProfile
@@ -100,6 +100,32 @@ export default function Dashboard({
   const [isDeleting, setIsDeleting] = useState(false)
   const [showUpgradeModal, setShowUpgradeModal] = useState(false)
   const [uploadBlocked, setUploadBlocked] = useState(false)
+
+  // ── Admin / metrics routing ──────────────────────────────────────────────
+  const isAdmin = isPrivilegedUser(user?.email)
+
+  /**
+   * Central metrics routing function.
+   * Returns the destination path based on user role/tier.
+   * 
+   * FUTURE TIERS (do not implement yet, provision only):
+   * - GO subscriber      → "/dashboard/metrics/go"
+   * - PLUS subscriber    → "/dashboard/metrics/plus"
+   * - DEALER enterprise  → "/dealer/analytics"
+   * 
+   * Current implementation:
+   * - SUPER_ADMIN / privileged → "/admin/analytics"
+   * - Free USER               → null (non-navigational, stays on dashboard)
+   */
+  const getMetricsDestination = (): string | null => {
+    if (isAdmin) return "/admin/analytics"
+    // Future: if (user?.plan === "plus") return "/dashboard/metrics/plus"
+    // Future: if (user?.plan === "go") return "/dashboard/metrics/go"
+    // Future: if (user?.dealerId) return "/dealer/analytics"
+    return null
+  }
+
+  const metricsDestination = getMetricsDestination()
 
   // Filter soft-deleted vehicles
   const safeSavedCars = Array.isArray(savedCars)
@@ -318,8 +344,13 @@ export default function Dashboard({
                     </Card>
                   </div>
 
-                  {/* Metrics Card */}
-                  <Card className="col-span-1 rounded-3xl p-5 w-full h-full flex flex-col justify-between bg-gradient-to-br from-white to-gray-50">
+                  {/* Metrics Card (Desktop) */}
+                  <Card 
+                    className={`col-span-1 rounded-3xl p-5 w-full h-full flex flex-col justify-between bg-gradient-to-br from-white to-gray-50 ${
+                      metricsDestination ? "cursor-pointer hover:shadow-xl hover:-translate-y-1 transition-all" : ""
+                    }`}
+                    onClick={() => metricsDestination && router.push(metricsDestination)}
+                  >
                     <div className="flex justify-between items-center">
                       <h3 className="text-xl font-semibold">Metrics</h3>
                       <Eye className="w-6 h-6 text-[#FF6700]" />
@@ -329,6 +360,9 @@ export default function Dashboard({
                         <span className="text-5xl font-bold">{totalListings}</span>
                         <span className="text-sm text-gray-500">listings</span>
                       </div>
+                      {metricsDestination && (
+                        <p className="text-xs text-[#FF6700] mt-1 font-medium">View Analytics →</p>
+                      )}
                       <div className="w-full bg-gray-200 rounded-full h-2 mt-3">
                         <div
                           className="bg-[#3E5641] h-2 rounded-full"
@@ -684,13 +718,22 @@ export default function Dashboard({
                 </Card>
               </div>
 
-              <Card className="col-span-1 rounded-xl p-2 flex flex-col items-center justify-center">
+              {/* Metrics Card (Mobile) */}
+              <Card 
+                className={`col-span-1 rounded-xl p-2 flex flex-col items-center justify-center ${
+                  metricsDestination ? "cursor-pointer hover:shadow-md transition-all" : ""
+                }`}
+                onClick={() => metricsDestination && router.push(metricsDestination)}
+              >
                 <div className="flex justify-between items-center mb-2 w-full">
                   <h3 className="text-xs font-semibold text-[#3E5641]">Metrics</h3>
                   <Eye className="w-3 h-3 text-[#FF6700]" />
                 </div>
                 <div className="text-xl font-bold text-[#3E5641]">{totalListings}</div>
                 <div className="text-xs text-[#6F7F69]">Listings</div>
+                {metricsDestination && (
+                  <div className="text-[10px] text-[#FF6700] font-medium mt-0.5">Analytics →</div>
+                )}
               </Card>
 
               <Card
