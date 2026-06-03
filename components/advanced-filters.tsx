@@ -10,16 +10,20 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { Slider } from "@/components/ui/slider"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
+import { ChevronRight, ChevronDown } from "lucide-react"
 
 interface AdvancedFiltersProps {
   filters: any
   onFilterChange: (filters: any) => void
   onResetFilters?: () => void
+  vehicleCount?: number
+  availableMakes?: string[]
+  availableModels?: Record<string, string[]>
 }
 
 const bodyTypes = ["Sedan", "SUV", "Truck", "Motorcycle", "Hatchback", "Convertible"]
 const fuelTypes = ["Petrol", "Diesel", "Electric", "Hybrid"]
-const provinces = [
+const allProvinces = [
   "Western Cape",
   "Gauteng",
   "KwaZulu-Natal",
@@ -32,22 +36,45 @@ const provinces = [
 ]
 const years = Array.from({ length: 30 }, (_, i) => new Date().getFullYear() - i)
 
-export default function AdvancedFilters({ filters, onFilterChange, onResetFilters }: AdvancedFiltersProps) {
+export default function AdvancedFilters({
+  filters,
+  onFilterChange,
+  onResetFilters,
+  vehicleCount,
+  availableMakes = [],
+  availableModels = {},
+}: AdvancedFiltersProps) {
+  // State for hierarchical make/model selection
+  const [selectedTerms, setSelectedTerms] = useState<string[]>(() => {
+    if (!filters.query) return []
+    return filters.query.split(',').map((t: string) => t.trim()).filter(Boolean)
+  })
+  const [makeSearch, setMakeSearch] = useState('')
+  const [expandedMakes, setExpandedMakes] = useState<Set<string>>(new Set())
+  
+  // Province and city selection (multi-province with city inputs)
+  const [selectedProvinces, setSelectedProvinces] = useState<string[]>(() => {
+    if (!filters.province) return []
+    return filters.province.split(',').map((p: string) => p.trim()).filter(Boolean)
+  })
+  const [selectedCities, setSelectedCities] = useState<string[]>(() => {
+    if (!filters.city) return []
+    return filters.city.split(',').map((c: string) => c.trim()).filter(Boolean)
+  })
+  const [cityInputs, setCityInputs] = useState<Record<string, string>>(() => {
+    const initial: Record<string, string> = {}
+    selectedProvinces.forEach((province, idx) => {
+      if (selectedCities[idx]) initial[province] = selectedCities[idx]
+    })
+    return initial
+  })
+  
+  // Other filter values
   const [localFilters, setLocalFilters] = useState(filters)
-  const [make, setMake] = useState("")
-  const [model, setModel] = useState("")
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
     setLocalFilters((prev: any) => ({ ...prev, [name]: value }))
-  }
-
-  const handleMakeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setMake(e.target.value)
-  }
-
-  const handleModelChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setModel(e.target.value)
   }
 
   const handleSelectChange = (name: string, value: string) => {
@@ -70,36 +97,43 @@ export default function AdvancedFilters({ filters, onFilterChange, onResetFilter
     }))
   }
 
+  // Apply filters – build query from selectedTerms, province from selectedProvinces, city from cityInputs
   const handleApplyFilters = () => {
-    const updatedFilters = { ...localFilters }
-    const queryParts = []
-    if (make.trim()) queryParts.push(make)
-    if (model.trim()) queryParts.push(model)
-    if (queryParts.length > 0) {
-      updatedFilters.query = queryParts.join(" ")
+    const allCities = Object.values(cityInputs).filter(Boolean)
+    const updatedFilters = {
+      ...localFilters,
+      query: selectedTerms.length > 0 ? selectedTerms.join(',') : '',
+      province: selectedProvinces.join(','),
+      city: allCities.join(','),
+      model: localFilters.model || '',
     }
     onFilterChange(updatedFilters)
   }
 
   const handleResetFilters = () => {
+    setSelectedTerms([])
+    setSelectedProvinces([])
+    setCityInputs({})
+    setMakeSearch('')
+    setExpandedMakes(new Set())
     const resetState = {
-      query: "",
-      minPrice: "",
-      maxPrice: "",
-      province: "",
+      query: '',
+      minPrice: '',
+      maxPrice: '',
+      province: '',
+      city: '',
       bodyType: [],
-      minYear: "",
-      maxYear: "",
-      minMileage: "",
-      maxMileage: "",
+      minYear: '',
+      maxYear: '',
+      minMileage: '',
+      maxMileage: '',
       fuelType: [],
-      transmission: "",
-      engineCapacityMin: "1.0",
-      engineCapacityMax: "8.0",
+      transmission: '',
+      engineCapacityMin: '1.0',
+      engineCapacityMax: '8.0',
+      model: '',
     }
     setLocalFilters(resetState)
-    setMake("")
-    setModel("")
     if (onResetFilters) {
       onResetFilters()
     } else {
@@ -110,44 +144,114 @@ export default function AdvancedFilters({ filters, onFilterChange, onResetFilter
   return (
     <div className="p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg">
       <h3 className="text-xl font-bold mb-6 text-gray-900 dark:text-white">Advanced Filters</h3>
+      {vehicleCount !== undefined && (
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{vehicleCount} vehicle(s) found</p>
+      )}
       <Accordion type="multiple" defaultValue={["item-1", "item-2", "item-3", "item-4", "item-5", "item-6"]}>
+        {/* KEYWORDS – hierarchical make/model selection */}
         <AccordionItem value="item-1">
           <AccordionTrigger>Keywords</AccordionTrigger>
-          <AccordionContent className="space-y-4">
-            <div>
-              <Label htmlFor="make-input" className="text-sm font-medium mb-2 block">
-                Make
-              </Label>
-              <Input
-                id="make-input"
-                placeholder="e.g., Toyota, Ford, Volkswagen"
-                value={make}
-                onChange={handleMakeChange}
-                className="w-full"
-              />
-            </div>
-            <div>
-              <Label htmlFor="model-input" className="text-sm font-medium mb-2 block">
-                Model
-              </Label>
-              <Input
-                id="model-input"
-                placeholder="e.g., Corolla, Mustang, Golf"
-                value={model}
-                onChange={handleModelChange}
-                className="w-full"
-              />
-            </div>
+          <AccordionContent className="space-y-3">
+            {/* Make search */}
             <Input
-              name="query"
-              placeholder="or search keywords"
-              value={localFilters.query}
+              placeholder="Search makes..."
+              value={makeSearch}
+              onChange={e => setMakeSearch(e.target.value)}
+              className="w-full"
+            />
+            
+            {/* Makes checklist with expandable models */}
+            <div className="max-h-64 overflow-y-auto space-y-1 border rounded-md p-2">
+              {availableMakes
+                .filter(make => make.toLowerCase().includes(makeSearch.toLowerCase()))
+                .map(make => {
+                  const isMakeSelected = selectedTerms.includes(make)
+                  const isExpanded = expandedMakes.has(make)
+                  const makeModels = availableModels[make] || []
+                  
+                  return (
+                    <div key={make}>
+                      <div className="flex items-center justify-between py-1 px-1 hover:bg-gray-50 dark:hover:bg-gray-700 rounded">
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            id={`make-${make}`}
+                            checked={isMakeSelected}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedTerms(prev => [...prev.filter(t => !t.startsWith(make + ' ')), make])
+                              } else {
+                                setSelectedTerms(prev => prev.filter(t => t !== make && !t.startsWith(make + ' ')))
+                              }
+                            }}
+                          />
+                          <Label htmlFor={`make-${make}`} className="cursor-pointer font-medium text-sm">
+                            {make}
+                          </Label>
+                        </div>
+                        {makeModels.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => setExpandedMakes(prev => {
+                              const next = new Set(prev)
+                              next.has(make) ? next.delete(make) : next.add(make)
+                              return next
+                            })}
+                            className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1"
+                          >
+                            {isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                          </button>
+                        )}
+                      </div>
+                      
+                      {isExpanded && makeModels.length > 0 && (
+                        <div className="ml-6 space-y-1 mt-1">
+                          {makeModels.map(model => {
+                            const term = `${make} ${model}`
+                            const isModelSelected = selectedTerms.includes(term)
+                            return (
+                              <div key={model} className="flex items-center gap-2 py-0.5 px-1 hover:bg-gray-50 dark:hover:bg-gray-700 rounded">
+                                <Checkbox
+                                  id={`model-${make}-${model}`}
+                                  checked={isModelSelected}
+                                  onCheckedChange={(checked) => {
+                                    if (checked) {
+                                      setSelectedTerms(prev => {
+                                        const withoutMakeOnly = prev.filter(t => t !== make)
+                                        return [...withoutMakeOnly, term]
+                                      })
+                                    } else {
+                                      setSelectedTerms(prev => prev.filter(t => t !== term))
+                                    }
+                                  }}
+                                />
+                                <Label htmlFor={`model-${make}-${model}`} className="cursor-pointer text-sm text-gray-700 dark:text-gray-300">
+                                  {model}
+                                </Label>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              {availableMakes.length === 0 && (
+                <p className="text-sm text-gray-400 text-center py-4">Loading makes...</p>
+              )}
+            </div>
+            
+            {/* Model search (free text) */}
+            <Input
+              name="model"
+              placeholder="Search model (free text)..."
+              value={localFilters.model || ''}
               onChange={handleInputChange}
               className="w-full"
             />
           </AccordionContent>
         </AccordionItem>
 
+        {/* PRICE */}
         <AccordionItem value="item-2">
           <AccordionTrigger>Price</AccordionTrigger>
           <AccordionContent className="space-y-4">
@@ -168,25 +272,51 @@ export default function AdvancedFilters({ filters, onFilterChange, onResetFilter
           </AccordionContent>
         </AccordionItem>
 
+        {/* LOCATION – province checkboxes with city inputs */}
         <AccordionItem value="item-3">
           <AccordionTrigger>Location</AccordionTrigger>
-          <AccordionContent>
-            <Select value={localFilters.province} onValueChange={(value) => handleSelectChange("province", value)}>
-              <SelectTrigger>
-                <SelectValue placeholder="All Provinces" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Provinces</SelectItem>
-                {provinces.map((p) => (
-                  <SelectItem key={p} value={p}>
-                    {p}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <AccordionContent className="space-y-3">
+            <p className="text-xs text-gray-500 dark:text-gray-400">Select provinces (expand for cities)</p>
+            <div className="space-y-2">
+              {allProvinces.map(province => {
+                const isChecked = selectedProvinces.includes(province)
+                return (
+                  <div key={province}>
+                    <div className="flex items-center gap-2 py-1">
+                      <Checkbox
+                        id={`province-${province}`}
+                        checked={isChecked}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setSelectedProvinces(prev => [...prev, province])
+                          } else {
+                            setSelectedProvinces(prev => prev.filter(p => p !== province))
+                            setCityInputs(prev => { const n = { ...prev }; delete n[province]; return n })
+                          }
+                        }}
+                      />
+                      <Label htmlFor={`province-${province}`} className="cursor-pointer font-medium text-sm">
+                        {province}
+                      </Label>
+                    </div>
+                    {isChecked && (
+                      <div className="ml-6 mt-1">
+                        <Input
+                          placeholder={`City in ${province}...`}
+                          value={cityInputs[province] || ''}
+                          onChange={e => setCityInputs(prev => ({ ...prev, [province]: e.target.value }))}
+                          className="text-sm h-8"
+                        />
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
           </AccordionContent>
         </AccordionItem>
 
+        {/* BODY TYPE */}
         <AccordionItem value="item-4">
           <AccordionTrigger>Body Type</AccordionTrigger>
           <AccordionContent className="space-y-2">
@@ -203,6 +333,7 @@ export default function AdvancedFilters({ filters, onFilterChange, onResetFilter
           </AccordionContent>
         </AccordionItem>
 
+        {/* YEAR & MILEAGE */}
         <AccordionItem value="item-5">
           <AccordionTrigger>Year & Mileage</AccordionTrigger>
           <AccordionContent className="space-y-4">
@@ -212,7 +343,7 @@ export default function AdvancedFilters({ filters, onFilterChange, onResetFilter
                   <SelectValue placeholder="Min Year" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="any">Any</SelectItem>
+                  <SelectItem value="">Any</SelectItem>
                   {years.map((y) => (
                     <SelectItem key={y} value={String(y)}>
                       {y}
@@ -225,7 +356,7 @@ export default function AdvancedFilters({ filters, onFilterChange, onResetFilter
                   <SelectValue placeholder="Max Year" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="any">Any</SelectItem>
+                  <SelectItem value="">Any</SelectItem>
                   {years.map((y) => (
                     <SelectItem key={y} value={String(y)}>
                       {y}
@@ -253,6 +384,7 @@ export default function AdvancedFilters({ filters, onFilterChange, onResetFilter
           </AccordionContent>
         </AccordionItem>
 
+        {/* SPECIFICATIONS */}
         <AccordionItem value="item-6">
           <AccordionTrigger>Specifications</AccordionTrigger>
           <AccordionContent className="space-y-4">
@@ -281,7 +413,7 @@ export default function AdvancedFilters({ filters, onFilterChange, onResetFilter
                   <SelectValue placeholder="Any" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="any">Any</SelectItem>
+                  <SelectItem value="">Any</SelectItem>
                   <SelectItem value="Automatic">Automatic</SelectItem>
                   <SelectItem value="Manual">Manual</SelectItem>
                 </SelectContent>

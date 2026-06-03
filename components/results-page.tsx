@@ -11,7 +11,7 @@ import type { Vehicle } from "@/types/vehicle"
 import { Search, SlidersHorizontal } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
-import { useVehicleList } from "@/components/VehicleProvider" // Add import
+import { useVehicleList } from "@/components/VehicleProvider"
 
 export default function ResultsPage() {
   const router = useRouter()
@@ -22,13 +22,18 @@ export default function ResultsPage() {
   const [isMobileFilterOpen, setIsMobileFilterOpen] = useState(false)
 
   // Parse filters from URL
+  // ✅ A: query remains comma-separated string, province supports multiple via getAll+join, city added
   const filters = useMemo(() => {
     const params = new URLSearchParams(searchParams.toString())
+    const allProvinces = params.getAll("province")
+    const provinceValue = allProvinces.length > 1 ? allProvinces.join(",") : (params.get("province") || "")
+    
     return {
-      query: params.get("query") || "",
+      query: params.get("query") || "",               // comma-separated terms
       minPrice: params.get("minPrice") ? Number(params.get("minPrice")) : undefined,
       maxPrice: params.get("maxPrice") ? Number(params.get("maxPrice")) : undefined,
-      province: params.get("province") || "",
+      province: provinceValue,                        // comma-separated if multiple
+      city: params.get("city") || "",                 // NEW: city filter
       bodyType: params.getAll("bodyType") || [],
       minYear: params.get("minYear") || "",
       maxYear: params.get("maxYear") || "",
@@ -43,9 +48,7 @@ export default function ResultsPage() {
 
   // Generate cache key based on filters
   const cacheKey = useMemo(() => {
-    // Create a stable string representation of filters for cache key
     const filterString = JSON.stringify(filters, (key, value) => {
-      // Sort arrays to ensure consistent cache key
       if (Array.isArray(value)) {
         return value.sort()
       }
@@ -59,7 +62,6 @@ export default function ResultsPage() {
     try {
       const { vehicleService } = await import("@/lib/vehicle-service")
       
-      // Check if we have any active filters
       const hasActiveFilters = Object.entries(filters).some(([key, value]) => {
         if (Array.isArray(value)) return value.length > 0
         if (typeof value === "string") return value.trim() !== "" && value !== "1.0" && value !== "8.0"
@@ -71,11 +73,9 @@ export default function ResultsPage() {
       if (hasActiveFilters) {
         data = await vehicleService.filterVehicles(filters)
       } else {
-        // If no filters, get all vehicles
         data = await vehicleService.getVehicles()
       }
 
-      // Ensure we return a VehicleListResponse format
       const vehicles = Array.isArray(data) ? data : data.vehicles || []
       return {
         vehicles,
@@ -99,12 +99,30 @@ export default function ResultsPage() {
     fetchFilteredVehicles,
     {
       enabled: true,
-      maxAge: 5 * 60 * 1000, // 5 minutes cache for results
-      forceRefresh: false, // Don't force refresh on mount
+      maxAge: 5 * 60 * 1000,
+      forceRefresh: false,
     }
   )
 
-  // Check if we have any active filters for display
+  // ✅ B: Derive available makes and models hierarchy from loaded vehicles
+  const { availableMakes, availableModels } = useMemo(() => {
+    const vehicles = vehicleData?.vehicles || []
+    const modelsMap: Record<string, string[]> = {}
+    vehicles.forEach(v => {
+      if (v.make) {
+        if (!modelsMap[v.make]) modelsMap[v.make] = []
+        if (v.model && !modelsMap[v.make].includes(v.model)) {
+          modelsMap[v.make].push(v.model)
+        }
+      }
+    })
+    Object.keys(modelsMap).forEach(make => modelsMap[make].sort())
+    return {
+      availableMakes: Object.keys(modelsMap).sort(),
+      availableModels: modelsMap,
+    }
+  }, [vehicleData])
+
   const hasActiveFilters = useMemo(() => {
     return Object.entries(filters).some(([key, value]) => {
       if (Array.isArray(value)) return value.length > 0
@@ -114,19 +132,19 @@ export default function ResultsPage() {
     })
   }, [filters])
 
-  // Extract vehicles from data
   const filteredVehicles = useMemo(() => {
     return vehicleData?.vehicles || []
   }, [vehicleData])
 
+  // ✅ C: handleFilterChange – generic, supports all fields (including city and comma-separated province)
   const handleFilterChange = useCallback(
     (newFilters: any) => {
-      // Create URL params from new filters
       const params = new URLSearchParams()
       Object.entries(newFilters).forEach(([key, value]) => {
+        if (value === undefined || value === null || value === "") return
         if (Array.isArray(value)) {
           value.forEach((v) => params.append(key, v))
-        } else if (value) {
+        } else {
           params.set(key, String(value))
         }
       })
@@ -144,10 +162,7 @@ export default function ResultsPage() {
     onLoginClick: () => router.push("/login"),
     onDashboardClick: () => router.push("/dashboard"),
     onGoHome: () => router.push("/home"),
-    onShowAllCars: () => {
-      // Clear filters and show all vehicles
-      router.push("/results")
-    },
+    onShowAllCars: () => router.push("/results"),
     onGoToSellPage: () => router.push("/upload-vehicle"),
     onSignOut: handleSignOut,
   }
@@ -174,11 +189,9 @@ export default function ResultsPage() {
   }
 
   const handleResetMobileFilters = () => {
-    // Reset all filters
     handleFilterChange({})
   }
 
-  // Handle vehicle click - navigate to details page instead of showing inline
   const handleVehicleClick = (vehicle: Vehicle) => {
     router.push(`/vehicle-details/${vehicle.id}`)
   }
@@ -190,10 +203,13 @@ export default function ResultsPage() {
         <div className="lg:grid lg:grid-cols-4 lg:gap-8">
           <aside className="hidden lg:block lg:col-span-1">
             <div className="sticky top-24">
+              {/* ✅ D: Pass availableMakes and availableModels */}
               <AdvancedFilters 
                 filters={filters} 
                 onFilterChange={handleFilterChange} 
                 vehicleCount={filteredVehicles.length}
+                availableMakes={availableMakes}
+                availableModels={availableModels}
               />
             </div>
           </aside>
@@ -216,7 +232,6 @@ export default function ResultsPage() {
                         Location: {filters.province}
                       </span>
                     )}
-                    {/* Add more filter chips as needed */}
                   </div>
                 )}
               </div>
@@ -273,9 +288,7 @@ export default function ResultsPage() {
               <div className="text-center py-16 bg-white dark:bg-gray-800 rounded-lg">
                 <Search className="w-16 h-16 mx-auto mb-4 text-gray-400" />
                 <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-                  {hasActiveFilters
-                    ? "No Vehicles Found"
-                    : "No Vehicles Available"}
+                  {hasActiveFilters ? "No Vehicles Found" : "No Vehicles Available"}
                 </h3>
                 <p className="text-gray-500 dark:text-gray-400 mt-2">
                   {hasActiveFilters
@@ -307,6 +320,8 @@ export default function ResultsPage() {
                 onFilterChange={handleApplyMobileFilters}
                 onResetFilters={handleResetMobileFilters}
                 vehicleCount={filteredVehicles.length}
+                availableMakes={availableMakes}
+                availableModels={availableModels}
               />
             </div>
           </SheetContent>

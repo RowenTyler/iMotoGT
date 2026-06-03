@@ -201,13 +201,29 @@ export async function filterVehicles(
       .select(VEHICLE_LIST_QUERY)
       .eq("status", "active")
 
+    // ─── QUERY (make/model) – supports comma-separated terms ──────────────
     if (filters.query && filters.query.trim()) {
-      const searchTerm = `%${filters.query.trim()}%`
-      query = query.or(
-        `make.ilike.${searchTerm},model.ilike.${searchTerm},variant.ilike.${searchTerm}`
-      )
+      const terms = filters.query
+        .split(',')
+        .map(t => t.trim())
+        .filter(Boolean)
+
+      if (terms.length > 0) {
+        const orParts = terms.map(term => {
+          const spaceIdx = term.indexOf(' ')
+          if (spaceIdx > -1) {
+            const makePart = term.slice(0, spaceIdx).trim()
+            const modelPart = term.slice(spaceIdx + 1).trim()
+            // AND condition for make AND model
+            return `make.ilike.%${makePart}%,model.ilike.%${modelPart}%`
+          }
+          return `make.ilike.%${term}%`
+        })
+        query = query.or(orParts.join(','))
+      }
     }
 
+    // ─── PRICE ────────────────────────────────────────────────────────────
     const minPrice =
       filters.minPrice !== undefined
         ? Number(filters.minPrice)
@@ -220,6 +236,7 @@ export async function filterVehicles(
     if (minPrice && !isNaN(minPrice)) query = query.gte("price", minPrice)
     if (maxPrice && !isNaN(maxPrice)) query = query.lte("price", maxPrice)
 
+    // ─── YEAR ──────────────────────────────────────────────────────────────
     const minYear = filters.minYear ? Number(filters.minYear) : undefined
     const maxYear = filters.maxYear ? Number(filters.maxYear) : undefined
 
@@ -228,6 +245,7 @@ export async function filterVehicles(
     if (maxYear && !isNaN(maxYear) && maxYear > 0)
       query = query.lte("year", maxYear)
 
+    // ─── MILEAGE ───────────────────────────────────────────────────────────
     const minMileage =
       filters.minMileage !== undefined
         ? Number(filters.minMileage)
@@ -242,6 +260,7 @@ export async function filterVehicles(
     if (maxMileage && !isNaN(maxMileage))
       query = query.lte("mileage", maxMileage)
 
+    // ─── FUEL TYPE ─────────────────────────────────────────────────────────
     if (filters.fuelType) {
       if (Array.isArray(filters.fuelType) && filters.fuelType.length > 0) {
         const fuelFilters = filters.fuelType
@@ -256,6 +275,7 @@ export async function filterVehicles(
       }
     }
 
+    // ─── TRANSMISSION ──────────────────────────────────────────────────────
     if (
       filters.transmission &&
       filters.transmission.trim() &&
@@ -264,6 +284,7 @@ export async function filterVehicles(
       query = query.ilike("transmission", `%${filters.transmission}%`)
     }
 
+    // ─── BODY TYPE ─────────────────────────────────────────────────────────
     if (filters.bodyType) {
       if (Array.isArray(filters.bodyType) && filters.bodyType.length > 0) {
         const bodyFilters = filters.bodyType
@@ -278,6 +299,7 @@ export async function filterVehicles(
       }
     }
 
+    // ─── ENGINE CAPACITY ───────────────────────────────────────────────────
     const engineMin = filters.engineCapacityMin
       ? Number(filters.engineCapacityMin)
       : undefined
@@ -290,10 +312,27 @@ export async function filterVehicles(
     if (engineMax !== undefined && !isNaN(engineMax) && engineMax < 8.0)
       query = query.lte("engine_capacity", engineMax)
 
-    if (filters.province && filters.province.trim())
-      query = query.ilike("province", `%${filters.province}%`)
-    if (filters.city && filters.city.trim())
-      query = query.ilike("city", `%${filters.city}%`)
+    // ─── PROVINCE – supports multiple comma-separated values ────────────────
+    if (filters.province && filters.province.trim()) {
+      const provinces = filters.province.split(',').map(p => p.trim()).filter(Boolean)
+      if (provinces.length === 1) {
+        query = query.ilike('province', `%${provinces[0]}%`)
+      } else if (provinces.length > 1) {
+        const orConditions = provinces.map(p => `province.ilike.%${p}%`).join(',')
+        query = query.or(orConditions)
+      }
+    }
+
+    // ─── CITY – supports multiple comma-separated values ───────────────────
+    if (filters.city && filters.city.trim()) {
+      const cities = filters.city.split(',').map(c => c.trim()).filter(Boolean)
+      if (cities.length === 1) {
+        query = query.ilike('city', `%${cities[0]}%`)
+      } else if (cities.length > 1) {
+        const orConditions = cities.map(c => `city.ilike.%${c}%`).join(',')
+        query = query.or(orConditions)
+      }
+    }
 
     const { data, error } = await query.order("created_at", {
       ascending: false,
