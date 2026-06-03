@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -56,7 +56,7 @@ export default function AdvancedFilters({
   const toSelectValue = (val: string | undefined) => (val && val !== "" ? val : "any")
 
   // --------------------------------------------------------------
-  // Make / Model hierarchical selection (using full, unfiltered lists)
+  // Make / Model hierarchical selection
   // --------------------------------------------------------------
   const [selectedTerms, setSelectedTerms] = useState<string[]>(() => {
     if (!filters.query) return []
@@ -80,7 +80,8 @@ export default function AdvancedFilters({
     if (!filters.suburb) return []
     return filters.suburb.split(",").map((s: string) => s.trim()).filter(Boolean)
   })
-  // UI expansion states for location hierarchy
+
+  // UI expansion states
   const [expandedProvinces, setExpandedProvinces] = useState<Set<string>>(new Set())
   const [expandedCities, setExpandedCities] = useState<Set<string>>(new Set())
 
@@ -153,25 +154,26 @@ export default function AdvancedFilters({
     }))
   }
 
-  // Location hierarchical handlers
-  const toggleProvinceSelection = (province: string) => {
+  // Location handlers (checkbox selection)
+  const toggleProvince = (province: string) => {
     setSelectedProvinces((prev) =>
       prev.includes(province) ? prev.filter((p) => p !== province) : [...prev, province]
     )
   }
 
-  const toggleCitySelection = (city: string) => {
+  const toggleCity = (city: string) => {
     setSelectedCities((prev) =>
       prev.includes(city) ? prev.filter((c) => c !== city) : [...prev, city]
     )
   }
 
-  const toggleSuburbSelection = (suburb: string) => {
+  const toggleSuburb = (suburb: string) => {
     setSelectedSuburbs((prev) =>
       prev.includes(suburb) ? prev.filter((s) => s !== suburb) : [...prev, suburb]
     )
   }
 
+  // UI expansion toggles
   const toggleProvinceExpansion = (province: string) => {
     setExpandedProvinces((prev) => {
       const next = new Set(prev)
@@ -398,7 +400,7 @@ export default function AdvancedFilters({
           </AccordionContent>
         </AccordionItem>
 
-        {/* LOCATION - hierarchical dropdown checkboxes */}
+        {/* LOCATION - hierarchical dropdown checkboxes with chevrons */}
         <AccordionItem value="item-3">
           <AccordionTrigger>Location</AccordionTrigger>
           <AccordionContent className="space-y-3">
@@ -416,7 +418,7 @@ export default function AdvancedFilters({
                         <Checkbox
                           id={`loc-province-${province}`}
                           checked={isProvinceSelected}
-                          onCheckedChange={() => toggleProvinceSelection(province)}
+                          onCheckedChange={() => toggleProvince(province)}
                         />
                         <Label htmlFor={`loc-province-${province}`} className="cursor-pointer font-medium text-sm">
                           {province}
@@ -446,7 +448,7 @@ export default function AdvancedFilters({
                                   <Checkbox
                                     id={`loc-city-${city}`}
                                     checked={isCitySelected}
-                                    onCheckedChange={() => toggleCitySelection(city)}
+                                    onCheckedChange={() => toggleCity(city)}
                                   />
                                   <Label htmlFor={`loc-city-${city}`} className="cursor-pointer text-sm text-gray-700 dark:text-gray-300">
                                     {city}
@@ -469,7 +471,7 @@ export default function AdvancedFilters({
                                       <Checkbox
                                         id={`loc-suburb-${suburb}`}
                                         checked={selectedSuburbs.includes(suburb)}
-                                        onCheckedChange={() => toggleSuburbSelection(suburb)}
+                                        onCheckedChange={() => toggleSuburb(suburb)}
                                       />
                                       <Label htmlFor={`loc-suburb-${suburb}`} className="cursor-pointer text-sm text-gray-700 dark:text-gray-300">
                                         {suburb}
