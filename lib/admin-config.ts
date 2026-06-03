@@ -9,9 +9,9 @@
 
 export const PRIVILEGED_EMAILS: string[] = [
   "nkosinathinathy70@gmail.com",
-  "tyler.rowend@gmail.com",
   "rowenrichardson@gmail.com",
   "richardson.rowen@gmail.com",
+  "tyler.rowend@gmail.com",
 ]
 
 /**
