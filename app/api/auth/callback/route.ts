@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
   const code = requestUrl.searchParams.get("code")
 
   if (code) {
-    const supabase = createServerClient()
+    const supabase = await createServerClient()   // ← AWAIT added here
 
     try {
       const { data, error } = await supabase.auth.exchangeCodeForSession(code)
@@ -21,7 +21,11 @@ export async function GET(request: NextRequest) {
 
       if (data.user) {
         // Check if user profile exists, create if not
-        const { data: existingProfile } = await supabase.from("users").select("id").eq("id", data.user.id).single()
+        const { data: existingProfile } = await supabase
+          .from("users")
+          .select("id")
+          .eq("id", data.user.id)
+          .maybeSingle()   // Use maybeSingle to avoid 406 error when no row
 
         if (!existingProfile) {
           // Create user profile
