@@ -8,8 +8,17 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Header } from "@/components/ui/header"
-import { authService, AuthError } from "@/lib/auth"
+import { createClient } from "@/lib/supabase-client"  // ← NEW: cookie‑based client
 import type { UserProfile } from "@/types/user"
+
+// Custom error class to mimic old AuthError
+class AuthError extends Error {
+  code?: string
+  constructor(message: string, code?: string) {
+    super(message)
+    this.code = code
+  }
+}
 
 interface LoginPageProps {
   onLoginSuccess?: (userProfile: UserProfile) => void
@@ -48,6 +57,9 @@ export default function LoginPage({
   const redirectUrl = searchParams.get('redirect')
   const resetToken = searchParams.get('token')
   const recoveryType = searchParams.get('type')
+
+  // Initialize Supabase client
+  const supabase = createClient()
 
   // Check for reset token on mount
   useEffect(() => {
@@ -91,35 +103,35 @@ export default function LoginPage({
     try {
       console.log("📝 Signing up with:", { email, firstName, lastName })
 
-      const { user, error: signUpError } = await authService.signUp(email, password, { firstName, lastName })
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            first_name: firstName,
+            last_name: lastName,
+          },
+        },
+      })
 
-      if (signUpError) {
-        throw signUpError
-      }
+      if (signUpError) throw signUpError
 
-      if (user) {
+      if (data.user) {
         console.log("✅ Sign up successful, showing verification message")
         setVerificationEmail(email)
         setVerificationType("signup")
         setViewMode("verification")
         setSuccessMessage("We've sent a verification link to your email. Please check your inbox (and spam folder).")
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error("❌ Sign up error:", e)
-      if (e instanceof AuthError) {
-        if (
-          e.code === "user_exists" ||
-          e.message.includes("already exists") ||
-          e.message.includes("already been registered")
-        ) {
-          setViewMode("existing-user")
-        } else if (e.message.includes("email")) {
-          setError("Invalid email address. Please check and try again.")
-        } else {
-          setError(e.message)
-        }
+      // Handle known error codes
+      if (e.message?.includes("already registered") || e.message?.includes("User already registered")) {
+        setViewMode("existing-user")
+      } else if (e.message?.includes("email")) {
+        setError("Invalid email address. Please check and try again.")
       } else {
-        setError("An unexpected error occurred during sign up.")
+        setError(e.message || "An unexpected error occurred during sign up.")
       }
     } finally {
       setIsLoading(false)
@@ -132,16 +144,16 @@ export default function LoginPage({
     setResendSuccess(false)
 
     try {
-      await authService.resendVerificationEmail(verificationEmail)
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: verificationEmail,
+      })
+      if (error) throw error
       setResendSuccess(true)
       setSuccessMessage("Verification email sent successfully!")
       setTimeout(() => setResendSuccess(false), 5000)
-    } catch (e) {
-      if (e instanceof AuthError) {
-        setError(e.message)
-      } else {
-        setError("Failed to resend verification email. Please try again.")
-      }
+    } catch (e: any) {
+      setError(e.message || "Failed to resend verification email. Please try again.")
     } finally {
       setIsResending(false)
     }
@@ -160,12 +172,14 @@ export default function LoginPage({
     try {
       console.log("🔑 Attempting sign in for:", email)
 
-      const { user, error: signInError } = await authService.signIn(email, password)
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
 
-      if (signInError) {
-        throw signInError
-      }
+      if (signInError) throw signInError
 
+      const user = data.user
       if (!user) {
         console.error("❌ No user returned from sign in")
         setError("Sign in failed. Please try again.")
@@ -184,56 +198,36 @@ export default function LoginPage({
         return
       }
 
-      console.log("👤 Fetching user profile...")
-      const profile = await authService.getUserProfile(user.id)
+      // Fetch user profile from metadata
+      const userProfile: UserProfile = {
+        id: user.id,
+        email: user.email || "",
+        firstName: user.user_metadata?.first_name || "",
+        lastName: user.user_metadata?.last_name || "",
+        profilePic: user.user_metadata?.avatar_url || "",
+      }
 
-      if (profile) {
-        console.log("✅ Profile loaded:", profile.firstName, profile.lastName)
-        if (onLoginSuccess) {
-          onLoginSuccess(profile)
-        } else {
-          if (redirectUrl) {
-            router.push(redirectUrl)
-          } else {
-            router.push("/dashboard")
-          }
-        }
+      console.log("✅ Profile loaded:", userProfile.firstName, userProfile.lastName)
+      if (onLoginSuccess) {
+        onLoginSuccess(userProfile)
       } else {
-        console.warn("⚠️ No profile found, creating fallback profile")
-
-        const fallbackProfile: UserProfile = {
-          id: user.id,
-          email: user.email,
-          firstName: "",
-          lastName: "",
-          loginMethod: "email",
-        }
-
-        if (onLoginSuccess) {
-          onLoginSuccess(fallbackProfile)
+        if (redirectUrl) {
+          router.push(redirectUrl)
         } else {
-          if (redirectUrl) {
-            router.push(redirectUrl)
-          } else {
-            router.push("/dashboard")
-          }
+          router.push("/dashboard")
         }
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error("❌ Sign in error:", e)
-      if (e instanceof AuthError) {
-        if (e.code === "email_not_confirmed") {
-          setError("Please verify your email address before signing in. Check your inbox for a verification link.")
-          setVerificationEmail(email)
-          setVerificationType("signup")
-          setViewMode("verification")
-        } else if (e.code === "invalid_credentials") {
-          setError("Invalid email or password. Please try again.")
-        } else {
-          setError(e.message)
-        }
+      if (e.message?.includes("Email not confirmed")) {
+        setError("Please verify your email address before signing in. Check your inbox for a verification link.")
+        setVerificationEmail(email)
+        setVerificationType("signup")
+        setViewMode("verification")
+      } else if (e.message?.includes("Invalid login credentials")) {
+        setError("Invalid email or password. Please try again.")
       } else {
-        setError("An unexpected error occurred during sign in.")
+        setError(e.message || "An unexpected error occurred during sign in.")
       }
     } finally {
       setIsLoading(false)
@@ -253,24 +247,19 @@ export default function LoginPage({
     try {
       console.log("🔐 Requesting password reset for:", email)
       
-      const { error: resetError } = await authService.requestPasswordReset(email)
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/login?type=recovery`,
+      })
       
-      if (resetError) {
-        throw resetError
-      }
+      if (error) throw error
       
-      // 🔁 Redirect to the verification view with reset context
       setVerificationEmail(email)
       setVerificationType("reset")
       setViewMode("verification")
       setSuccessMessage("Password reset instructions have been sent to your email. Please check your inbox (and spam folder).")
-    } catch (e) {
+    } catch (e: any) {
       console.error("❌ Forgot password error:", e)
-      if (e instanceof AuthError) {
-        setError(e.message)
-      } else {
-        setError("Failed to send reset email. Please try again.")
-      }
+      setError(e.message || "Failed to send reset email. Please try again.")
     } finally {
       setIsLoading(false)
     }
@@ -304,30 +293,23 @@ export default function LoginPage({
     try {
       console.log("🔐 Resetting password...")
       
-      const { error: resetError } = await authService.resetPassword(newPassword)
+      const { error } = await supabase.auth.updateUser({ password: newPassword })
       
-      if (resetError) {
-        throw resetError
-      }
+      if (error) throw error
       
       setSuccessMessage("Password reset successfully! You can now sign in with your new password.")
       
-      // Auto-redirect to login after 3 seconds
       setTimeout(() => {
         resetForm()
         setViewMode("login")
       }, 3000)
-    } catch (e) {
+    } catch (e: any) {
       console.error("❌ Reset password error:", e)
-      if (e instanceof AuthError) {
-        if (e.message.includes("session") || e.message.includes("expired")) {
-          setError("Reset link has expired. Please request a new password reset.")
-          setViewMode("forgot-password")
-        } else {
-          setError(e.message)
-        }
+      if (e.message?.includes("session") || e.message?.includes("expired")) {
+        setError("Reset link has expired. Please request a new password reset.")
+        setViewMode("forgot-password")
       } else {
-        setError("Failed to reset password. Please try again.")
+        setError(e.message || "Failed to reset password. Please try again.")
       }
     } finally {
       setIsLoading(false)
@@ -339,13 +321,16 @@ export default function LoginPage({
     setError(null)
     setSuccessMessage(null)
     try {
-      await authService.signInWithOAuth(provider)
-    } catch (e) {
-      if (e instanceof AuthError) {
-        setError(e.message)
-      } else {
-        setError(`An unexpected error occurred with ${provider} sign in.`)
-      }
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      })
+      if (error) throw error
+      // No need to setLoading false because redirect happens
+    } catch (e: any) {
+      setError(e.message || `An unexpected error occurred with ${provider} sign in.`)
       setIsLoading(false)
     }
   }
