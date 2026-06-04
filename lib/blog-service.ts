@@ -3,9 +3,11 @@
  * Handles blog creation, editing, publishing, and retrieval
  */
 
-import { supabase } from "./supabase"
+import { createClient } from "@/lib/supabase-client"
 import type { Blog, BlogBlock } from "@/types/admin"
 import { trackAnalyticsEvent } from "./admin-service"
+
+const supabase = createClient()
 
 export interface BlogCreateInput {
   title: string

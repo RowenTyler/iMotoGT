@@ -9,7 +9,9 @@
  * so no listing or profile is ever broken by a failed upload.
  */
 
-import { supabase } from "./supabase"
+import { createClient } from "@/lib/supabase-client"
+
+const supabase = createClient()
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 

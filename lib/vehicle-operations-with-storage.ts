@@ -11,7 +11,7 @@
  * only changes behaviour for new uploads and updates.
  */
 
-import { supabase } from "./supabase"
+import { createClient } from "@/lib/supabase-client" 
 import type { Vehicle, VehicleFormData } from "@/types/vehicle"
 import {
   uploadVehicleImages,
@@ -28,6 +28,8 @@ import {
  * large base64 strings that inflate the payload to 6MB+.
  * Images are only needed when a user opens the vehicle detail page.
  */
+const supabase = createClient()
+
 const VEHICLE_LIST_QUERY = `
   id,
   user_id,
