@@ -2,10 +2,11 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { createClient } from "@/lib/supabase-client"  // ← cookie‑based client
+import { createClient } from "@/lib/supabase-client"  // ← CHANGED: cookie‑based client
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { Header } from "@/components/ui/header"  // assuming you have a Header component
 import type { UserProfile } from "@/types/user"
 
 interface LoginPageProps {
@@ -30,7 +31,7 @@ export default function LoginPage({
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
 
-  const supabase = createClient()
+  const supabase = createClient()  // ← CHANGED: uses new cookie client
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -49,7 +50,6 @@ export default function LoginPage({
     }
 
     if (data.user) {
-      // Build UserProfile from user metadata
       const userProfile: UserProfile = {
         id: data.user.id,
         email: data.user.email || "",
@@ -103,97 +103,107 @@ export default function LoginPage({
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <Card className="w-full max-w-md p-8 rounded-3xl">
-        <div className="flex gap-4 mb-6">
-          <button
-            onClick={() => setIsLogin(true)}
-            className={`flex-1 py-2 text-center font-medium rounded-full transition ${
-              isLogin
-                ? "bg-[#FF6700] text-white"
-                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-            }`}
-          >
-            Login
-          </button>
-          <button
-            onClick={() => setIsLogin(false)}
-            className={`flex-1 py-2 text-center font-medium rounded-full transition ${
-              !isLogin
-                ? "bg-[#FF6700] text-white"
-                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-            }`}
-          >
-            Sign Up
-          </button>
-        </div>
+    <div className="min-h-screen flex flex-col bg-white">
+      <Header 
+        user={null} 
+        onLoginClick={() => {}} 
+        onDashboardClick={() => router.push("/")}
+        onGoHome={() => router.push("/home")}
+        onShowAllCars={() => router.push("/results")}
+        onGoToSellPage={() => router.push("/upload-vehicle")}
+      />
+      <div className="flex-grow flex items-center justify-center px-4 py-8">
+        <Card className="w-full max-w-md p-8 rounded-3xl shadow-lg">
+          <div className="flex gap-4 mb-6">
+            <button
+              onClick={() => setIsLogin(true)}
+              className={`flex-1 py-2 text-center font-medium rounded-full transition ${
+                isLogin
+                  ? "bg-[#FF6700] text-white"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              Login
+            </button>
+            <button
+              onClick={() => setIsLogin(false)}
+              className={`flex-1 py-2 text-center font-medium rounded-full transition ${
+                !isLogin
+                  ? "bg-[#FF6700] text-white"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              Sign Up
+            </button>
+          </div>
 
-        <form onSubmit={isLogin ? handleLogin : handleSignUp} className="space-y-4">
-          {!isLogin && (
-            <>
-              <Input
-                type="text"
-                placeholder="First Name"
-                value={firstName}
-                onChange={(e) => setFirstName(e.target.value)}
-                required
-              />
-              <Input
-                type="text"
-                placeholder="Last Name"
-                value={lastName}
-                onChange={(e) => setLastName(e.target.value)}
-                required
-              />
-            </>
-          )}
+          <form onSubmit={isLogin ? handleLogin : handleSignUp} className="space-y-4">
+            {!isLogin && (
+              <>
+                <Input
+                  type="text"
+                  placeholder="First Name"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  required
+                />
+                <Input
+                  type="text"
+                  placeholder="Last Name"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  required
+                />
+              </>
+            )}
 
-          <Input
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
-
-          <Input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-
-          {!isLogin && (
             <Input
-              type="password"
-              placeholder="Confirm Password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
+              type="email"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               required
             />
-          )}
 
-          {error && <p className="text-red-500 text-sm">{error}</p>}
+            <Input
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
 
-          <Button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-[#FF6700] hover:bg-[#FF6700]/90 text-white"
-          >
-            {loading ? "Processing..." : isLogin ? "Login" : "Sign Up"}
-          </Button>
+            {!isLogin && (
+              <Input
+                type="password"
+                placeholder="Confirm Password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+              />
+            )}
 
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onCancel}
-            className="w-full"
-          >
-            Cancel
-          </Button>
-        </form>
-      </Card>
+            {error && <p className="text-red-500 text-sm">{error}</p>}
+
+            <Button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-[#FF6700] hover:bg-[#FF6700]/90 text-white"
+            >
+              {loading ? "Processing..." : isLogin ? "Login" : "Sign Up"}
+            </Button>
+
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onCancel}
+              className="w-full"
+            >
+              Cancel
+            </Button>
+          </form>
+        </Card>
+      </div>
     </div>
   )
 }
