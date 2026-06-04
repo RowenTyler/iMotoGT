@@ -15,7 +15,7 @@ export interface AdminSession {
 }
 
 export async function getServerAdminSession(): Promise<AdminSession | null> {
-  const supabase = createServerClient<Database>()
+  const supabase = await createServerClient()
   const {
     data: { user },
     error,
@@ -57,7 +57,7 @@ export async function requireAdminSession(): Promise<AdminSession> {
   if (!admin) {
     redirect("/login?redirect=/admin")
   }
-  return admin!
+  return admin
 }
 
 export async function requireSuperAdmin(): Promise<AdminSession> {
@@ -65,7 +65,7 @@ export async function requireSuperAdmin(): Promise<AdminSession> {
   if (!admin || admin.role !== "SUPER_ADMIN") {
     redirect("/dashboard")
   }
-  return admin!
+  return admin
 }
 
 export function isAllowedSuperAdminEmail(email?: string | null): boolean {
