@@ -15,8 +15,10 @@
  * VEHICLE_DETAIL_QUERY includes full images array and all seller contact info.
  */
 
-import { supabase } from "./supabase"
+import { createClient } from "@/lib/supabase-client"
 import type { Vehicle } from "@/types/vehicle"
+
+const supabase = createClient()
 
 // ─── Queries ──────────────────────────────────────────────────────────────────
 

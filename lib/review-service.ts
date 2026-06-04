@@ -3,10 +3,12 @@
  * Handles car review creation, editing, and publishing
  */
 
-import { supabase } from "./supabase"
+import { createClient } from "@/lib/supabase-client"
 import type { Review } from "@/types/admin"
 import { trackAnalyticsEvent } from "./admin-service"
 import { generateSlug } from "./blog-service"
+
+const supabase = createClient()
 
 export interface ReviewCreateInput {
   title: string

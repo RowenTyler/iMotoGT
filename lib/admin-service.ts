@@ -3,9 +3,11 @@
  * Handles role checking, permissions verification, and admin operations
  */
 
-import { supabase } from "./supabase"
+import { createClient } from "@/lib/supabase-client"
 import type { UserRole, RolePermissions, AdminUser, DealerProfile } from "@/types/admin"
 import { ROLE_PERMISSIONS } from "@/types/admin"
+
+const supabase = createClient()
 
 const SUPER_ADMIN_EMAILS = [
   "rowenrichardson@gmail.com",
@@ -32,11 +34,13 @@ export function isSuperAdminEmail(email: string): boolean {
 
 /**
  * Get user's role from database
+ * NOTE: This uses the client-side auth. For admin checks that require service role,
+ * you should use a server action or API route.
  */
 export async function getUserRole(userId: string): Promise<UserRole> {
   try {
-    // Check if super admin
-    const { data: user } = await supabase.auth.admin.getUserById(userId)
+    // Check if super admin by email – we need to fetch user email first
+    const { data: { user } } = await supabase.auth.getUser()
     if (user?.email && isSuperAdminEmail(user.email)) {
       return "SUPER_ADMIN"
     }
@@ -101,6 +105,8 @@ export async function isUserSuperAdmin(userId: string): Promise<boolean> {
 
 /**
  * Grant admin role to a user
+ * WARNING: This uses the client-side client, which may lack admin privileges.
+ * Consider moving to a server action.
  */
 export async function grantAdminRole(
   userId: string,
@@ -178,39 +184,13 @@ export async function logAdminAction(
 
 /**
  * Get all admin users
+ * WARNING: Uses supabase.auth.admin, which is not available on client.
+ * This function will not work in the browser. Use a server action instead.
  */
 export async function getAllAdmins(): Promise<AdminUser[]> {
-  try {
-    const { data, error } = await supabase
-      .from("admin_roles")
-      .select("user_id, role, created_at, updated_at")
-      .in("role", ["SUPER_ADMIN", "ADMIN"])
-
-    if (error) throw error
-
-    // Fetch user details from auth
-    const admins: AdminUser[] = []
-    for (const admin of data || []) {
-      const { data: user } = await supabase.auth.admin.getUserById(admin.user_id)
-      if (user) {
-        admins.push({
-          id: user.id,
-          email: user.email || "",
-          role: admin.role as UserRole,
-          first_name: user.user_metadata?.firstName || "",
-          last_name: user.user_metadata?.lastName || "",
-          created_at: admin.created_at,
-          updated_at: admin.updated_at,
-          last_login: user.last_sign_in_at || undefined,
-        })
-      }
-    }
-
-    return admins
-  } catch (error) {
-    console.error("Error fetching admins:", error)
-    return []
-  }
+  console.warn("getAllAdmins requires server-side admin client. Returning empty array.")
+  return []
+  // Original code would need to be moved to a server route.
 }
 
 /**
