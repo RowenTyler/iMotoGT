@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase-client"  // ← cookie-based client
+import { createClient } from "@/lib/supabase-client"  // ← cookie-based client npnm test updates
 import type { UserProfile } from "@/types/user"
 import { syncUserToEditors, syncUserToPublic } from "./userSync"
 
