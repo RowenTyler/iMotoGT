@@ -3,8 +3,8 @@ import type { Database } from "@/types/supabase"
 import { cookies } from "next/headers"
 import { getSupabaseConfig } from "@/lib/supabase-config"
 
-export function createServerClient() {
-  const cookieStore = cookies()
+export async function createServerClient() {
+  const cookieStore = await cookies()
   const { url, anonKey } = getSupabaseConfig()
 
   return createServerClientSSR<Database>(

@@ -1,6 +1,8 @@
 import { createClient } from "@/utils/supabase/server"
 import AnalyticsDashboardClient from "./client-page"
 
+export const dynamic = "force-dynamic"
+
 export const metadata = {
   title: "Analytics Dashboard - iMoto GT"
 }
@@ -67,8 +69,12 @@ export default async function AdminAnalyticsPage() {
       }
     })()
 
-    // Vehicles – fixed is_deleted filter
-    const totalVehicles = await safeCount("vehicles", { column: "is_deleted", value: true, operator: "neq" })
+    // Vehicles – count where is_deleted is false or null
+    const { count: totalVehicles } = await supabase
+      .from("vehicles")
+      .select("*", { count: "exact", head: true })
+      .or("is_deleted.eq.false,is_deleted.is.null")
+
     const activeVehicles = await safeCount("vehicles", { column: "status", value: "active" })
 
     // Users
@@ -109,7 +115,7 @@ export default async function AdminAnalyticsPage() {
         videoReviews={videoReviews}
         writtenReviews={writtenReviews}
         reviewViewsRaw={reviewViewsRaw}
-        totalVehicles={totalVehicles}
+        totalVehicles={totalVehicles ?? 0}
         activeVehicles={activeVehicles}
         totalUsers={totalUsers}
         totalDealers={totalDealers}
