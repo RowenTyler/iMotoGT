@@ -1,6 +1,8 @@
-import { supabase } from "./supabase"
+import { createClient } from "@/lib/supabase-client"  // ← cookie-based client
 import type { UserProfile } from "@/types/user"
 import { syncUserToEditors, syncUserToPublic } from "./userSync"
+
+const supabase = createClient()  // ← creates the cookie-based client
 
 export interface AuthUser {
   id: string
@@ -49,7 +51,6 @@ async function signUp(
   try {
     console.log("🔐 Signing up user:", email, "with metadata:", metadata)
 
-    // Use the correct redirect URL for email confirmation
     const emailRedirectTo = `${window.location.origin}/dashboard`
 
     const { data, error } = await supabase.auth.signUp({
@@ -144,14 +145,12 @@ async function signOut(): Promise<{ error: AuthError | null }> {
 
       if (error) {
         console.error("❌ Sign out error:", error)
-        // Treat auth session missing as success since we want to clear anyway
         if (error.message?.includes("session") || error.message?.includes("Auth session")) {
           console.log("✅ No active session, proceeding with cleanup")
         }
       }
     } catch (authError: any) {
       console.error("❌ Supabase auth error:", authError)
-      // Continue with cleanup even if auth error occurs
     }
 
     clearAllStorage()
@@ -250,33 +249,33 @@ async function getSession() {
 
 async function getUserProfile(userId: string): Promise<UserProfile | null> {
   try {
-    console.log("👤 Fetching user profile for:", userId);
+    console.log("👤 Fetching user profile for:", userId)
 
     const { data, error } = await supabase
       .from("users")
       .select("*")
       .eq("id", userId)
       .order("created_at", { ascending: false })
-      .limit(1);
+      .limit(1)
 
     if (error) {
-      console.error("❌ Get user profile error:", error);
-      return null;
+      console.error("❌ Get user profile error:", error)
+      return null
     }
 
     if (!data || data.length === 0) {
-      console.log("⚠️ No user profile found for:", userId);
-      return null;
+      console.log("⚠️ No user profile found for:", userId)
+      return null
     }
 
-    const userData = data[0];
+    const userData = data[0]
 
     console.log("✅ User profile fetched:", {
       id: userData.id,
       email: userData.email,
       firstName: userData.first_name,
       lastName: userData.last_name,
-    });
+    })
 
     const profile: UserProfile = {
       id: userData.id,
@@ -291,12 +290,12 @@ async function getUserProfile(userId: string): Promise<UserProfile | null> {
       loginMethod: userData.login_method || "email",
       createdAt: userData.created_at,
       updatedAt: userData.updated_at,
-    };
+    }
 
-    return profile;
+    return profile
   } catch (error) {
-    console.error("❌ Error in getUserProfile:", error);
-    return null;
+    console.error("❌ Error in getUserProfile:", error)
+    return null
   }
 }
 
@@ -315,7 +314,6 @@ async function createUserProfile(
       return { error: null }
     }
 
-    // This bypasses RLS by using server-side logic
     const dbData = {
       id: userId,
       email: email,
@@ -353,55 +351,52 @@ async function createUserProfile(
 
 async function updateUserProfile(userId: string, updates: Partial<UserProfile>): Promise<{ error: AuthError | null }> {
   try {
-    console.log("📝 Updating user profile for:", userId, "with updates:", updates);
+    console.log("📝 Updating user profile for:", userId, "with updates:", updates)
 
-    // Map UserProfile fields to database column names
     const dbUpdates: Record<string, any> = {
       updated_at: new Date().toISOString(),
-    };
+    }
 
-    if (updates.firstName !== undefined) dbUpdates.first_name = updates.firstName;
-    if (updates.lastName !== undefined) dbUpdates.last_name = updates.lastName;
-    if (updates.phone !== undefined) dbUpdates.phone = updates.phone;
-    if (updates.profilePic !== undefined) dbUpdates.profile_pic = updates.profilePic;
-    if (updates.suburb !== undefined) dbUpdates.suburb = updates.suburb;
-    if (updates.city !== undefined) dbUpdates.city = updates.city;
-    if (updates.province !== undefined) dbUpdates.province = updates.province;
+    if (updates.firstName !== undefined) dbUpdates.first_name = updates.firstName
+    if (updates.lastName !== undefined) dbUpdates.last_name = updates.lastName
+    if (updates.phone !== undefined) dbUpdates.phone = updates.phone
+    if (updates.profilePic !== undefined) dbUpdates.profile_pic = updates.profilePic
+    if (updates.suburb !== undefined) dbUpdates.suburb = updates.suburb
+    if (updates.city !== undefined) dbUpdates.city = updates.city
+    if (updates.province !== undefined) dbUpdates.province = updates.province
 
-    console.log("🔵 Database updates:", dbUpdates);
+    console.log("🔵 Database updates:", dbUpdates)
 
-    // Use Supabase client with current session
     const { error } = await supabase
       .from("users")
       .update(dbUpdates)
-      .eq("id", userId);
+      .eq("id", userId)
 
     if (error) {
-      console.error("❌ Update user profile error:", error);
-      
-      // Handle specific error cases
+      console.error("❌ Update user profile error:", error)
+
       if (error.code === '42501') {
         return { error: new AuthError(
           "Permission denied. Please ensure you're logged in and trying to update your own profile.",
           "PERMISSION_DENIED"
-        )};
+        )}
       }
-      
+
       if (error.code === 'PGRST301') {
         return { error: new AuthError(
           "Database connection error. Please try again.",
           "CONNECTION_ERROR"
-        )};
+        )}
       }
-      
-      return { error: new AuthError(error.message, "UPDATE_PROFILE_FAILED") };
+
+      return { error: new AuthError(error.message, "UPDATE_PROFILE_FAILED") }
     }
 
-    console.log("✅ User profile updated successfully");
-    return { error: null };
+    console.log("✅ User profile updated successfully")
+    return { error: null }
   } catch (error: any) {
-    console.error("❌ Error in updateUserProfile:", error);
-    return { error: new AuthError(error.message, "UNKNOWN_ERROR") };
+    console.error("❌ Error in updateUserProfile:", error)
+    return { error: new AuthError(error.message, "UNKNOWN_ERROR") }
   }
 }
 
@@ -496,10 +491,11 @@ async function signInWithOAuth(provider: "google" | "facebook" | "apple"): Promi
   try {
     console.log("🔐 Signing in with OAuth:", provider)
 
+    // ✅ Updated redirect URL to match your callback route
     const { error } = await supabase.auth.signInWithOAuth({
       provider: provider,
       options: {
-        redirectTo: `https://imotogtv7.vercel.app/dashboard`,
+        redirectTo: `${window.location.origin}/api/auth/callback`,  // ← changed to /api/auth/callback
       }
     })
 
