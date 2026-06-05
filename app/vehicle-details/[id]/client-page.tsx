@@ -20,6 +20,11 @@ interface VehicleDetailsPageProps {
   }
 }
 
+// Helper: check if vehicle has complete seller contact information
+const hasCompleteSellerInfo = (v: any): boolean => {
+  return v && v.sellerName && v.sellerEmail && v.sellerPhone && v.sellerSuburb
+}
+
 export default function VehicleDetailsClientPage({ params }: VehicleDetailsPageProps) {
   // `params` can be a Promise in Client Components; unwrap with React.use() when available
   const resolvedParams = (React as any).use ? (React as any).use(params) : params
@@ -40,9 +45,10 @@ export default function VehicleDetailsClientPage({ params }: VehicleDetailsPageP
   } = useVehicleContext()
   
   // Local state initialized securely with synchronous cache extraction
+  // ONLY use cached vehicle if it has complete seller info; otherwise force fetch
   const [vehicle, setVehicle] = useState<any>(() => {
     const ctxCached = getCachedVehicle?.(resolvedParams.id)
-    if (ctxCached) {
+    if (ctxCached && hasCompleteSellerInfo(ctxCached)) {
       return ctxCached
     }
     return null
@@ -55,7 +61,7 @@ export default function VehicleDetailsClientPage({ params }: VehicleDetailsPageP
   const isInitialMountRef = useRef(true)
 
   // ------------------------------------------------------------------
-  // 1. Fetch vehicle data
+  // 1. Fetch vehicle data (ensuring full seller info)
   // ------------------------------------------------------------------
   useEffect(() => {
     let isMounted = true
@@ -63,7 +69,8 @@ export default function VehicleDetailsClientPage({ params }: VehicleDetailsPageP
 
     const fetchVehicle = async () => {
       const cached = getCachedVehicle?.(resolvedParams.id)
-      if (cached) {
+      // If we have a cached vehicle with complete seller info, use it and skip fetch
+      if (cached && hasCompleteSellerInfo(cached)) {
         if (isMounted) {
           setVehicle(cached)
           setLoading(false)
@@ -72,6 +79,7 @@ export default function VehicleDetailsClientPage({ params }: VehicleDetailsPageP
         return
       }
 
+      // Otherwise fetch fresh from API
       try {
         const res = await fetch(`/api/vehicles/${resolvedParams.id}`, { signal: controller.signal })
 
@@ -79,7 +87,7 @@ export default function VehicleDetailsClientPage({ params }: VehicleDetailsPageP
           if (res.status === 404) {
             try {
               const fallback = await vehicleService.getVehicleById(resolvedParams.id)
-              if (fallback) {
+              if (fallback && hasCompleteSellerInfo(fallback)) {
                 if (isMounted) {
                   setVehicle(fallback)
                   setLoading(false)
@@ -223,7 +231,7 @@ export default function VehicleDetailsClientPage({ params }: VehicleDetailsPageP
   }, [vehicle, savedVehiclesSet])
 
   // ------------------------------------------------------------------
-  // 8. Derive effectiveUser for fast contact privacy resolution (BUG FIX)
+  // 8. Derive effectiveUser for fast contact privacy resolution
   // ------------------------------------------------------------------
   const effectiveUser = user || (authUser ? {
     id: authUser.id,
