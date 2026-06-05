@@ -18,7 +18,7 @@ import {
   Maximize2,
   Minimize2,
   Info,
-  MapPin,           // <-- ADDED for location card
+  MapPin,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -329,7 +329,7 @@ export default function UploadVehicle({
     )
   }
 
-  // ─── Effects ──────────────────────────────────────────────────────────────
+  // ─── Effects (only those that are truly needed) ────────────────────────────
 
   // Load vehicle makes/models from JSON
   useEffect(() => {
@@ -357,7 +357,7 @@ export default function UploadVehicle({
     loadVehicleData()
   }, [])
 
-  // Edit mode: pre‑fill from existing vehicle
+  // Edit mode: pre‑fill from existing vehicle (no prop sync issue)
   useEffect(() => {
     if (editMode && existingVehicle) {
       setFormData({
@@ -411,39 +411,6 @@ export default function UploadVehicle({
       }
     }
   }, [editMode, existingVehicle, vehicleData, formData.make])
-
-  // Pre‑fill vehicle location from profile as default (only for new listings and if empty)
-  useEffect(() => {
-    if (!editMode && userProfile) {
-      setVehicleLocation(prev => ({
-        suburb: prev.suburb || userProfile.suburb || "",
-        city: prev.city || userProfile.city || "",
-        province: prev.province || userProfile.province || "",
-      }))
-    }
-  }, [editMode, userProfile])
-
-  // Sync seller name/phone/email from user profile (no location)
-  useEffect(() => {
-    if (userProfile) {
-      setSellerFormData({
-        firstName: userProfile.firstName || "",
-        lastName: userProfile.lastName || "",
-        phone: userProfile.phone || "",
-        profilePic: userProfile.profilePic || "",
-      })
-      setFormData((prev) => ({
-        ...prev,
-        sellerName:
-          `${userProfile.firstName || ""} ${userProfile.lastName || ""}`.trim() ||
-          userProfile.email?.split("@")[0] ||
-          "",
-        sellerEmail: userProfile.email || "",
-        sellerPhone: userProfile.phone || "",
-        sellerProfilePic: userProfile.profilePic || "",
-      }))
-    }
-  }, [userProfile])
 
   // Sync engine/body search inputs
   useEffect(() => {
@@ -499,25 +466,42 @@ export default function UploadVehicle({
     return () => document.removeEventListener("mousedown", handleClickOutside)
   }, [])
 
-  // ─── Location confirmation modal trigger (based on vehicleLocation) ────────
+  // ─── INLINE STATE SYNC (replaces effects that sync props to state) ─────────
+  // This fixes React Doctor issue #3: State synced to a prop inside an effect.
 
-  useEffect(() => {
-    // Only for new listings, not edit mode
-    if (editMode) return
-    if (userLoading) return
-    if (!profile) return
-    if (!authUser?.email) return
-    if (hasShownModal.current) return
+  // 1. Sync derived state from userProfile (already fixed in previous step)
+  const [prevUserProfile, setPrevUserProfile] = useState(userProfile)
 
-    // Skip for privileged users
-    if (isPrivilegedUser(authUser.email)) return
+  if (userProfile !== prevUserProfile) {
+    setPrevUserProfile(userProfile)
 
-    // Show only if vehicleLocation already has suburb and city (pre‑filled from profile)
-    if (vehicleLocation.suburb && vehicleLocation.city) {
-      setShowLocationConfirmModal(true)
-      hasShownModal.current = true
+    if (!editMode && userProfile) {
+      setVehicleLocation(prev => ({
+        suburb: prev.suburb || userProfile.suburb || "",
+        city: prev.city || userProfile.city || "",
+        province: prev.province || userProfile.province || "",
+      }))
     }
-  }, [editMode, userLoading, profile, authUser?.email, vehicleLocation.suburb, vehicleLocation.city])
+
+    if (userProfile) {
+      setSellerFormData({
+        firstName: userProfile.firstName || "",
+        lastName: userProfile.lastName || "",
+        phone: userProfile.phone || "",
+        profilePic: userProfile.profilePic || "",
+      })
+      setFormData(prev => ({
+        ...prev,
+        sellerName:
+          `${userProfile.firstName || ""} ${userProfile.lastName || ""}`.trim() ||
+          userProfile.email?.split("@")[0] ||
+          "",
+        sellerEmail: userProfile.email || "",
+        sellerPhone: userProfile.phone || "",
+        sellerProfilePic: userProfile.profilePic || "",
+      }))
+    }
+  }
 
   // ─── Make/Model Handlers (unchanged) ──────────────────────────────────────
 
@@ -1096,6 +1080,24 @@ export default function UploadVehicle({
         <p className="text-[#3E5641] dark:text-white">Loading profile...</p>
       </div>
     )
+  }
+
+  // ─── INLINE LOCATION CONFIRMATION MODAL TRIGGER (replaces useEffect) ─────
+  // This fixes the React Doctor issue: side effect in useEffect that sets state.
+  // Instead of a separate effect, we check the condition during render
+  // and set the modal state once, guarded by a ref.
+  if (
+    !editMode &&
+    !userLoading &&
+    profile &&
+    authUser?.email &&
+    !hasShownModal.current &&
+    !isPrivilegedUser(authUser.email) &&
+    vehicleLocation.suburb &&
+    vehicleLocation.city
+  ) {
+    setShowLocationConfirmModal(true)
+    hasShownModal.current = true
   }
 
   // ─── Render ───────────────────────────────────────────────────────────────
