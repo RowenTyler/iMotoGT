@@ -16,7 +16,12 @@ interface VehicleEditDetailsProps {
 
 export default function VehicleEditDetails({ vehicle, onBack }: VehicleEditDetailsProps) {
   const router = useRouter()
-  const [editableData, setEditableData] = useState<Partial<Vehicle>>({ ...vehicle })
+  const [editableData, setEditableData] = useState<Partial<Vehicle>>({
+    ...vehicle,
+    sellerSuburb: vehicle.sellerSuburb || "",
+    sellerCity: vehicle.sellerCity || "",
+    sellerProvince: vehicle.sellerProvince || "",
+  })
   const [editableImages, setEditableImages] = useState<string[]>(
     vehicle.images && vehicle.images.length > 0 ? [...vehicle.images] : vehicle.image ? [vehicle.image] : [],
   )
@@ -207,7 +212,11 @@ export default function VehicleEditDetails({ vehicle, onBack }: VehicleEditDetai
         province: editableData.province,
         description: editableData.description,
         images: editableImages,
-        contactPrivacyEnabled: contactPrivacyEnabled, // ADD THIS
+        contactPrivacyEnabled: contactPrivacyEnabled,
+        // Snapshot seller location fields (required for edit)
+        sellerSuburb: editableData.sellerSuburb || "",
+        sellerCity: editableData.sellerCity || "",
+        sellerProvince: editableData.sellerProvince || "",
       }
 
       await vehicleService.updateVehicle(vehicle.id, updateData, vehicle.userId)
@@ -297,7 +306,7 @@ export default function VehicleEditDetails({ vehicle, onBack }: VehicleEditDetai
         />
       </div>
 
-      {/* Contact Privacy Settings */}
+      {/* Contact Privacy Settings + Seller Location */}
       <div className="px-6 max-w-7xl mx-auto mt-6">
         <div className="rounded-3xl p-6 border border-[#9FA791]/20 dark:border-[#4A4D45]/20">
           <h3 className="text-xl font-semibold mb-4 text-[#3E5641] dark:text-white">Contact Privacy Settings</h3>
@@ -322,6 +331,51 @@ export default function VehicleEditDetails({ vehicle, onBack }: VehicleEditDetai
                 }`}
               />
             </button>
+          </div>
+
+          {/* Seller Location Section (for snapshot) */}
+          <div className="mt-6 pt-4 border-t border-[#9FA791]/20 dark:border-[#4A4D45]/20">
+            <h4 className="text-md font-medium text-[#3E5641] dark:text-white mb-3">
+              Seller Location (as shown to buyers)
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-[#3E5641] dark:text-white mb-1">Suburb</label>
+                <input
+                  type="text"
+                  name="sellerSuburb"
+                  value={editableData.sellerSuburb || ""}
+                  onChange={handleInputChange}
+                  placeholder="e.g., Sandton"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-[#3E5641] dark:text-white bg-white dark:bg-[#2A352A] focus:ring-2 focus:ring-[#FF6700]"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#3E5641] dark:text-white mb-1">City</label>
+                <input
+                  type="text"
+                  name="sellerCity"
+                  value={editableData.sellerCity || ""}
+                  onChange={handleInputChange}
+                  placeholder="e.g., Johannesburg"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-[#3E5641] dark:text-white bg-white dark:bg-[#2A352A] focus:ring-2 focus:ring-[#FF6700]"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[#3E5641] dark:text-white mb-1">Province</label>
+                <input
+                  type="text"
+                  name="sellerProvince"
+                  value={editableData.sellerProvince || ""}
+                  onChange={handleInputChange}
+                  placeholder="e.g., Gauteng"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-[#3E5641] dark:text-white bg-white dark:bg-[#2A352A] focus:ring-2 focus:ring-[#FF6700]"
+                />
+              </div>
+            </div>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+              This location will be displayed on your listing. You can update it here independently of your profile.
+            </p>
           </div>
         </div>
       </div>
@@ -438,7 +492,7 @@ export default function VehicleEditDetails({ vehicle, onBack }: VehicleEditDetai
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-[#3E5641] dark:text-white mb-2">City</label>
+            <label className="block text-sm font-medium text-[#3E5641] dark:text-white mb-2">City (Vehicle Location)</label>
             <input
               type="text"
               name="city"
@@ -448,7 +502,7 @@ export default function VehicleEditDetails({ vehicle, onBack }: VehicleEditDetai
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-[#3E5641] dark:text-white mb-2">Province</label>
+            <label className="block text-sm font-medium text-[#3E5641] dark:text-white mb-2">Province (Vehicle Location)</label>
             <input
               type="text"
               name="province"

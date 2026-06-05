@@ -50,7 +50,10 @@ const VEHICLE_LIST_QUERY = `
   contact_privacy_enabled,
   created_at,
   updated_at,
-  users(id, first_name, last_name, profile_pic, city, province)
+  seller_suburb,
+  seller_city_stored,
+  seller_province_stored,
+  users(id, first_name, last_name, profile_pic, city, province, suburb)
 `
 
 /**
@@ -81,6 +84,9 @@ const VEHICLE_DETAIL_QUERY = `
   contact_privacy_enabled,
   created_at,
   updated_at,
+  seller_suburb,
+  seller_city_stored,
+  seller_province_stored,
   users(id, email, first_name, last_name, phone, profile_pic, suburb, city, province)
 `
 
@@ -123,22 +129,23 @@ function mapDatabaseToVehicle(data: any): Vehicle {
       city: data.city,
       description: data.description || "",
       images: parsedImages,
-    status: data.status || "active",
-    contactPrivacyEnabled: data.contact_privacy_enabled ?? false,
-    sellerName:
-      user.first_name && user.last_name
-        ? `${user.first_name} ${user.last_name}`
-        : user.first_name || user.last_name || user.email?.split("@")[0] || "",
-    sellerEmail: user.email || "",
-    sellerPhone: user.phone || "",
-    sellerSuburb: user.suburb || "",
-    sellerCity: user.city || "",
-    sellerProvince: user.province || "",
-    sellerProfilePic: user.profile_pic || "",
-    createdAt: data.created_at,
-    updatedAt: data.updated_at,
-    isDeleted: typeof data.is_deleted === "boolean" ? data.is_deleted : false,
-  }
+      status: data.status || "active",
+      contactPrivacyEnabled: data.contact_privacy_enabled ?? false,
+      sellerName:
+        user.first_name && user.last_name
+          ? `${user.first_name} ${user.last_name}`
+          : user.first_name || user.last_name || user.email?.split("@")[0] || "",
+      sellerEmail: user.email || "",
+      sellerPhone: user.phone || "",
+      // BUG FIX: Prefer vehicle-stored location with fallback to user's profile location
+      sellerSuburb: data.seller_suburb || user.suburb || "",
+      sellerCity: data.seller_city_stored || user.city || "",
+      sellerProvince: data.seller_province_stored || user.province || "",
+      sellerProfilePic: user.profile_pic || "",
+      createdAt: data.created_at,
+      updatedAt: data.updated_at,
+      isDeleted: typeof data.is_deleted === "boolean" ? data.is_deleted : false,
+    }
 }
 
 // ─── Lean List Fetches ────────────────────────────────────────────────────────
@@ -283,6 +290,10 @@ export async function createVehicleWithStorage(
     description: vehicleData.description || null,
     images: imageUrls, // Public URLs or base64 fallbacks
     contact_privacy_enabled: vehicleData.contactPrivacyEnabled ?? false,
+    // BUG FIX: snapshot seller location at creation time
+    seller_suburb: (vehicleData as any).sellerSuburb || "",
+    seller_city_stored: (vehicleData as any).sellerCity || vehicleData.city || "",
+    seller_province_stored: (vehicleData as any).sellerProvince || vehicleData.province || "",
     status: "active",
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
@@ -356,6 +367,14 @@ export async function updateVehicleWithStorage(
     if (vehicleData.description !== undefined) dbData.description = vehicleData.description
     if (vehicleData.contactPrivacyEnabled !== undefined)
       dbData.contact_privacy_enabled = vehicleData.contactPrivacyEnabled
+
+    // BUG FIX: handle seller location snapshot updates
+    if ((vehicleData as any).sellerSuburb !== undefined) 
+      dbData.seller_suburb = (vehicleData as any).sellerSuburb
+    if ((vehicleData as any).sellerCity !== undefined) 
+      dbData.seller_city_stored = (vehicleData as any).sellerCity
+    if ((vehicleData as any).sellerProvince !== undefined) 
+      dbData.seller_province_stored = (vehicleData as any).sellerProvince
 
     // Handle images
     if (vehicleData.images && vehicleData.images.length > 0) {

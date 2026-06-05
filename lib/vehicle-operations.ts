@@ -26,7 +26,7 @@ const supabase = createClient()
  * Query for list/search/filter views.
  * Includes images so card thumbnails work correctly.
  * No description — only needed on the detail page.
- * ✅ ADDED suburb to users join
+ * ✅ ADDED seller_suburb, seller_city_stored, seller_province_stored
  */
 const VEHICLE_LIST_QUERY = `
   id,
@@ -48,13 +48,16 @@ const VEHICLE_LIST_QUERY = `
   contact_privacy_enabled,
   created_at,
   updated_at,
+  seller_suburb,
+  seller_city_stored,
+  seller_province_stored,
   users(id, first_name, last_name, profile_pic, city, province, suburb)
 `
 
 /**
  * Full detail query used for vehicle detail pages and saved vehicles.
  * Includes full images array and complete seller contact information.
- * ✅ ADDED suburb to users join
+ * ✅ ADDED seller_suburb, seller_city_stored, seller_province_stored
  */
 const VEHICLE_DETAIL_QUERY = `
   id,
@@ -77,6 +80,9 @@ const VEHICLE_DETAIL_QUERY = `
   contact_privacy_enabled,
   created_at,
   updated_at,
+  seller_suburb,
+  seller_city_stored,
+  seller_province_stored,
   users(id, email, first_name, last_name, phone, profile_pic, suburb, city, province)
 `
 
@@ -117,9 +123,10 @@ function mapDatabaseToVehicle(data: any): Vehicle {
         : user.first_name || user.last_name || user.email?.split("@")[0] || "",
     sellerEmail: user.email || "",
     sellerPhone: user.phone || "",
-    sellerSuburb: user.suburb || "",
-    sellerCity: user.city || "",
-    sellerProvince: user.province || "",
+    // BUG FIX: Prefer vehicle-stored location with fallback to user's profile location
+    sellerSuburb: data.seller_suburb || user.suburb || "",
+    sellerCity: data.seller_city_stored || user.city || "",
+    sellerProvince: data.seller_province_stored || user.province || "",
     sellerProfilePic: user.profile_pic || "",
     createdAt: data.created_at,
     updatedAt: data.updated_at,

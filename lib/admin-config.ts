@@ -30,5 +30,5 @@ export function isPrivilegedUser(email: string | undefined | null): boolean {
  * Privileged users get Number.MAX_SAFE_INTEGER (effectively unlimited).
  */
 export function getListingLimit(email: string | undefined | null): number {
-  return isPrivilegedUser(email) ? Number.MAX_SAFE_INTEGER : 20
+  return isPrivilegedUser(email) ? Number.MAX_SAFE_INTEGER : 5
 }

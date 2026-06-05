@@ -3,7 +3,7 @@ import { useState, useEffect, useMemo, useRef } from "react"
 import type React from "react"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
-import { Car, Shield, Phone, Mail, X, Star, UploadCloud, Search, MapPin } from "lucide-react"
+import { Phone, Mail, X, UploadCloud, Search, MapPin } from "lucide-react"
 import type { Vehicle } from "@/types/vehicle"
 import type { UserProfile } from "@/types/user"
 import { Heart, ChevronLeft, ChevronRight } from "lucide-react"
@@ -29,7 +29,7 @@ export default function VehicleDetails({
 }: VehicleDetailsProps) {
   const router = useRouter()
   
-  // Add helper functions for masking
+  // Helper functions for masking
   const maskEmail = (email: string) => {
     if (!email) return ""
     const [name, domain] = email.split('@')
@@ -46,32 +46,10 @@ export default function VehicleDetails({
   
   const isDataUrl = (src?: string | null) => typeof src === "string" && src.startsWith("data:")
 
-  // SAFE access with fallback
+  // SAFE access with fallback – privacy logic unchanged
   const isContactPrivate = vehicle.contactPrivacyEnabled ?? false
   const shouldMaskContact = isContactPrivate && !user
 
-  console.log("VehicleDetails vehicle:", vehicle)
-  console.log("Vehicle details:", {
-    sellerName: vehicle.sellerName,
-    sellerEmail: vehicle.sellerEmail,
-    sellerPhone: vehicle.sellerPhone,
-    sellerSuburb: vehicle.sellerSuburb,
-    sellerCity: vehicle.sellerCity,
-    sellerProvince: vehicle.sellerProvince,
-    contactPrivacyEnabled: vehicle.contactPrivacyEnabled,
-    isContactPrivate,
-    shouldMaskContact,
-  })
-  console.log("Vehicle Details:", {
-    sellerName: vehicle.sellerName,
-    sellerEmail: vehicle.sellerEmail,
-    sellerPhone: vehicle.sellerPhone,
-    sellerSuburb: vehicle.sellerSuburb,
-    sellerCity: vehicle.sellerCity,
-    sellerProvince: vehicle.sellerProvince,
-    userId: vehicle.userId,
-  })
-  
   const [showContactForm, setShowContactForm] = useState(false)
   const [email, setEmail] = useState("")
   const [message, setMessage] = useState("")
@@ -1077,8 +1055,8 @@ export default function VehicleDetails({
                           <p className="detail-value">{vehicle.bodyType}</p>
                         </div>
                         <div>
-                        <p className="detail-label">Suburb</p>
-                        <p className="detail-value">{vehicle.sellerSuburb}</p>
+                          <p className="detail-label">Suburb</p>
+                          <p className="detail-value">{vehicle.sellerSuburb}</p>
                         </div>
                         <div>
                           <p className="detail-label">City</p>
@@ -1218,7 +1196,7 @@ const EditableField = ({
   <div>
     <label
       htmlFor={name}
-      className={`block text-sm font-medium ${textWhite ? "text-gray-300" : "text-[#6F7F69] dark:text-gray-300"} mb-1 text-white`}
+      className={`block text-sm font-medium ${textWhite ? "text-gray-300" : "text-[#6F7F69] dark:text-gray-300"} mb-1`}
     >
       {label}
     </label>
@@ -1241,7 +1219,6 @@ const EditableField = ({
         placeholder={placeholder || label}
         className={`form-input-edit w-full ${textWhite ? "bg-[#576B55] dark:bg-[#2A352A] text-white placeholder-gray-400" : ""}`}
       />
-    )
-  }
+    )}
   </div>
 )

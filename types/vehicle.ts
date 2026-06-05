@@ -48,4 +48,5 @@ export interface VehicleFormData {
   description?: string
   images?: string[]
   contactPrivacyEnabled?: boolean
+  sellerSuburb?: string   // <-- ADDED
 }
