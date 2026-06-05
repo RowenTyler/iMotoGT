@@ -2,7 +2,7 @@
 
 import React from "react"
 import { notFound, useRouter } from "next/navigation"
-import { useEffect, useRef, useState, useMemo } from "react"   // ✅ useMemo added
+import { useEffect, useRef, useState, useMemo } from "react"
 import { Header } from "@/components/ui/header"
 import { useUser } from "@/components/UserContext"
 import VehicleDetails from "@/components/vehicle-details"
@@ -25,7 +25,8 @@ export default function VehicleDetailsClientPage({ params }: VehicleDetailsPageP
   const resolvedParams = (React as any).use ? (React as any).use(params) : params
 
   const router = useRouter()
-  const { user, toggleSaveVehicle, savedVehicles: savedVehiclesSet } = useUser()
+  // BUG FIX: also destructure authUser and isLoading for fast user resolution
+  const { user, authUser, isLoading: userLoading, toggleSaveVehicle, savedVehicles: savedVehiclesSet } = useUser()
   
   // Stabilized navigation cache
   const { savePageState, restorePageState } = useNavigationCache()
@@ -38,13 +39,10 @@ export default function VehicleDetailsClientPage({ params }: VehicleDetailsPageP
     addToCache
   } = useVehicleContext()
   
-  // Local state initialized securely with synchronous cache extraction!
+  // Local state initialized securely with synchronous cache extraction
   const [vehicle, setVehicle] = useState<any>(() => {
-    // Attempt rapid hydration via our context
     const ctxCached = getCachedVehicle?.(resolvedParams.id)
     if (ctxCached) {
-      console.log(`⚡ [VehicleDetailsPage] Synchronous hydration for ${resolvedParams.id}`)
-      // Fire it instantly into DOM before layout
       return ctxCached
     }
     return null
@@ -55,18 +53,17 @@ export default function VehicleDetailsClientPage({ params }: VehicleDetailsPageP
   const [error, setError] = useState<string | null>(null)
 
   const isInitialMountRef = useRef(true)
+
   // ------------------------------------------------------------------
-  // 1. Fetch vehicle data (replaces broken useVehicle)
+  // 1. Fetch vehicle data
   // ------------------------------------------------------------------
   useEffect(() => {
     let isMounted = true
     const controller = new AbortController()
 
     const fetchVehicle = async () => {
-      // Try cache first
       const cached = getCachedVehicle?.(resolvedParams.id)
       if (cached) {
-        console.log(`✅ [VehicleDetailsPage] Using cached vehicle: ${cached.make} ${cached.model}`)
         if (isMounted) {
           setVehicle(cached)
           setLoading(false)
@@ -75,15 +72,11 @@ export default function VehicleDetailsClientPage({ params }: VehicleDetailsPageP
         return
       }
 
-      // Fetch from API
       try {
-        console.log(`🔍 [VehicleDetailsPage] Fetching vehicle ${resolvedParams.id} from API...`)
         const res = await fetch(`/api/vehicles/${resolvedParams.id}`, { signal: controller.signal })
 
         if (!res.ok) {
-          // Attempt client-side cache-aware fallback for 404s
           if (res.status === 404) {
-            console.warn(`⚠️ [VehicleDetailsPage] API returned 404, trying client cache fallback for ${resolvedParams.id}`)
             try {
               const fallback = await vehicleService.getVehicleById(resolvedParams.id)
               if (fallback) {
@@ -107,7 +100,6 @@ export default function VehicleDetailsClientPage({ params }: VehicleDetailsPageP
           setLoading(false)
           setError(null)
           
-          // Safe calls – context may not provide these functions
           if (typeof addToCache === 'function') {
             addToCache(resolvedParams.id, data, 'vehicleDetails')
           }
@@ -136,19 +128,12 @@ export default function VehicleDetailsClientPage({ params }: VehicleDetailsPageP
   // 2. Restore page state from navigation cache
   // ------------------------------------------------------------------
   useEffect(() => {
-    console.log(`🔍 [VehicleDetailsPage] Mounted for vehicle ID: ${resolvedParams.id}`)
-    
     const cachedState = restorePageState?.()
     if (cachedState) {
-      console.log(`✅ [VehicleDetailsPage] Restored cached state for route`)
+      // State restored (no console log kept)
     }
-    
     const routeKey = getCurrentRouteKey?.()
-    console.log(`📍 [VehicleDetailsPage] Current route key: ${routeKey}`)
-    
-    return () => {
-      console.log(`👋 [VehicleDetailsPage] Unmounting vehicle: ${resolvedParams.id}`)
-    }
+    return () => {}
   }, [resolvedParams.id, restorePageState, getCurrentRouteKey])
 
   // ------------------------------------------------------------------
@@ -156,8 +141,6 @@ export default function VehicleDetailsClientPage({ params }: VehicleDetailsPageP
   // ------------------------------------------------------------------
   useEffect(() => {
     if (vehicle && !loading) {
-      console.log(`💾 [VehicleDetailsPage] Saving vehicle to cache: ${vehicle.id}`)
-      
       if (typeof addToCache === 'function') {
         addToCache(resolvedParams.id, vehicle, 'vehicleDetails')
       }
@@ -182,13 +165,12 @@ export default function VehicleDetailsClientPage({ params }: VehicleDetailsPageP
   }, [])
 
   // ------------------------------------------------------------------
-  // 5. Fetch similar vehicles (unchanged)
+  // 5. Fetch similar vehicles
   // ------------------------------------------------------------------
   const fetchSimilarVehicles = async () => {
     if (!vehicle) return { vehicles: [], totalCount: 0, timestamp: Date.now() }
     
     try {
-      console.log(`🔍 [VehicleDetailsPage] Fetching similar vehicles for: ${vehicle.make} ${vehicle.model}`)
       const response = await fetch(`/api/vehicles/similar/${vehicle.id}?limit=4`)
       if (!response.ok) throw new Error('Failed to fetch similar vehicles')
       
@@ -221,7 +203,6 @@ export default function VehicleDetailsClientPage({ params }: VehicleDetailsPageP
   // 6. Back navigation with state preservation
   // ------------------------------------------------------------------
   const handleBack = () => {
-    console.log(`⏪ [VehicleDetailsPage] Back button clicked, saving current state`)
     if (vehicle && typeof savePageState === 'function') {
       savePageState({
         vehicleId: resolvedParams.id,
@@ -234,25 +215,33 @@ export default function VehicleDetailsClientPage({ params }: VehicleDetailsPageP
 
   // ------------------------------------------------------------------
   // 7. Prepare savedCars array for VehicleDetails
-  //    (VehicleDetails expects an array of vehicles, but our context gives a Set of IDs)
   // ------------------------------------------------------------------
   const savedCarsArray = useMemo(() => {
     if (!vehicle) return []
-    // savedVehiclesSet is a Set of vehicle IDs (from UserContext)
     const isSaved = savedVehiclesSet?.has?.(vehicle.id) || false
     return isSaved ? [vehicle] : []
   }, [vehicle, savedVehiclesSet])
 
   // ------------------------------------------------------------------
-  // 8. Not found / error handling
+  // 8. Derive effectiveUser for fast contact privacy resolution (BUG FIX)
+  // ------------------------------------------------------------------
+  const effectiveUser = user || (authUser ? {
+    id: authUser.id,
+    email: authUser.email || "",
+    firstName: "",
+    lastName: "",
+    loginMethod: "email" as const,
+  } : null)
+
+  // ------------------------------------------------------------------
+  // 9. Not found / error handling
   // ------------------------------------------------------------------
   if (!loading && !vehicle && error) {
-    console.error("❌ [VehicleDetailsPage] Vehicle not found or error:", error)
     return notFound()
   }
 
   // ------------------------------------------------------------------
-  // 9. Loading skeleton (identical to original)
+  // 10. Loading skeleton (unchanged)
   // ------------------------------------------------------------------
   if (loading && !vehicle) {
     return (
@@ -330,7 +319,7 @@ export default function VehicleDetailsClientPage({ params }: VehicleDetailsPageP
   }
 
   // ------------------------------------------------------------------
-  // 10. Navigation handlers with safe cache calls
+  // 11. Navigation handlers with safe cache calls
   // ------------------------------------------------------------------
   const navigationHandlers = {
     onLoginClick: () => {
@@ -397,7 +386,7 @@ export default function VehicleDetailsClientPage({ params }: VehicleDetailsPageP
   return (
     <div className="min-h-screen bg-[var(--light-bg)] dark:bg-[var(--dark-bg)]">
       <Header
-        user={user}
+        user={user}   // Header still uses the full UserProfile (avatar, name)
         {...navigationHandlers}
         transparent={false}
       />
@@ -405,9 +394,9 @@ export default function VehicleDetailsClientPage({ params }: VehicleDetailsPageP
         <VehicleDetails
           vehicle={vehicle}
           onBack={handleBack}
-          user={user}
-          savedCars={savedCarsArray}        // ✅ now an array, .some works
-            onSaveCar={() => {
+          user={effectiveUser}           // ← BUG FIX: use effectiveUser for fast privacy resolution
+          savedCars={savedCarsArray}
+          onSaveCar={() => {
             toggleSaveVehicle(vehicle)
             if (typeof addToCache === 'function') {
               addToCache(resolvedParams.id, vehicle, 'vehicleDetails')
@@ -428,15 +417,7 @@ export default function VehicleDetailsClientPage({ params }: VehicleDetailsPageP
         />
       </div>
       
-      {/* Minimal dev cache indicator */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="fixed bottom-4 left-4 z-50">
-          <div className="bg-gray-900/80 text-white p-2 rounded-lg text-xs">
-            <div>Vehicle Cache: {vehicle ? '✅ Loaded' : '⏳ Loading'}</div>
-            <div>Similar Vehicles: {similarVehiclesData?.vehicles?.length || 0}</div>
-          </div>
-        </div>
-      )}
+      {/* Removed development cache indicator as requested */}
     </div>
   )
 }

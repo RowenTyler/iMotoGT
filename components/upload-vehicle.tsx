@@ -18,6 +18,7 @@ import {
   Maximize2,
   Minimize2,
   Info,
+  MapPin,           // <-- ADDED for location card
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -30,6 +31,7 @@ import type { Vehicle } from "@/types/vehicle"
 import { useUser } from "@/components/UserContext"
 import { vehicleService } from "@/lib/vehicle-service"
 import { compressImage } from "@/lib/image-utils"
+import { isPrivilegedUser } from "@/lib/admin-config"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -138,15 +140,13 @@ export default function UploadVehicle({
   const user = propUser || userProfile || authUser
   const profile = userProfile || propUser || authUser
 
+  // Profile completeness check (no longer includes location)
   const isProfileIncomplete =
     !profile?.firstName ||
     !profile?.lastName ||
-    !profile?.phone ||
-    !profile?.suburb ||
-    !profile?.city ||
-    !profile?.province
+    !profile?.phone
 
-  // Navigation handlers
+  // Navigation handlers (unchanged)
   const handleLogin =
     HeaderPropsOverride?.onLoginClick ?? (() => router.push("/login"))
   const handleDashboard =
@@ -169,7 +169,7 @@ export default function UploadVehicle({
       router.push("/login")
     })
 
-  // ─── Vehicle Data State ───────────────────────────────────────────────────
+  // ─── Vehicle Data State (makes/models) ───────────────────────────────────
 
   const [vehicleData, setVehicleData] = useState<VehicleData | null>(null)
   const [makesList, setMakesList] = useState<VehicleMake[]>([])
@@ -196,7 +196,7 @@ export default function UploadVehicle({
 
   const [contactPrivacyEnabled, setContactPrivacyEnabled] = useState(false)
 
-  // ─── Form State ───────────────────────────────────────────────────────────
+  // ─── Form State (vehicle details, no location) ───────────────────────────
 
   const [formData, setFormData] = useState({
     make: "",
@@ -220,12 +220,19 @@ export default function UploadVehicle({
         "",
     sellerEmail: profile?.email || "",
     sellerPhone: profile?.phone || "",
-    sellerSuburb: profile?.suburb || "",
-    sellerCity: profile?.city || "",
-    sellerProvince: profile?.province || "",
     sellerProfilePic: profile?.profilePic || "",
     contactPrivacyEnabled: false,
   })
+
+  // ─── Independent Vehicle Location State (NEW) ────────────────────────────
+
+  const [vehicleLocation, setVehicleLocation] = useState({
+    suburb: "",
+    city: "",
+    province: "",
+  })
+
+  // ─── Seller Profile Edit State (no location fields) ──────────────────────
 
   const [userClickedEdit, setUserClickedEdit] = useState(false)
   const isEditingSeller = isProfileIncomplete || userClickedEdit
@@ -234,11 +241,13 @@ export default function UploadVehicle({
     firstName: profile?.firstName || "",
     lastName: profile?.lastName || "",
     phone: profile?.phone || "",
-    suburb: profile?.suburb || "",
-    city: profile?.city || "",
-    province: profile?.province || "",
     profilePic: profile?.profilePic || "",
   })
+
+  // ─── Location confirmation modal state ───────────────────────────────────
+
+  const [showLocationConfirmModal, setShowLocationConfirmModal] = useState(false)
+  const hasShownModal = useRef(false)  // prevent repeated triggers
 
   // ─── Submission State ─────────────────────────────────────────────────────
 
@@ -268,7 +277,7 @@ export default function UploadVehicle({
   const [showMakeDropdown, setShowMakeDropdown] = useState(false)
   const [showModelDropdown, setShowModelDropdown] = useState(false)
 
-  // ─── Make/Model Helpers ───────────────────────────────────────────────────
+  // ─── Make/Model Helpers (unchanged) ───────────────────────────────────────
 
   const normalizeMakeName = (make: string): string =>
     make.toLowerCase().replace(/[^a-z0-9]/g, "").trim()
@@ -348,7 +357,7 @@ export default function UploadVehicle({
     loadVehicleData()
   }, [])
 
-  // Pre-populate form in edit mode
+  // Edit mode: pre‑fill from existing vehicle
   useEffect(() => {
     if (editMode && existingVehicle) {
       setFormData({
@@ -367,9 +376,6 @@ export default function UploadVehicle({
         sellerName: existingVehicle.sellerName || "",
         sellerEmail: existingVehicle.sellerEmail || "",
         sellerPhone: existingVehicle.sellerPhone || "",
-        sellerSuburb: existingVehicle.sellerSuburb || "",
-        sellerCity: existingVehicle.sellerCity || "",
-        sellerProvince: existingVehicle.sellerProvince || "",
         sellerProfilePic: existingVehicle.sellerProfilePic || "",
         contactPrivacyEnabled: existingVehicle.contactPrivacyEnabled || false,
       })
@@ -377,10 +383,16 @@ export default function UploadVehicle({
       if (existingVehicle.images && existingVehicle.images.length > 0) {
         setVehicleImages(existingVehicle.images)
       }
+      // Pre‑fill vehicle location from existing listing
+      setVehicleLocation({
+        suburb: existingVehicle.sellerSuburb || "",
+        city: existingVehicle.sellerCity || existingVehicle.city || "",
+        province: existingVehicle.sellerProvince || existingVehicle.province || "",
+      })
     }
   }, [editMode, existingVehicle])
 
-  // Sync make key when vehicle data loads in edit mode
+  // Sync selected make after vehicle data loads in edit mode
   useEffect(() => {
     if (editMode && existingVehicle && vehicleData && formData.make) {
       const canonicalMake = findCanonicalMake(formData.make)
@@ -400,16 +412,24 @@ export default function UploadVehicle({
     }
   }, [editMode, existingVehicle, vehicleData, formData.make])
 
-  // Sync seller info from user profile
+  // Pre‑fill vehicle location from profile as default (only for new listings and if empty)
+  useEffect(() => {
+    if (!editMode && userProfile) {
+      setVehicleLocation(prev => ({
+        suburb: prev.suburb || userProfile.suburb || "",
+        city: prev.city || userProfile.city || "",
+        province: prev.province || userProfile.province || "",
+      }))
+    }
+  }, [editMode, userProfile])
+
+  // Sync seller name/phone/email from user profile (no location)
   useEffect(() => {
     if (userProfile) {
       setSellerFormData({
         firstName: userProfile.firstName || "",
         lastName: userProfile.lastName || "",
         phone: userProfile.phone || "",
-        suburb: userProfile.suburb || "",
-        city: userProfile.city || "",
-        province: userProfile.province || "",
         profilePic: userProfile.profilePic || "",
       })
       setFormData((prev) => ({
@@ -420,15 +440,12 @@ export default function UploadVehicle({
           "",
         sellerEmail: userProfile.email || "",
         sellerPhone: userProfile.phone || "",
-        sellerSuburb: userProfile.suburb || "",
-        sellerCity: userProfile.city || "",
-        sellerProvince: userProfile.province || "",
         sellerProfilePic: userProfile.profilePic || "",
       }))
     }
   }, [userProfile])
 
-  // Sync engine/body search inputs with form data
+  // Sync engine/body search inputs
   useEffect(() => {
     const selectedEngineOption = engineCapacityOptionsList.find(
       (opt) => opt.value === formData.engineCapacity
@@ -482,11 +499,29 @@ export default function UploadVehicle({
     return () => document.removeEventListener("mousedown", handleClickOutside)
   }, [])
 
-  // ─── Make/Model Handlers ──────────────────────────────────────────────────
+  // ─── Location confirmation modal trigger (based on vehicleLocation) ────────
 
-  const handleMakeInputChange = (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  useEffect(() => {
+    // Only for new listings, not edit mode
+    if (editMode) return
+    if (userLoading) return
+    if (!profile) return
+    if (!authUser?.email) return
+    if (hasShownModal.current) return
+
+    // Skip for privileged users
+    if (isPrivilegedUser(authUser.email)) return
+
+    // Show only if vehicleLocation already has suburb and city (pre‑filled from profile)
+    if (vehicleLocation.suburb && vehicleLocation.city) {
+      setShowLocationConfirmModal(true)
+      hasShownModal.current = true
+    }
+  }, [editMode, userLoading, profile, authUser?.email, vehicleLocation.suburb, vehicleLocation.city])
+
+  // ─── Make/Model Handlers (unchanged) ──────────────────────────────────────
+
+  const handleMakeInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = event.target.value
     setFormData((prev) => ({ ...prev, make: inputValue }))
     setSubmitError(null)
@@ -501,9 +536,7 @@ export default function UploadVehicle({
         ? makesList
         : makesList.filter(
           (make) =>
-            make.displayName
-              .toLowerCase()
-              .includes(inputValue.toLowerCase()) ||
+            make.displayName.toLowerCase().includes(inputValue.toLowerCase()) ||
             make.key.toLowerCase().includes(inputValue.toLowerCase())
         )
     )
@@ -525,9 +558,7 @@ export default function UploadVehicle({
     setSubmitError(null)
   }
 
-  const handleModelInputChange = (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  const handleModelInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = event.target.value
     setFormData((prev) => ({ ...prev, model: inputValue }))
     setSubmitError(null)
@@ -576,9 +607,7 @@ export default function UploadVehicle({
     return `R ${formattedInteger || "0"}.${decimalPart.padEnd(2, "0")}`
   }
 
-  const handlePriceInputChange = (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  const handlePriceInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = event.target.value
     const previousRawPrice = formData.price || ""
     let newRawPrice = ""
@@ -586,10 +615,7 @@ export default function UploadVehicle({
       .replace(/^R\s*/, "")
       .replace(/\s/g, "")
 
-    if (
-      inputValue.trim() === "" ||
-      inputValue.trim().toLowerCase() === "r"
-    ) {
+    if (inputValue.trim() === "" || inputValue.trim().toLowerCase() === "r") {
       newRawPrice = ""
     } else if (condensedValue === ".") {
       newRawPrice = "0."
@@ -632,17 +658,16 @@ export default function UploadVehicle({
     setSubmitError(null)
   }
 
+  // Seller profile handlers (no location)
   const handleSellerInputChange = (
-    event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+    event: React.ChangeEvent<HTMLInputElement>
   ) => {
     const { name, value } = event.target
     setSellerFormData((prev) => ({ ...prev, [name]: value }))
     setSubmitError(null)
   }
 
-  const handleEngineCapacitySearchChange = (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  const handleEngineCapacitySearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const searchTerm = e.target.value
     setEngineCapacitySearch(searchTerm)
     setFormData((prev) => ({ ...prev, engineCapacity: searchTerm }))
@@ -654,19 +679,14 @@ export default function UploadVehicle({
     setShowEngineCapacityDropdown(true)
   }
 
-  const handleEngineCapacitySelect = (option: {
-    value: string
-    label: string
-  }) => {
+  const handleEngineCapacitySelect = (option: { value: string; label: string }) => {
     setFormData((prev) => ({ ...prev, engineCapacity: option.value }))
     setEngineCapacitySearch(option.label)
     setShowEngineCapacityDropdown(false)
     setSubmitError(null)
   }
 
-  const handleBodyTypeSearchChange = (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  const handleBodyTypeSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const searchTerm = e.target.value
     setBodyTypeSearch(searchTerm)
     setFormData((prev) => ({ ...prev, bodyType: searchTerm }))
@@ -721,7 +741,7 @@ export default function UploadVehicle({
     }
   }
 
-  // ─── Seller Save ──────────────────────────────────────────────────────────
+  // ─── Seller Save (no location fields) ─────────────────────────────────────
 
   const handleSaveSellerInfo = async () => {
     try {
@@ -740,10 +760,8 @@ export default function UploadVehicle({
         firstName: sellerFormData.firstName,
         lastName: sellerFormData.lastName,
         phone: sellerFormData.phone,
-        suburb: sellerFormData.suburb,
-        city: sellerFormData.city,
-        province: sellerFormData.province,
         profilePic: sellerFormData.profilePic,
+        // IMPORTANT: no suburb, city, province
       }
 
       if (onSaveProfile) {
@@ -757,26 +775,14 @@ export default function UploadVehicle({
       setTimeout(() => setSubmitSuccess(null), 3000)
     } catch (error) {
       console.error("Failed to save seller info:", error)
-      setSubmitError(
-        "Failed to update seller information. Please try again."
-      )
+      setSubmitError("Failed to update seller information. Please try again.")
       setSubmitSuccess(null)
     }
   }
 
-  // ─── Image Handling ───────────────────────────────────────────────────────
+  // ─── Image Handling (unchanged) ───────────────────────────────────────────
 
-  /**
-   * Process uploaded image files.
-   *
-   * Uses compressImage from lib/image-utils.ts (WebP, 75% quality, 1200px max).
-   * This replaces the old inline compressImage function that was in this file.
-   * The compressed base64 is stored in state — actual upload to vehicle-storage
-   * happens inside createVehicle / updateVehicle in the service layer.
-   */
-  const handleImageUpload = async (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files
     if (!files) return
 
@@ -799,24 +805,19 @@ export default function UploadVehicle({
           if (!file.type.startsWith("image/")) {
             throw new Error(`File "${file.name}" is not a valid image.`)
           }
-
           setImageUploadProgress(((index + 1) / fileArray.length) * 100)
-
-          // Read file as base64 then compress using lib/image-utils.ts
           return new Promise<string>((resolve, reject) => {
             const reader = new FileReader()
             reader.onload = async () => {
               try {
                 const base64 = reader.result as string
-                // compressImage from lib/image-utils.ts — WebP, 75% quality
                 const compressed = await compressImage(base64, 1200, 0.75)
                 resolve(compressed)
               } catch (err) {
                 reject(err)
               }
             }
-            reader.onerror = () =>
-              reject(new Error(`Failed to read ${file.name}`))
+            reader.onerror = () => reject(new Error(`Failed to read ${file.name}`))
             reader.readAsDataURL(file)
           })
         })
@@ -829,16 +830,13 @@ export default function UploadVehicle({
         if (result.status === "fulfilled") {
           newImages.push(result.value)
         } else {
-          errors.push(
-            `Failed to process ${fileArray[index].name}: ${result.reason.message}`
-          )
+          errors.push(`Failed to process ${fileArray[index].name}: ${result.reason.message}`)
         }
       })
 
       if (newImages.length > 0) {
         setVehicleImages((prev) => [...prev, ...newImages])
       }
-
       setSubmitError(errors.length > 0 ? errors.join(" ") : null)
     } catch (error) {
       setSubmitError("Failed to process images. Please try again.")
@@ -850,18 +848,17 @@ export default function UploadVehicle({
   }
 
   const triggerFileInput = () => fileInputRef.current?.click()
-
   const handleRemoveImage = (index: number) => {
-    setVehicleImages((prevImages) => prevImages.filter((_, i) => i !== index))
+    setVehicleImages((prev) => prev.filter((_, i) => i !== index))
     setSubmitError(null)
   }
 
-  // ─── Drag/Drop ────────────────────────────────────────────────────────────
+  // ─── Drag/Drop (unchanged) ────────────────────────────────────────────────
 
   const handlePointerDown = useCallback(
     (index: number, e: React.PointerEvent<HTMLDivElement>) => {
       e.preventDefault()
-        ; (e.target as HTMLElement).setPointerCapture(e.pointerId)
+      ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
       setIsDragging(true)
       setDraggedIndex(index)
       setDropTargetIndex(null)
@@ -871,10 +868,7 @@ export default function UploadVehicle({
   )
 
   const handlePointerMove = useCallback(
-    (
-      e: React.PointerEvent<HTMLDivElement>,
-      gridRef: React.RefObject<HTMLDivElement | null>
-    ) => {
+    (e: React.PointerEvent<HTMLDivElement>, gridRef: React.RefObject<HTMLDivElement | null>) => {
       if (draggedIndex === null || !gridRef.current) return
       const items = gridRef.current.querySelectorAll("[data-drag-index]")
       const pointerX = e.clientX
@@ -882,10 +876,7 @@ export default function UploadVehicle({
       let newDropTarget: number | null = null
       items.forEach((item) => {
         const rect = item.getBoundingClientRect()
-        const index = parseInt(
-          item.getAttribute("data-drag-index") || "-1",
-          10
-        )
+        const index = parseInt(item.getAttribute("data-drag-index") || "-1", 10)
         if (
           pointerX >= rect.left &&
           pointerX <= rect.right &&
@@ -903,12 +894,8 @@ export default function UploadVehicle({
 
   const handlePointerUp = useCallback(
     (e: React.PointerEvent<HTMLDivElement>) => {
-      ; (e.target as HTMLElement).releasePointerCapture(e.pointerId)
-      if (
-        draggedIndex !== null &&
-        dropTargetIndex !== null &&
-        draggedIndex !== dropTargetIndex
-      ) {
+      ;(e.target as HTMLElement).releasePointerCapture(e.pointerId)
+      if (draggedIndex !== null && dropTargetIndex !== null && draggedIndex !== dropTargetIndex) {
         const newImages = [...vehicleImages]
         const [draggedImage] = newImages.splice(draggedIndex, 1)
         newImages.splice(dropTargetIndex, 0, draggedImage)
@@ -922,18 +909,15 @@ export default function UploadVehicle({
     [draggedIndex, dropTargetIndex, vehicleImages]
   )
 
-  const handlePointerCancel = useCallback(
-    (e: React.PointerEvent<HTMLDivElement>) => {
-      ; (e.target as HTMLElement).releasePointerCapture(e.pointerId)
-      setIsDragging(false)
-      setDraggedIndex(null)
-      setDropTargetIndex(null)
-      dragItemRef.current = null
-    },
-    []
-  )
+  const handlePointerCancel = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    ;(e.target as HTMLElement).releasePointerCapture(e.pointerId)
+    setIsDragging(false)
+    setDraggedIndex(null)
+    setDropTargetIndex(null)
+    dragItemRef.current = null
+  }, [])
 
-  // ─── Submit ───────────────────────────────────────────────────────────────
+  // ─── Submit with independent vehicle location validation ──────────────────
 
   const handleSubmitVehicle = async () => {
     setIsSubmitting(true)
@@ -941,14 +925,11 @@ export default function UploadVehicle({
     setSubmitSuccess(null)
     setUploadProgress(0)
 
-    // Auto-correct make and model before submission
+    // Auto-correct make and model
     if (formData.make.trim() && vehicleData) {
       const canonicalMake = findCanonicalMake(formData.make)
       if (canonicalMake && canonicalMake.displayName !== formData.make) {
-        setFormData((prev) => ({
-          ...prev,
-          make: canonicalMake.displayName,
-        }))
+        setFormData((prev) => ({ ...prev, make: canonicalMake.displayName }))
       }
     }
     if (
@@ -957,32 +938,40 @@ export default function UploadVehicle({
       vehicleData &&
       vehicleData[selectedMakeKey]
     ) {
-      const canonicalModel = findCanonicalModel(
-        formData.model,
-        selectedMakeKey
-      )
+      const canonicalModel = findCanonicalModel(formData.model, selectedMakeKey)
       if (canonicalModel && canonicalModel.name !== formData.model) {
         setFormData((prev) => ({ ...prev, model: canonicalModel.name }))
       }
     }
 
-    // Validation
-    if (!editMode && isEditingSeller) {
-      setSubmitError(
-        "Please save your updated seller information before listing a vehicle."
-      )
+    // 1. Vehicle location validation (mandatory, independent)
+    if (!vehicleLocation.suburb?.trim()) {
+      setSubmitError("Please enter the suburb where this vehicle is located.")
+      setIsSubmitting(false)
+      return
+    }
+    if (!vehicleLocation.city?.trim()) {
+      setSubmitError("Please enter the city where this vehicle is located.")
+      setIsSubmitting(false)
+      return
+    }
+    if (!vehicleLocation.province?.trim()) {
+      setSubmitError("Please select the province where this vehicle is located.")
       setIsSubmitting(false)
       return
     }
 
+    // 2. Profile completeness (no location required)
+    if (!editMode && isEditingSeller) {
+      setSubmitError("Please save your updated seller information before listing a vehicle.")
+      setIsSubmitting(false)
+      return
+    }
     if (!editMode) {
       const isProfileStillIncomplete =
         !profile?.firstName ||
         !profile?.lastName ||
-        !profile?.phone ||
-        !profile?.suburb ||
-        !profile?.city ||
-        !profile?.province
+        !profile?.phone
       if (isProfileStillIncomplete) {
         setSubmitError(
           "Your seller profile is incomplete. Please edit and save your information to proceed."
@@ -993,6 +982,7 @@ export default function UploadVehicle({
       }
     }
 
+    // 3. Vehicle details validation
     if (
       !formData.make ||
       !formData.model ||
@@ -1009,18 +999,14 @@ export default function UploadVehicle({
       return
     }
 
+    // 4. Images validation
     if (vehicleImages.length < 5) {
-      setSubmitError(
-        `Please upload at least 5 images. You have ${vehicleImages.length}.`
-      )
+      setSubmitError(`Please upload at least 5 images. You have ${vehicleImages.length}.`)
       setIsSubmitting(false)
       return
     }
-
     if (vehicleImages.length > 21) {
-      setSubmitError(
-        `You can upload a maximum of 21 images. You have ${vehicleImages.length}.`
-      )
+      setSubmitError(`You can upload a maximum of 21 images. You have ${vehicleImages.length}.`)
       setIsSubmitting(false)
       return
     }
@@ -1035,13 +1021,17 @@ export default function UploadVehicle({
         images: vehicleImages,
         contactPrivacyEnabled: contactPrivacyEnabled,
         contact_privacy_enabled: contactPrivacyEnabled,
+        // Snapshot the independent vehicle location
+        sellerSuburb: vehicleLocation.suburb,
+        sellerCity: vehicleLocation.city,
+        sellerProvince: vehicleLocation.province,
+        // Keep top-level city/province for backwards compatibility (will be overwritten in DB? but safe)
+        city: vehicleLocation.city,
+        province: vehicleLocation.province,
       }
 
       if (editMode && existingVehicle) {
-        const result = await vehicleService.updateVehicle(
-          existingVehicle.id,
-          vehicleDataForSubmit
-        )
+        const result = await vehicleService.updateVehicle(existingVehicle.id, vehicleDataForSubmit)
         if (!result || !result.id) {
           throw new Error("Failed to update vehicle. Please try again.")
         }
@@ -1050,10 +1040,7 @@ export default function UploadVehicle({
         if (onVehicleSubmit) {
           await onVehicleSubmit(vehicleDataForSubmit)
         } else {
-          const result = await vehicleService.createVehicle(
-            vehicleDataForSubmit,
-            authUser?.id || ""
-          )
+          const result = await vehicleService.createVehicle(vehicleDataForSubmit, authUser?.id || "")
           if (!result || !result.id) {
             throw new Error("Failed to create vehicle. Please try again.")
           }
@@ -1077,11 +1064,7 @@ export default function UploadVehicle({
         }
       }, 1500)
     } catch (error) {
-      setSubmitError(
-        error instanceof Error
-          ? error.message
-          : "Failed to list vehicle. Please try again."
-      )
+      setSubmitError(error instanceof Error ? error.message : "Failed to list vehicle. Please try again.")
       setIsSubmitting(false)
       setUploadProgress(0)
     } finally {
@@ -1102,9 +1085,7 @@ export default function UploadVehicle({
   if (!authUser) {
     return (
       <div className="min-h-screen bg-[var(--light-bg)] dark:bg-[var(--dark-bg)] flex items-center justify-center">
-        <p className="text-[#3E5641] dark:text-white">
-          Redirecting to login...
-        </p>
+        <p className="text-[#3E5641] dark:text-white">Redirecting to login...</p>
       </div>
     )
   }
@@ -1152,12 +1133,8 @@ export default function UploadVehicle({
           {isProcessingImages && (
             <div className="mb-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
-                  Processing images...
-                </span>
-                <span className="text-sm text-blue-600 dark:text-blue-400">
-                  {Math.round(imageUploadProgress)}%
-                </span>
+                <span className="text-sm font-medium text-blue-700 dark:text-blue-300">Processing images...</span>
+                <span className="text-sm text-blue-600 dark:text-blue-400">{Math.round(imageUploadProgress)}%</span>
               </div>
               <div className="w-full bg-blue-200 dark:bg-blue-800 rounded-full h-2">
                 <div
@@ -1174,9 +1151,7 @@ export default function UploadVehicle({
                 <span className="text-sm font-medium text-green-700 dark:text-green-300">
                   {editMode ? "Updating vehicle..." : "Uploading vehicle..."}
                 </span>
-                <span className="text-sm text-green-600 dark:text-green-400">
-                  {Math.round(uploadProgress)}%
-                </span>
+                <span className="text-sm text-green-600 dark:text-green-400">{Math.round(uploadProgress)}%</span>
               </div>
               <div className="w-full bg-green-200 dark:bg-green-800 rounded-full h-2">
                 <div
@@ -1187,42 +1162,28 @@ export default function UploadVehicle({
             </div>
           )}
 
-          {/* Expanded Image Modal */}
+          {/* Expanded Image Modal (unchanged) */}
           {isImageCardExpanded && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
               <div className="relative bg-white dark:bg-[#2A352A] rounded-3xl w-full max-w-6xl max-h-[90vh] overflow-hidden">
                 <div className="flex justify-between items-center p-6 border-b border-[#9FA791]/20 dark:border-[#4A4D45]/20">
-                  <h3 className="text-xl font-bold text-[#3E5641] dark:text-white">
-                    Vehicle Images ({vehicleImages.length})
-                  </h3>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setIsImageCardExpanded(false)}
-                    className="rounded-full"
-                  >
+                  <h3 className="text-xl font-bold text-[#3E5641] dark:text-white">Vehicle Images ({vehicleImages.length})</h3>
+                  <Button variant="ghost" size="icon" onClick={() => setIsImageCardExpanded(false)} className="rounded-full">
                     <Minimize2 className="h-5 w-5" />
                   </Button>
                 </div>
                 <div className="p-4 sm:p-6 overflow-y-auto max-h-[calc(90vh-80px)]">
-                  <div
-                    ref={expandedGridRef}
-                    className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 px-4 py-3 auto-rows-min"
-                  >
+                  <div ref={expandedGridRef} className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 px-4 py-3 auto-rows-min">
                     {vehicleImages.map((image, index) => (
                       <div
                         key={index}
                         data-drag-index={index}
-                        className={`relative w-full aspect-square overflow-hidden rounded-lg group cursor-move select-none ${draggedIndex === index ? "opacity-50 scale-95" : ""
-                          } ${dropTargetIndex === index
-                            ? "ring-2 ring-[#FF6700]"
-                            : ""
-                          }`}
+                        className={`relative w-full aspect-square overflow-hidden rounded-lg group cursor-move select-none ${
+                          draggedIndex === index ? "opacity-50 scale-95" : ""
+                        } ${dropTargetIndex === index ? "ring-2 ring-[#FF6700]" : ""}`}
                         style={{ touchAction: "none" }}
                         onPointerDown={(e) => handlePointerDown(index, e)}
-                        onPointerMove={(e) =>
-                          handlePointerMove(e, expandedGridRef)
-                        }
+                        onPointerMove={(e) => handlePointerMove(e, expandedGridRef)}
                         onPointerUp={handlePointerUp}
                         onPointerCancel={handlePointerCancel}
                       >
@@ -1254,37 +1215,64 @@ export default function UploadVehicle({
                     ))}
                   </div>
                   <p className="text-sm text-gray-500 dark:text-gray-400 mt-4 text-center">
-                    Drag to reorder • First image is main •{" "}
-                    {vehicleImages.length} of 21 images
+                    Drag to reorder • First image is main • {vehicleImages.length} of 21 images
                   </p>
                 </div>
               </div>
             </div>
           )}
 
+          {/* LOCATION CONFIRMATION MODAL (based on vehicleLocation) */}
+          {showLocationConfirmModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+              <div className="bg-white dark:bg-[#2A352A] rounded-3xl p-6 max-w-md w-full shadow-xl border border-[#9FA791]/20 dark:border-[#4A4D45]/20">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 bg-[#FFF8E0] dark:bg-[#3E5641]/30 rounded-full flex items-center justify-center">
+                    <MapPin className="w-5 h-5 text-[#FF6700]" />
+                  </div>
+                  <h3 className="text-lg font-bold text-[#3E5641] dark:text-white">Confirm Vehicle Location</h3>
+                </div>
+                <p className="text-[#6F7F69] dark:text-gray-300 mb-2">Is this vehicle located in:</p>
+                <p className="text-[#3E5641] dark:text-white font-semibold mb-6 text-lg">
+                  {vehicleLocation.suburb}, {vehicleLocation.city}?
+                </p>
+                <div className="flex flex-col gap-3">
+                  <button
+                    onClick={() => setShowLocationConfirmModal(false)}
+                    className="w-full bg-[#FF6700] hover:bg-[#FF7D33] text-white font-semibold py-3 px-6 rounded-xl transition-colors"
+                  >
+                    Yes, that's correct
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowLocationConfirmModal(false)
+                      // Clear vehicle location to force user to fill manually
+                      setVehicleLocation({ suburb: "", city: "", province: "" })
+                      // Scroll to the vehicle location card
+                      document.getElementById("vehicle-location-card")?.scrollIntoView({ behavior: "smooth", block: "center" })
+                    }}
+                    className="w-full border border-[#9FA791] dark:border-[#4A4D45] text-[#3E5641] dark:text-white font-semibold py-3 px-6 rounded-xl hover:bg-gray-50 dark:hover:bg-[#1F2B20] transition-colors"
+                  >
+                    No, let me update it
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="flex flex-col lg:flex-row gap-6">
-            {/* Left Column */}
+            {/* LEFT COLUMN */}
             <div className="lg:w-1/3 flex flex-col">
-              {/* Image Card */}
+              {/* Image Card (unchanged) */}
               <Card className="rounded-3xl overflow-hidden p-4 sm:p-6 flex flex-col w-full border-[#9FA791]/20 dark:border-[#4A4D45]/20 bg-white dark:bg-[#2A352A] mb-6">
                 <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-xl font-bold text-[#3E5641] dark:text-white">
-                    Vehicle Images
-                  </h2>
+                  <h2 className="text-xl font-bold text-[#3E5641] dark:text-white">Vehicle Images</h2>
                   {vehicleImages.length > 0 && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setIsImageCardExpanded(true)}
-                      className="text-[#FF6700] dark:text-[#FF7D33]"
-                    >
-                      <Maximize2 className="h-4 w-4 mr-1" />
-                      Expand
+                    <Button variant="ghost" size="sm" onClick={() => setIsImageCardExpanded(true)} className="text-[#FF6700] dark:text-[#FF7D33]">
+                      <Maximize2 className="h-4 w-4 mr-1" /> Expand
                     </Button>
                   )}
                 </div>
-
-                {/* Main Image Preview */}
                 <div
                   className="relative w-full aspect-video mb-4 bg-gray-200 dark:bg-gray-700 rounded-2xl flex items-center justify-center overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
                   onClick={triggerFileInput}
@@ -1300,9 +1288,7 @@ export default function UploadVehicle({
                   ) : (
                     <div className="text-center text-gray-500 dark:text-gray-400">
                       <Camera className="w-12 h-12 mx-auto mb-2" />
-                      <span className="text-xl font-bold">
-                        Upload Vehicle Images
-                      </span>
+                      <span className="text-xl font-bold">Upload Vehicle Images</span>
                       <p className="text-sm mt-1">(Min 5, Max 21)</p>
                     </div>
                   )}
@@ -1326,38 +1312,23 @@ export default function UploadVehicle({
                     />
                   </Button>
                 </div>
-
-                {/* Thumbnail Grid */}
                 {vehicleImages.length > 0 && (
                   <div className="mt-2">
                     <div className="flex justify-between items-center mb-3">
-                      <h3 className="text-lg font-semibold text-[#3E5641] dark:text-white">
-                        Gallery ({vehicleImages.length})
-                      </h3>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        Drag to reorder • First is main
-                      </p>
+                      <h3 className="text-lg font-semibold text-[#3E5641] dark:text-white">Gallery ({vehicleImages.length})</h3>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Drag to reorder • First is main</p>
                     </div>
-                    <div
-                      ref={imageGridRef}
-                      className="grid grid-cols-3 gap-3 px-3 py-3"
-                    >
+                    <div ref={imageGridRef} className="grid grid-cols-3 gap-3 px-3 py-3">
                       {vehicleImages.map((image, index) => (
                         <div
                           key={index}
                           data-drag-index={index}
-                          className={`relative aspect-square overflow-hidden rounded-lg group cursor-move select-none ${draggedIndex === index
-                              ? "opacity-50 scale-95"
-                              : ""
-                            } ${dropTargetIndex === index
-                              ? "ring-2 ring-[#FF6700]"
-                              : ""
-                            }`}
+                          className={`relative aspect-square overflow-hidden rounded-lg group cursor-move select-none ${
+                            draggedIndex === index ? "opacity-50 scale-95" : ""
+                          } ${dropTargetIndex === index ? "ring-2 ring-[#FF6700]" : ""}`}
                           style={{ touchAction: "none" }}
                           onPointerDown={(e) => handlePointerDown(index, e)}
-                          onPointerMove={(e) =>
-                            handlePointerMove(e, imageGridRef)
-                          }
+                          onPointerMove={(e) => handlePointerMove(e, imageGridRef)}
                           onPointerUp={handlePointerUp}
                           onPointerCancel={handlePointerCancel}
                         >
@@ -1392,24 +1363,21 @@ export default function UploadVehicle({
                 )}
               </Card>
 
-              {/* Contact Privacy Card */}
+              {/* Contact Privacy Card (unchanged) */}
               <Card className="rounded-3xl overflow-hidden p-6 flex flex-col w-full border-[#9FA791]/20 dark:border-[#4A4D45]/20 bg-white dark:bg-[#2A352A] mb-6">
                 <h2 className="text-xl font-bold mb-4 text-[#3E5641] dark:text-white flex items-center">
                   Contact Privacy Settings
                   <div className="relative group ml-2">
                     <Info className="h-4 w-4 text-gray-500 dark:text-gray-400" />
                     <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 hidden group-hover:block w-64 p-3 bg-gray-800 text-white text-xs rounded-lg z-10">
-                      When enabled, only logged-in users will be able to view
-                      your contact information.
+                      When enabled, only logged-in users will be able to view your contact information.
                     </div>
                   </div>
                 </h2>
                 <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-[#1F2B20] rounded-lg">
                   <div className="flex-1">
                     <p className="font-medium text-[#3E5641] dark:text-white">
-                      {contactPrivacyEnabled
-                        ? "Restricted Contact Access"
-                        : "Public Contact Access"}
+                      {contactPrivacyEnabled ? "Restricted Contact Access" : "Public Contact Access"}
                     </p>
                     <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                       {contactPrivacyEnabled
@@ -1421,142 +1389,153 @@ export default function UploadVehicle({
                     onClick={() => {
                       const newValue = !contactPrivacyEnabled
                       setContactPrivacyEnabled(newValue)
-                      setFormData((prev) => ({
-                        ...prev,
-                        contactPrivacyEnabled: newValue,
-                      }))
+                      setFormData((prev) => ({ ...prev, contactPrivacyEnabled: newValue }))
                     }}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${contactPrivacyEnabled
-                        ? "bg-[#FF6700] dark:bg-[#FF7D33]"
-                        : "bg-gray-300 dark:bg-gray-600"
-                      }`}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      contactPrivacyEnabled ? "bg-[#FF6700] dark:bg-[#FF7D33]" : "bg-gray-300 dark:bg-gray-600"
+                    }`}
                   >
                     <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${contactPrivacyEnabled
-                          ? "translate-x-6"
-                          : "translate-x-1"
-                        }`}
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        contactPrivacyEnabled ? "translate-x-6" : "translate-x-1"
+                      }`}
                     />
                   </button>
                 </div>
               </Card>
 
-              {/* Seller Info Card */}
+              {/* DEDICATED VEHICLE LOCATION CARD (NEW) */}
+              <Card
+                id="vehicle-location-card"
+                className="rounded-3xl overflow-hidden p-6 flex flex-col w-full border-[#9FA791]/20 dark:border-[#4A4D45]/20 bg-white dark:bg-[#2A352A] mb-6"
+              >
+                <div className="flex items-center gap-2 mb-4">
+                  <MapPin className="w-5 h-5 text-[#FF6700]" />
+                  <h2 className="text-xl font-bold text-[#3E5641] dark:text-white">Vehicle Location</h2>
+                </div>
+                <p className="text-sm text-[#6F7F69] dark:text-gray-400 mb-4">
+                  Where is this vehicle located? This can differ from your profile.
+                </p>
+                <div className="space-y-4">
+                  <div className="space-y-1.5">
+                    <Label className="text-sm font-medium text-[#3E5641] dark:text-gray-300">
+                      Suburb / Area <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      value={vehicleLocation.suburb}
+                      onChange={(e) => setVehicleLocation(prev => ({ ...prev, suburb: e.target.value }))}
+                      placeholder="e.g., Sandton"
+                      className="border-[#9FA791] dark:border-[#4A4D45] dark:bg-[#1F2B20] dark:text-white"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-sm font-medium text-[#3E5641] dark:text-gray-300">
+                      City <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      value={vehicleLocation.city}
+                      onChange={(e) => setVehicleLocation(prev => ({ ...prev, city: e.target.value }))}
+                      placeholder="e.g., Johannesburg"
+                      className="border-[#9FA791] dark:border-[#4A4D45] dark:bg-[#1F2B20] dark:text-white"
+                      required
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-sm font-medium text-[#3E5641] dark:text-gray-300">
+                      Province <span className="text-red-500">*</span>
+                    </Label>
+                    <select
+                      value={vehicleLocation.province}
+                      onChange={(e) => setVehicleLocation(prev => ({ ...prev, province: e.target.value }))}
+                      className="w-full px-3 py-2 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] appearance-none bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white"
+                      required
+                    >
+                      <option value="">Select Province</option>
+                      <option value="Eastern Cape">Eastern Cape</option>
+                      <option value="Free State">Free State</option>
+                      <option value="Gauteng">Gauteng</option>
+                      <option value="KwaZulu-Natal">KwaZulu-Natal</option>
+                      <option value="Limpopo">Limpopo</option>
+                      <option value="Mpumalanga">Mpumalanga</option>
+                      <option value="North West">North West</option>
+                      <option value="Northern Cape">Northern Cape</option>
+                      <option value="Western Cape">Western Cape</option>
+                    </select>
+                  </div>
+                </div>
+                <p className="text-xs text-[#6F7F69] dark:text-gray-400 mt-3">
+                  💡 This location is specific to this listing and won't affect your profile.
+                </p>
+              </Card>
+
+              {/* Seller Information Card (location fields removed) */}
               {!editMode && (
                 <Card className="rounded-3xl overflow-hidden p-6 flex flex-col w-full border-[#9FA791]/20 dark:border-[#4A4D45]/20 bg-white dark:bg-[#2A352A]">
                   {isEditingSeller && isProfileIncomplete && (
-                    <Alert
-                      variant="default"
-                      className="mb-4 bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20"
-                    >
+                    <Alert variant="default" className="mb-4 bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20">
                       <AlertCircle className="h-4 w-4 text-yellow-600" />
                       <AlertDescription className="text-yellow-800 dark:text-yellow-200">
-                        Your seller profile is incomplete. Please fill out all
-                        fields and save before listing.
+                        Your seller profile is incomplete. Please fill out all fields and save before listing.
                       </AlertDescription>
                     </Alert>
                   )}
                   <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-xl font-bold text-[#3E5641] dark:text-white">
-                      Seller Information
-                    </h2>
+                    <h2 className="text-xl font-bold text-[#3E5641] dark:text-white">Seller Information</h2>
                     {!isEditingSeller ? (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-[#FF6700] dark:text-[#FF7D33]"
-                        onClick={() => setUserClickedEdit(true)}
-                      >
-                        <Edit className="h-4 w-4 mr-1" />
-                        Edit
+                      <Button variant="ghost" size="sm" className="text-[#FF6700] dark:text-[#FF7D33]" onClick={() => setUserClickedEdit(true)}>
+                        <Edit className="h-4 w-4 mr-1" /> Edit
                       </Button>
                     ) : (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-green-600 dark:text-green-400"
-                        onClick={handleSaveSellerInfo}
-                      >
-                        <Check className="h-4 w-4 mr-1" />
-                        Save
+                      <Button variant="ghost" size="sm" className="text-green-600 dark:text-green-400" onClick={handleSaveSellerInfo}>
+                        <Check className="h-4 w-4 mr-1" /> Save
                       </Button>
                     )}
                   </div>
-
                   <div className="space-y-4">
                     {!isEditingSeller ? (
                       <>
                         <div className="flex flex-col">
-                          <Label className="text-sm font-medium text-[#6F7F69] dark:text-gray-400 mb-1">
-                            Name
-                          </Label>
-                          <div className="text-[#3E5641] dark:text-white font-medium">
-                            {formData.sellerName || "Not provided"}
-                          </div>
+                          <Label className="text-sm font-medium text-[#6F7F69] dark:text-gray-400 mb-1">Name</Label>
+                          <div className="text-[#3E5641] dark:text-white font-medium">{formData.sellerName || "Not provided"}</div>
                         </div>
                         <div className="flex flex-col">
-                          <Label className="text-sm font-medium text-[#6F7F69] dark:text-gray-400 mb-1">
-                            Email
-                          </Label>
-                          <div className="text-[#3E5641] dark:text-white font-medium">
-                            {formData.sellerEmail}
-                          </div>
+                          <Label className="text-sm font-medium text-[#6F7F69] dark:text-gray-400 mb-1">Email</Label>
+                          <div className="text-[#3E5641] dark:text-white font-medium">{formData.sellerEmail}</div>
                         </div>
                         <div className="flex flex-col">
-                          <Label className="text-sm font-medium text-[#6F7F69] dark:text-gray-400 mb-1">
-                            Phone
-                          </Label>
-                          <div className="text-[#3E5641] dark:text-white font-medium">
-                            {formData.sellerPhone || "Not provided"}
-                          </div>
-                        </div>
-                        <div className="flex flex-col">
-                          <Label className="text-sm font-medium text-[#6F7F69] dark:text-gray-400 mb-1">
-                            Location
-                          </Label>
-                          <div className="text-[#3E5641] dark:text-white font-medium">
-                            {[
-                              profile?.suburb,
-                              profile?.city,
-                              profile?.province,
-                            ]
-                              .filter(Boolean)
-                              .join(", ") || "Not provided"}
-                          </div>
+                          <Label className="text-sm font-medium text-[#6F7F69] dark:text-gray-400 mb-1">Phone</Label>
+                          <div className="text-[#3E5641] dark:text-white font-medium">{formData.sellerPhone || "Not provided"}</div>
                         </div>
                       </>
                     ) : (
                       <>
                         <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-1.5">
-                            <Label className="text-sm font-medium text-[#3E5641] dark:text-gray-300">
-                              First Name
-                            </Label>
+                            <Label className="text-sm font-medium text-[#3E5641] dark:text-gray-300">First Name *</Label>
                             <Input
                               name="firstName"
                               value={sellerFormData.firstName}
                               onChange={handleSellerInputChange}
                               placeholder="First Name"
                               className="border-[#9FA791] dark:border-[#4A4D45] dark:bg-[#1F2B20] dark:text-white"
+                              required
                             />
                           </div>
                           <div className="space-y-1.5">
-                            <Label className="text-sm font-medium text-[#3E5641] dark:text-gray-300">
-                              Last Name
-                            </Label>
+                            <Label className="text-sm font-medium text-[#3E5641] dark:text-gray-300">Last Name *</Label>
                             <Input
                               name="lastName"
                               value={sellerFormData.lastName}
                               onChange={handleSellerInputChange}
                               placeholder="Last Name"
                               className="border-[#9FA791] dark:border-[#4A4D45] dark:bg-[#1F2B20] dark:text-white"
+                              required
                             />
                           </div>
                         </div>
                         <div className="space-y-1.5">
-                          <Label className="text-sm font-medium text-[#3E5641] dark:text-gray-300">
-                            Phone Number
-                          </Label>
+                          <Label className="text-sm font-medium text-[#3E5641] dark:text-gray-300">Phone Number *</Label>
                           <Input
                             name="phone"
                             type="tel"
@@ -1564,97 +1543,34 @@ export default function UploadVehicle({
                             onChange={handleSellerInputChange}
                             placeholder="+27 12 345 6789"
                             className="border-[#9FA791] dark:border-[#4A4D45] dark:bg-[#1F2B20] dark:text-white"
+                            required
                           />
                         </div>
                         <div className="space-y-1.5">
-                          <Label className="text-sm font-medium text-[#3E5641] dark:text-gray-300">
-                            Email
-                          </Label>
-                          <Input
-                            value={user?.email || ""}
-                            disabled
-                            className="opacity-70 border-[#9FA791] dark:border-[#4A4D45] dark:bg-[#1F2B20] dark:text-white"
-                          />
-                          <p className="text-xs text-gray-500">
-                            Email cannot be changed
-                          </p>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-1.5">
-                            <Label className="text-sm font-medium text-[#3E5641] dark:text-gray-300">
-                              Suburb
-                            </Label>
-                            <Input
-                              name="suburb"
-                              value={sellerFormData.suburb || ""}
-                              onChange={handleSellerInputChange}
-                              placeholder="Suburb"
-                              className="border-[#9FA791] dark:border-[#4A4D45] dark:bg-[#1F2B20] dark:text-white"
-                            />
-                          </div>
-                          <div className="space-y-1.5">
-                            <Label className="text-sm font-medium text-[#3E5641] dark:text-gray-300">
-                              City
-                            </Label>
-                            <Input
-                              name="city"
-                              value={sellerFormData.city || ""}
-                              onChange={handleSellerInputChange}
-                              placeholder="City"
-                              className="border-[#9FA791] dark:border-[#4A4D45] dark:bg-[#1F2B20] dark:text-white"
-                            />
-                          </div>
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label className="text-sm font-medium text-[#3E5641] dark:text-gray-300">
-                            Province
-                          </Label>
-                          <select
-                            name="province"
-                            value={sellerFormData.province || ""}
-                            onChange={handleSellerInputChange}
-                            className="w-full px-3 py-2 rounded-lg border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] appearance-none bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white"
-                          >
-                            <option value="">Select Province</option>
-                            <option value="Eastern Cape">Eastern Cape</option>
-                            <option value="Free State">Free State</option>
-                            <option value="Gauteng">Gauteng</option>
-                            <option value="KwaZulu-Natal">KwaZulu-Natal</option>
-                            <option value="Limpopo">Limpopo</option>
-                            <option value="Mpumalanga">Mpumalanga</option>
-                            <option value="North West">North West</option>
-                            <option value="Northern Cape">Northern Cape</option>
-                            <option value="Western Cape">Western Cape</option>
-                          </select>
+                          <Label className="text-sm font-medium text-[#3E5641] dark:text-gray-300">Email</Label>
+                          <Input value={user?.email || ""} disabled className="opacity-70 border-[#9FA791] dark:border-[#4A4D45] dark:bg-[#1F2B20] dark:text-white" />
+                          <p className="text-xs text-gray-500">Email cannot be changed</p>
                         </div>
                       </>
                     )}
                   </div>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-4">
-                    This information will be visible to potential buyers.
-                  </p>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-4">This information will be visible to potential buyers.</p>
                 </Card>
               )}
             </div>
 
-            {/* Right Column — Vehicle Details Form */}
+            {/* RIGHT COLUMN — Vehicle Details Form (unchanged except removed any location fields) */}
             <div className="lg:w-2/3 flex">
               <Card className="rounded-3xl p-6 w-full border-[#9FA791]/20 dark:border-[#4A4D45]/20 bg-white dark:bg-[#2A352A]">
-                <h2 className="text-xl font-bold mb-6 text-[#3E5641] dark:text-white">
-                  Vehicle Details
-                </h2>
+                <h2 className="text-xl font-bold mb-6 text-[#3E5641] dark:text-white">Vehicle Details</h2>
                 <div className="space-y-6">
                   {/* Basic Info */}
                   <div>
-                    <h3 className="text-lg font-semibold mb-3 text-[#3E5641] dark:text-white">
-                      Basic Information
-                    </h3>
+                    <h3 className="text-lg font-semibold mb-3 text-[#3E5641] dark:text-white">Basic Information</h3>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div className="space-y-1.5">
                         <div className="relative" ref={makeRef}>
-                          <Label className="text-sm font-medium text-[#3E5641] dark:text-gray-300">
-                            Make
-                          </Label>
+                          <Label className="text-sm font-medium text-[#3E5641] dark:text-gray-300">Make</Label>
                           <Input
                             name="make"
                             value={formData.make}
@@ -1662,8 +1578,7 @@ export default function UploadVehicle({
                             onBlur={handleMakeBlur}
                             onFocus={() => {
                               setShowMakeDropdown(true)
-                              if (!formData.make.trim())
-                                setFilteredMakes(makesList)
+                              if (!formData.make.trim()) setFilteredMakes(makesList)
                             }}
                             placeholder="e.g., Toyota"
                             className="border-[#9FA791] dark:border-[#4A4D45] dark:bg-[#1F2B20] dark:text-white"
@@ -1690,9 +1605,7 @@ export default function UploadVehicle({
                       </div>
                       <div className="space-y-1.5">
                         <div className="relative" ref={modelRef}>
-                          <Label className="text-sm font-medium text-[#3E5641] dark:text-gray-300">
-                            Model
-                          </Label>
+                          <Label className="text-sm font-medium text-[#3E5641] dark:text-gray-300">Model</Label>
                           <Input
                             name="model"
                             value={formData.model}
@@ -1701,8 +1614,7 @@ export default function UploadVehicle({
                             onFocus={() => {
                               if (selectedMakeKey) {
                                 setShowModelDropdown(true)
-                                if (!formData.model.trim())
-                                  setFilteredModels(modelsList)
+                                if (!formData.model.trim()) setFilteredModels(modelsList)
                               }
                             }}
                             placeholder="e.g., Corolla"
@@ -1729,9 +1641,7 @@ export default function UploadVehicle({
                         </div>
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-sm font-medium text-[#3E5641] dark:text-gray-300">
-                          Variant (Optional)
-                        </Label>
+                        <Label className="text-sm font-medium text-[#3E5641] dark:text-gray-300">Variant (Optional)</Label>
                         <Input
                           name="variant"
                           value={formData.variant}
@@ -1746,14 +1656,10 @@ export default function UploadVehicle({
 
                   {/* Price / Mileage / Year */}
                   <div>
-                    <h3 className="text-lg font-semibold mb-3 text-[#3E5641] dark:text-white">
-                      Price, Mileage &amp; Year
-                    </h3>
+                    <h3 className="text-lg font-semibold mb-3 text-[#3E5641] dark:text-white">Price, Mileage &amp; Year</h3>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div className="space-y-1.5">
-                        <Label className="text-sm font-medium text-[#3E5641] dark:text-gray-300">
-                          Price (ZAR)
-                        </Label>
+                        <Label className="text-sm font-medium text-[#3E5641] dark:text-gray-300">Price (ZAR)</Label>
                         <Input
                           name="price"
                           type="text"
@@ -1765,9 +1671,7 @@ export default function UploadVehicle({
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-sm font-medium text-[#3E5641] dark:text-gray-300">
-                          Mileage (km)
-                        </Label>
+                        <Label className="text-sm font-medium text-[#3E5641] dark:text-gray-300">Mileage (km)</Label>
                         <Input
                           name="mileage"
                           type="number"
@@ -1781,9 +1685,7 @@ export default function UploadVehicle({
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-sm font-medium text-[#3E5641] dark:text-gray-300">
-                          Year
-                        </Label>
+                        <Label className="text-sm font-medium text-[#3E5641] dark:text-gray-300">Year</Label>
                         <Input
                           name="year"
                           type="number"
@@ -1801,14 +1703,10 @@ export default function UploadVehicle({
 
                   {/* Technical Specs */}
                   <div>
-                    <h3 className="text-lg font-semibold mb-3 text-[#3E5641] dark:text-white">
-                      Technical Specifications
-                    </h3>
+                    <h3 className="text-lg font-semibold mb-3 text-[#3E5641] dark:text-white">Technical Specifications</h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                       <div className="space-y-1.5">
-                        <Label className="text-sm font-medium text-[#3E5641] dark:text-gray-300">
-                          Transmission
-                        </Label>
+                        <Label className="text-sm font-medium text-[#3E5641] dark:text-gray-300">Transmission</Label>
                         <select
                           name="transmission"
                           value={formData.transmission}
@@ -1822,9 +1720,7 @@ export default function UploadVehicle({
                         </select>
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-sm font-medium text-[#3E5641] dark:text-gray-300">
-                          Fuel Type
-                        </Label>
+                        <Label className="text-sm font-medium text-[#3E5641] dark:text-gray-300">Fuel Type</Label>
                         <select
                           name="fuel"
                           value={formData.fuel}
@@ -1841,9 +1737,7 @@ export default function UploadVehicle({
                       </div>
                       <div className="space-y-1.5">
                         <div className="relative" ref={engineCapacityRef}>
-                          <Label className="text-sm font-medium text-[#3E5641] dark:text-gray-300">
-                            Engine Capacity
-                          </Label>
+                          <Label className="text-sm font-medium text-[#3E5641] dark:text-gray-300">Engine Capacity</Label>
                           <Input
                             type="text"
                             value={engineCapacitySearch}
@@ -1852,13 +1746,7 @@ export default function UploadVehicle({
                               setShowEngineCapacityDropdown(true)
                               setEngineCapacityFiltered(
                                 engineCapacitySearch
-                                  ? engineCapacityOptionsList.filter((o) =>
-                                    o.label
-                                      .toLowerCase()
-                                      .includes(
-                                        engineCapacitySearch.toLowerCase()
-                                      )
-                                  )
+                                  ? engineCapacityOptionsList.filter((o) => o.label.toLowerCase().includes(engineCapacitySearch.toLowerCase()))
                                   : engineCapacityOptionsList
                               )
                             }}
@@ -1867,30 +1755,27 @@ export default function UploadVehicle({
                             disabled={isSubmitting}
                             autoComplete="off"
                           />
-                          {showEngineCapacityDropdown &&
-                            engineCapacityFiltered.length > 0 && (
-                              <div className="absolute z-10 w-full mt-4 bg-white dark:bg-[#1F2B20] border border-[#9FA791] dark:border-[#4A4D45] rounded-md shadow-lg max-h-60 overflow-y-auto">
-                                {engineCapacityFiltered.map((option) => (
-                                  <div
-                                    key={option.value}
-                                    className="px-4 py-2 hover:bg-[#FFF8E0] dark:hover:bg-[#2A352A] cursor-pointer text-[#3E5641] dark:text-white"
-                                    onMouseDown={(e) => {
-                                      e.preventDefault()
-                                      handleEngineCapacitySelect(option)
-                                    }}
-                                  >
-                                    {option.label}
-                                  </div>
-                                ))}
-                              </div>
-                            )}
+                          {showEngineCapacityDropdown && engineCapacityFiltered.length > 0 && (
+                            <div className="absolute z-10 w-full mt-4 bg-white dark:bg-[#1F2B20] border border-[#9FA791] dark:border-[#4A4D45] rounded-md shadow-lg max-h-60 overflow-y-auto">
+                              {engineCapacityFiltered.map((option) => (
+                                <div
+                                  key={option.value}
+                                  className="px-4 py-2 hover:bg-[#FFF8E0] dark:hover:bg-[#2A352A] cursor-pointer text-[#3E5641] dark:text-white"
+                                  onMouseDown={(e) => {
+                                    e.preventDefault()
+                                    handleEngineCapacitySelect(option)
+                                  }}
+                                >
+                                  {option.label}
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       </div>
                       <div className="space-y-1.5">
                         <div className="relative" ref={bodyTypeRef}>
-                          <Label className="text-sm font-medium text-[#3E5641] dark:text-gray-300">
-                            Body Type
-                          </Label>
+                          <Label className="text-sm font-medium text-[#3E5641] dark:text-gray-300">Body Type</Label>
                           <Input
                             type="text"
                             value={bodyTypeSearch}
@@ -1899,11 +1784,7 @@ export default function UploadVehicle({
                               setShowBodyTypeDropdown(true)
                               setBodyTypeFiltered(
                                 bodyTypeSearch
-                                  ? bodyTypeOptionsList.filter((o) =>
-                                    o.label
-                                      .toLowerCase()
-                                      .includes(bodyTypeSearch.toLowerCase())
-                                  )
+                                  ? bodyTypeOptionsList.filter((o) => o.label.toLowerCase().includes(bodyTypeSearch.toLowerCase()))
                                   : bodyTypeOptionsList
                               )
                             }}
@@ -1912,24 +1793,23 @@ export default function UploadVehicle({
                             disabled={isSubmitting}
                             autoComplete="off"
                           />
-                          {showBodyTypeDropdown &&
-                            bodyTypeFiltered.length > 0 && (
-                              <div className="absolute z-10 w-full mt-1 bg-white dark:bg-[#1F2B20] border border-[#9FA791] dark:border-[#4A4D45] rounded-md shadow-lg max-h-60 overflow-y-auto">
-                                {bodyTypeFiltered.map((option) => (
-                                  <div
-                                    key={option.value}
-                                    className="px-4 py-3 hover:bg-[#FFF8E0] dark:hover:bg-[#2A352A] cursor-pointer text-[#3E5641] dark:text-white flex items-center"
-                                    onMouseDown={(e) => {
-                                      e.preventDefault()
-                                      handleBodyTypeSelect(option)
-                                    }}
-                                  >
-                                    <option.IconComponent className="w-4 h-4 mr-2 opacity-70 flex-shrink-0" />
-                                    {option.label}
-                                  </div>
-                                ))}
-                              </div>
-                            )}
+                          {showBodyTypeDropdown && bodyTypeFiltered.length > 0 && (
+                            <div className="absolute z-10 w-full mt-1 bg-white dark:bg-[#1F2B20] border border-[#9FA791] dark:border-[#4A4D45] rounded-md shadow-lg max-h-60 overflow-y-auto">
+                              {bodyTypeFiltered.map((option) => (
+                                <div
+                                  key={option.value}
+                                  className="px-4 py-3 hover:bg-[#FFF8E0] dark:hover:bg-[#2A352A] cursor-pointer text-[#3E5641] dark:text-white flex items-center"
+                                  onMouseDown={(e) => {
+                                    e.preventDefault()
+                                    handleBodyTypeSelect(option)
+                                  }}
+                                >
+                                  <option.IconComponent className="w-4 h-4 mr-2 opacity-70 flex-shrink-0" />
+                                  {option.label}
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -1937,13 +1817,9 @@ export default function UploadVehicle({
 
                   {/* Condition */}
                   <div>
-                    <h3 className="text-lg font-semibold mb-3 text-[#3E5641] dark:text-white">
-                      Vehicle Condition
-                    </h3>
+                    <h3 className="text-lg font-semibold mb-3 text-[#3E5641] dark:text-white">Vehicle Condition</h3>
                     <div className="space-y-1.5">
-                      <Label className="text-sm font-medium text-[#3E5641] dark:text-gray-300">
-                        Condition
-                      </Label>
+                      <Label className="text-sm font-medium text-[#3E5641] dark:text-gray-300">Condition</Label>
                       <select
                         name="condition"
                         value={formData.condition}
@@ -1961,13 +1837,9 @@ export default function UploadVehicle({
 
                   {/* Description */}
                   <div>
-                    <h3 className="text-lg font-semibold mb-3 text-[#3E5641] dark:text-white">
-                      Description
-                    </h3>
+                    <h3 className="text-lg font-semibold mb-3 text-[#3E5641] dark:text-white">Description</h3>
                     <div className="space-y-1.5">
-                      <Label className="text-sm font-medium text-[#3E5641] dark:text-gray-300">
-                        Vehicle Description (Optional)
-                      </Label>
+                      <Label className="text-sm font-medium text-[#3E5641] dark:text-gray-300">Vehicle Description (Optional)</Label>
                       <textarea
                         name="description"
                         value={formData.description}
@@ -1979,7 +1851,7 @@ export default function UploadVehicle({
                     </div>
                   </div>
 
-                  {/* Submit */}
+                  {/* Submit Button */}
                   <div className="flex justify-end pt-4 mt-auto">
                     <Button
                       onClick={handleSubmitVehicle}
@@ -1987,13 +1859,7 @@ export default function UploadVehicle({
                       className="bg-[#FF6700] text-white hover:bg-[#FF6700]/90 dark:bg-[#FF7D33] dark:hover:bg-[#FF7D33]/90"
                     >
                       <Save className="h-4 w-4 mr-2" />
-                      {isSubmitting
-                        ? editMode
-                          ? "Updating..."
-                          : "Submitting..."
-                        : editMode
-                          ? "Update Vehicle"
-                          : "List Vehicle"}
+                      {isSubmitting ? (editMode ? "Updating..." : "Submitting...") : editMode ? "Update Vehicle" : "List Vehicle"}
                     </Button>
                   </div>
                 </div>
