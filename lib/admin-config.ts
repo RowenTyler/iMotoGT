@@ -1,34 +1,62 @@
 /**
  * lib/admin-config.ts
  *
- * Privileged user configuration.
- * Users listed here bypass the free-tier listing limit and have full access.
+ * Two-tier privileged access:
  *
- * To add more users, append their email to PRIVILEGED_EMAILS.
+ *   SUPER_ADMIN  – 500 listings + full /admin/* access
+ *   PLUS_TIER    – 50 listings, no /admin/* access
+ *
+ * To add a plus-tier user, append their email to PLUS_TIER_EMAILS only.
+ * To promote someone to super admin, add to SUPER_ADMIN_EMAILS only.
  */
 
-export const PRIVILEGED_EMAILS: string[] = [
-  "nkosinathinathy70@gmail.com",
+export const SUPER_ADMIN_EMAILS: string[] = [
   "rowenrichardson@gmail.com",
   "richardson.rowen@gmail.com",
   "tyler.rowend@gmail.com",
 ]
 
-/**
- * Returns true if the given email has unlimited/admin access.
- * Comparison is case-insensitive.
- */
+export const PLUS_TIER_EMAILS: string[] = [
+  "nkosinathinathy70@gmail.com",
+  // add more plus-tier users here
+]
+
+// Combined – used only for generic "is this person non-free?" checks
+export const PRIVILEGED_EMAILS: string[] = [
+  ...SUPER_ADMIN_EMAILS,
+  ...PLUS_TIER_EMAILS,
+]
+
+/** True for super admins AND plus-tier users. */
 export function isPrivilegedUser(email: string | undefined | null): boolean {
   if (!email) return false
-  return PRIVILEGED_EMAILS.some(
-    (privileged) => privileged.toLowerCase() === email.toLowerCase()
-  )
+  const lower = email.toLowerCase()
+  return PRIVILEGED_EMAILS.some((e) => e.toLowerCase() === lower)
+}
+
+/** True only for super admins – controls /admin/* access. */
+export function isSuperAdminUser(email: string | undefined | null): boolean {
+  if (!email) return false
+  const lower = email.toLowerCase()
+  return SUPER_ADMIN_EMAILS.some((e) => e.toLowerCase() === lower)
+}
+
+/** True only for plus-tier users (50-listing cap, no admin panel). */
+export function isPlusTierUser(email: string | undefined | null): boolean {
+  if (!email) return false
+  const lower = email.toLowerCase()
+  return PLUS_TIER_EMAILS.some((e) => e.toLowerCase() === lower)
 }
 
 /**
  * Returns the effective listing limit for a user.
- * Privileged users get Number.MAX_SAFE_INTEGER (effectively unlimited).
+ *
+ * super admin  → 500
+ * plus tier    → 50
+ * free         → 5
  */
 export function getListingLimit(email: string | undefined | null): number {
-  return isPrivilegedUser(email) ? Number.MAX_SAFE_INTEGER : 5
+  if (isSuperAdminUser(email)) return 500
+  if (isPlusTierUser(email)) return 50
+  return 5
 }
