@@ -15,6 +15,7 @@ import { Header } from "./ui/header"
 import VehicleCard from "./vehicle-card"
 import { useVehicleList, useVehicleContext } from "@/components/VehicleProvider"
 import { useNavigationCache } from "@/components/NavigationCacheHandler"
+import { useDebounce } from "@/hooks/use-debounce"
 
 // Common South African car make abbreviations
 const MAKE_ABBREVIATIONS: Record<string, string> = {
@@ -90,6 +91,7 @@ export default function CarMarketplace() {
   const [savedVehiclesData, setSavedVehiclesData] = useState<Vehicle[]>([])
 
   const [searchTerm, setSearchTerm] = useState("")
+  const debouncedSearchTerm = useDebounce(searchTerm, 250) // 👈 debounced search term
   const [selectedTerms, setSelectedTerms] = useState<string[]>([])
   const [suggestions, setSuggestions] = useState<string[]>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
@@ -341,6 +343,15 @@ export default function CarMarketplace() {
     }
   }, [showEngineCapacitySlider, currentSliderEngineValues])
 
+  // 🚀 Debounced suggestion generation
+  useEffect(() => {
+    if (debouncedSearchTerm.trim()) {
+      generateSuggestions(debouncedSearchTerm)
+    } else {
+      setSuggestions([])
+    }
+  }, [debouncedSearchTerm, vehicleData?.vehicles])
+
   // Check if a make is selected
   const isMakeSelected = (make: string): boolean => {
     return selectedTerms.includes(make)
@@ -444,8 +455,8 @@ export default function CarMarketplace() {
   const handleSearchInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value
     setSearchTerm(value)
-    generateSuggestions(value)
     setShowSuggestions(true)
+    // generateSuggestions is now driven by the debouncedSearchTerm effect
   }
 
   const removeSelectedTerm = (term: string) => {
@@ -1205,8 +1216,24 @@ export default function CarMarketplace() {
               </div>
 
               {loading ? (
-                <div className="flex justify-center items-center py-12">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#FF6700]"></div>
+                // Skeleton UI grid
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {Array.from({ length: 8 }).map((_, i) => (
+                    <div
+                      key={i}
+                      className="rounded-lg shadow-md overflow-hidden h-96 bg-gray-200 dark:bg-gray-700 animate-pulse"
+                    >
+                      {/* Image area */}
+                      <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-600 relative">
+                        {/* Bottom content strip */}
+                        <div className="absolute bottom-0 left-0 right-0 p-4 space-y-2">
+                          <div className="h-5 bg-gray-300 dark:bg-gray-600 rounded w-3/4" />
+                          <div className="h-7 bg-gray-300 dark:bg-gray-600 rounded w-1/2" />
+                          <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-2/3" />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               ) : error ? (
                 <div className="text-center py-12">

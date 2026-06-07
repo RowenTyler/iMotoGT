@@ -12,6 +12,7 @@
   "dependencies": {
     "@edge-runtime/vm": "latest",
     "@hookform/resolvers": "^3.10.0",
+    "@ikhrustalev/convex-debouncer": "^0.1.2",
     "@opentelemetry/api": "latest",
     "@radix-ui/react-accordion": "latest",
     "@radix-ui/react-alert-dialog": "latest",
