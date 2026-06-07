@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   title: "Browse Vehicles - iMoto GT",
   description: "Search and filter thousands of vehicles for sale across South Africa.",
   alternates: {
-    canonical: 'https://imoto-gt.co.za/results',
+    canonical: 'https://imotogt.co.za/results',
   },
 }
 

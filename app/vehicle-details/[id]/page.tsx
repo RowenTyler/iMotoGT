@@ -8,7 +8,7 @@ export async function generateMetadata(
   // For now a safe default:
   return {
     alternates: {
-      canonical: `https://imoto-gt.co.za/vehicle-details/${params.id}`,
+      canonical: `https://imotogt.co.za/vehicle-details/${params.id}`,
     },
   }
 }

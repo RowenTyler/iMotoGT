@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   title: 'Privacy Policy - iMoto GT',
   description: 'Learn how iMoto GT collects, uses, and protects your personal data in compliance with GDPR.',
   alternates: {
-    canonical: 'https://imoto-gt.co.za/privacy',
+    canonical: 'https://imotogt.co.za/privacy',
   },
 }
 

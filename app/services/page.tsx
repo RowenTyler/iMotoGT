@@ -6,7 +6,7 @@ import type { Metadata } from 'next'
 export const metadata: Metadata = {
   title: "Services - iMoto GT",
   alternates: {
-    canonical: 'https://imoto-gt.co.za/services',
+    canonical: 'https://imotogt.co.za/services',
   },
 }
 

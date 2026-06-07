@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   title: "About Us - iMoto GT",
   description: "Learn about iMoto GT, South Africa's trusted vehicle marketplace.",
   alternates: {
-    canonical: 'https://imoto-gt.co.za/about',
+    canonical: 'https://imotogt.co.za/about',
   },
 }
 

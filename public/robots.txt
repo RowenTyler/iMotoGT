@@ -1,5 +1,5 @@
 # robots.txt — iMoto GT
-# https://imoto-gt.co.za
+# https://imotogt.co.za
 
 User-agent: *
 
@@ -25,4 +25,4 @@ Disallow: /vehicle/*/edit
 Disallow: /api/
 
 # Sitemap location
-Sitemap: https://imoto-gt.co.za/sitemap.xml
+Sitemap: https://imotogt.co.za/sitemap.xml
