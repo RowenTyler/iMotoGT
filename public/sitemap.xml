@@ -6,7 +6,7 @@
 
   <!-- ============================================================
        IMOTO GT — SITEMAP
-       Base URL: https://imoto-gt.co.za
+       Base URL: https://imotogt.co.za
        Generated: 2026-03-21
        ============================================================ -->
 
@@ -15,14 +15,14 @@
        ─────────────────────────────────────────────── -->
 
   <url>
-    <loc>https://imoto-gt.co.za/home</loc>
+    <loc>https://imotogt.co.za/home</loc>
     <lastmod>2026-03-21</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
 
   <url>
-    <loc>https://imoto-gt.co.za/results</loc>
+    <loc>https://imotogt.co.za/results</loc>
     <lastmod>2026-03-21</lastmod>
     <changefreq>hourly</changefreq>
     <priority>0.9</priority>
@@ -33,21 +33,21 @@
        ─────────────────────────────────────────────── -->
 
   <url>
-    <loc>https://imoto-gt.co.za/upload-vehicle</loc>
+    <loc>https://imotogt.co.za/upload-vehicle</loc>
     <lastmod>2026-03-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
 
   <url>
-    <loc>https://imoto-gt.co.za/login</loc>
+    <loc>https://imotogt.co.za/login</loc>
     <lastmod>2026-03-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
 
   <url>
-    <loc>https://imoto-gt.co.za/upgrade</loc>
+    <loc>https://imotogt.co.za/upgrade</loc>
     <lastmod>2026-03-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
@@ -58,7 +58,7 @@
        ─────────────────────────────────────────────── -->
 
   <url>
-    <loc>https://imoto-gt.co.za/reset-password</loc>
+    <loc>https://imotogt.co.za/reset-password</loc>
     <lastmod>2026-03-21</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.4</priority>
@@ -69,21 +69,21 @@
        ─────────────────────────────────────────────── -->
 
   <url>
-    <loc>https://imoto-gt.co.za/about</loc>
+    <loc>https://imotogt.co.za/about</loc>
     <lastmod>2026-03-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.6</priority>
   </url>
 
   <url>
-    <loc>https://imoto-gt.co.za/services</loc>
+    <loc>https://imotogt.co.za/services</loc>
     <lastmod>2026-03-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
 
   <url>
-    <loc>https://imoto-gt.co.za/privacy</loc>
+    <loc>https://imotogt.co.za/privacy</loc>
     <lastmod>2026-03-21</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.4</priority>
@@ -96,14 +96,14 @@
        ─────────────────────────────────────────────── -->
 
   <url>
-    <loc>https://imoto-gt.co.za/dashboard</loc>
+    <loc>https://imotogt.co.za/dashboard</loc>
     <lastmod>2026-03-21</lastmod>
     <changefreq>always</changefreq>
     <priority>0.3</priority>
   </url>
 
   <url>
-    <loc>https://imoto-gt.co.za/settings</loc>
+    <loc>https://imotogt.co.za/settings</loc>
     <lastmod>2026-03-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.2</priority>

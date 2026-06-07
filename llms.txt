@@ -1,6 +1,6 @@
 # iMoto GT — LLM Context File
 # South African Car Marketplace
-# https://imoto-gt.co.za
+# https://imotogt.co.za
 # Generated: 2026-03-21
 
 ---
@@ -257,7 +257,7 @@ contact privacy controls, GDPR cookie consent, and a smart caching layer for per
 NEXT_PUBLIC_SUPABASE_URL=https://mwzrrrnmtyiyrwdqhcqb.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGci...
 SUPABASE_SERVICE_ROLE_KEY=eyJhbGci...  # Server-only, used in API routes
-NEXT_PUBLIC_APP_URL=https://imoto-gt.co.za
+NEXT_PUBLIC_APP_URL=https://imotogt.co.za
 NODE_ENV=production
 \`\`\`
 
