@@ -58,6 +58,9 @@ interface VehicleContextType {
   restoreScrollPosition: () => number | null;
   getCurrentRouteKey: () => string;
   isCurrentRouteCached: () => boolean;
+  // 👇 Added missing methods
+  addToCache: (id: string, vehicle: Vehicle, type?: string) => void;
+  saveForCurrentRoute: (data: any, type?: string) => void;
 }
 
 const VehicleContext = createContext<VehicleContextType | null>(null);
@@ -169,6 +172,26 @@ export const VehicleProvider = ({ children }: { children: React.ReactNode }) => 
     }));
   }, []);
 
+  // 👇 New: addToCache implementation
+  const addToCache = useCallback((id: string, vehicle: Vehicle, _type?: string) => {
+    setCache(prev => ({
+      ...prev,
+      byId: { ...prev.byId, [id]: vehicle },
+      timestamps: { ...prev.timestamps, [`vehicle:${id}`]: Date.now() },
+      lastAccessed: { ...prev.lastAccessed, [id]: Date.now() },
+    }));
+  }, []);
+
+  // 👇 New: saveForCurrentRoute implementation
+  const saveForCurrentRoute = useCallback((data: any, _type?: string) => {
+    const key = currentRouteKeyRef.current;
+    setCache(prev => ({
+      ...prev,
+      lists: { ...prev.lists, [key]: data },
+      timestamps: { ...prev.timestamps, [key]: Date.now() },
+    }));
+  }, []);
+
   const contextValue = useMemo(() => ({
     getVehicle,
     getVehicleList,
@@ -195,8 +218,11 @@ export const VehicleProvider = ({ children }: { children: React.ReactNode }) => 
     saveScrollPosition,
     restoreScrollPosition: () => cacheRef.current.navigationHistory.find(e => e.path === currentRouteKeyRef.current)?.scrollPosition || null,
     getCurrentRouteKey: () => currentRouteKeyRef.current,
-    isCurrentRouteCached: () => !!cacheRef.current.lists[currentRouteKeyRef.current]
-  }), [getVehicle, getVehicleList, isFresh, saveScrollPosition, savePageState]);
+    isCurrentRouteCached: () => !!cacheRef.current.lists[currentRouteKeyRef.current],
+    // 👇 Expose new methods
+    addToCache,
+    saveForCurrentRoute,
+  }), [getVehicle, getVehicleList, isFresh, saveScrollPosition, savePageState, addToCache, saveForCurrentRoute]);
 
   return <VehicleContext.Provider value={contextValue}>{children}</VehicleContext.Provider>;
 };

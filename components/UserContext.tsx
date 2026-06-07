@@ -38,7 +38,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
   const router = useRouter()
 
-  // NEW: Function to load saved vehicles from database
+  // Function to load saved vehicles from database – kept for dashboard refresh
   const loadSavedVehicles = useCallback(async () => {
     if (!user?.id) {
       console.log("⚠️ No user ID, skipping saved vehicles load")
@@ -69,7 +69,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
     if (profile) {
       console.log("✅ Profile refreshed:", profile.firstName, profile.lastName);
-      setUser(profile); // This should update with the NEW data
+      setUser(profile);
     } else {
       console.warn("⚠️ No profile found during refresh");
     }
@@ -116,11 +116,12 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
           setAuthUser(currentUser)
           setIsEmailVerified(verified)
 
-          const profile = await authService.getUserProfile(currentUser.id)
-
-          if (!profile) {
-            console.log("⚠️ No profile found, will be created on first need")
-          }
+          // ── Parallel: profile + vehicles + saved vehicles ────────────────
+          const [profile, vehicles, savedVehiclesList] = await Promise.all([
+            authService.getUserProfile(currentUser.id),
+            vehicleService.getUserVehicles(currentUser.id).catch(() => [] as Vehicle[]),
+            vehicleService.getSavedVehicles(currentUser.id).catch(() => [] as Vehicle[]),
+          ])
 
           if (!mounted) return
 
@@ -133,14 +134,6 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
               verified: verified,
             })
             setUser(profile)
-            const vehicles = await vehicleService.getUserVehicles(currentUser.id)
-            if (mounted) {
-              setListedVehicles(vehicles)
-            }
-            // NEW: Load saved vehicles when user logs in
-            if (mounted) {
-              await loadSavedVehicles()
-            }
           } else {
             console.log("⚠️ Using fallback profile")
             setUser({
@@ -151,6 +144,9 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
               loginMethod: "email",
             })
           }
+
+          setListedVehicles(vehicles)
+          setSavedVehicles(new Set(savedVehiclesList.map((v) => v.id)))
         } else {
           console.log("⚠️ No authenticated user")
           setAuthUser(null)
@@ -181,11 +177,12 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         setAuthUser(newAuthUser)
         setIsEmailVerified(verified)
 
-        const profile = await authService.getUserProfile(newAuthUser.id)
-
-        if (!profile) {
-          console.log("⚠️ No profile found on auth change")
-        }
+        // ── Parallel: profile + vehicles + saved vehicles ────────────────
+        const [profile, vehicles, savedVehiclesList] = await Promise.all([
+          authService.getUserProfile(newAuthUser.id),
+          vehicleService.getUserVehicles(newAuthUser.id).catch(() => [] as Vehicle[]),
+          vehicleService.getSavedVehicles(newAuthUser.id).catch(() => [] as Vehicle[]),
+        ])
 
         if (!mounted) return
 
@@ -198,14 +195,6 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
             verified: verified,
           })
           setUser(profile)
-          const vehicles = await vehicleService.getUserVehicles(newAuthUser.id)
-          if (mounted) {
-            setListedVehicles(vehicles)
-          }
-          // NEW: Load saved vehicles on auth state change
-          if (mounted) {
-            await loadSavedVehicles()
-          }
         } else {
           console.log("⚠️ Using fallback profile on auth change")
           setUser({
@@ -216,6 +205,9 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
             loginMethod: "email",
           })
         }
+
+        setListedVehicles(vehicles)
+        setSavedVehicles(new Set(savedVehiclesList.map((v) => v.id)))
       } else {
         console.log("🔄 Auth state changed - user signed out")
         setAuthUser(null)
@@ -231,16 +223,10 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       mounted = false
       unsubscribe()
     }
-  }, [loadSavedVehicles]) // NEW: Added dependency
+  }, []) // ✅ No dependency on loadSavedVehicles – saved vehicles are loaded in parallel
 
-  // NEW: Load saved vehicles when user changes
-  useEffect(() => {
-    if (user?.id) {
-      loadSavedVehicles()
-    } else {
-      setSavedVehicles(new Set())
-    }
-  }, [user?.id, loadSavedVehicles])
+  // ❌ REMOVED: auto-run useEffect that called loadSavedVehicles on user?.id change
+  // loadSavedVehicles is still kept as a callback for manual refresh (e.g., dashboard)
 
   const logout = async () => {
     try {
@@ -280,8 +266,6 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       throw new Error("User not authenticated")
     }
 
-    // Email verification is no longer a blocker – removed the check
-
     try {
       console.log("➕ Adding new vehicle")
       const newVehicle = await vehicleService.createVehicle(vehicleData, user.id)
@@ -298,8 +282,6 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       console.error("❌ Cannot update vehicle: No user logged in")
       throw new Error("User not authenticated")
     }
-
-    // Email verification is no longer a blocker – removed the check
 
     try {
       console.log("📝 Updating vehicle:", vehicleId)
@@ -349,7 +331,6 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  // UPDATED: toggleSaveVehicle now persists to database
   const toggleSaveVehicle = async (vehicle: Vehicle) => {
     if (!user?.id) {
       console.error("❌ Cannot save vehicle: No user logged in")
