@@ -21,7 +21,7 @@ export const viewport = {
 }
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://imoto-gt.co.za"),
+  metadataBase: new URL("https://imotogt.co.za"),
   title: {
     default: "Buy & Sell Affordable Cars in South Africa - iMoto GT",
     template: "%s - iMoto GT",
@@ -107,13 +107,13 @@ export default function RootLayout({
               "@type": "WebSite",
               name: "iMoto GT",
               alternateName: "iMoto GT - South African Car Marketplace",
-              url: "https://imoto-gt.co.za",
+              url: "https://imotogt.co.za",
               description:
                 "Buy and sell affordable cars across South Africa on a trusted local marketplace.",
               potentialAction: {
                 "@type": "SearchAction",
                 target:
-                  "https://imoto-gt.co.za/search?q={search_term_string}",
+                  "https://imotogt.co.za/search?q={search_term_string}",
                 "query-input": "required name=search_term_string",
               },
             }),
