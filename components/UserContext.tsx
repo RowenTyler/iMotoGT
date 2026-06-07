@@ -280,12 +280,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       throw new Error("User not authenticated")
     }
 
-    if (!isEmailVerified) {
-      console.error("❌ Cannot add vehicle: Email not verified")
-      console.error("🔍 Debug - authUser:", authUser)
-      console.error("🔍 Debug - email_confirmed_at:", authUser?.email_confirmed_at)
-      throw new Error("Email not verified")
-    }
+    // Email verification is no longer a blocker – removed the check
 
     try {
       console.log("➕ Adding new vehicle")
@@ -304,10 +299,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       throw new Error("User not authenticated")
     }
 
-    if (!isEmailVerified) {
-      console.error("❌ Cannot update vehicle: Email not verified")
-      throw new Error("Email not verified")
-    }
+    // Email verification is no longer a blocker – removed the check
 
     try {
       console.log("📝 Updating vehicle:", vehicleId)
