@@ -5,14 +5,13 @@
  * - TTL-based expiry (5 minutes default)
  * - Stale-while-revalidate threshold (2 minutes)
  * - Automatic quota management (evicts oldest entries on overflow)
- * - Size guard (refuses entries over 500KB to prevent single large items
- *   from consuming the entire quota — base64 images used to cause this)
+ * - Size guard (refuses entries over 5MB to prevent single large items
+ *   from consuming the entire quota — some vehicle list responses can be large)
  *
- * Key change from previous version:
- * MAX_CACHE_SIZE per entry reduced from 5MB → 500KB.
- * Now that images are stored in Supabase Storage and only URLs are cached,
- * no single cache entry should ever be anywhere near 500KB.
- * The old 5MB limit was only needed because base64 images were being cached.
+ * Key change: MAX_CACHE_SIZE increased from 500KB → 5MB.
+ * Although images are now stored in Supabase Storage and only URLs are cached,
+ * a full vehicle list (200+ vehicles) with all fields can exceed 3–6MB.
+ * The 500KB limit was too restrictive for production data.
  */
 
 // ─── Config ───────────────────────────────────────────────────────────────────
@@ -42,9 +41,8 @@ export const CACHE_CONFIG: CacheConfig = {
   BACKGROUND_REFRESH_THRESHOLD: 2 * 60 * 1000, // 2 minutes
 
   // Maximum size per cache entry
-  // Reduced from 5MB → 500KB now that images are URLs not base64
-  // A list of 200 vehicles with no images should be well under 100KB
-  MAX_CACHE_SIZE: 500 * 1024, // 500KB
+  // Increased from 500KB → 5MB because vehicle lists can be 3–6MB in practice
+  MAX_CACHE_SIZE: 5 * 1024 * 1024, // 5MB
 }
 
 // ─── Internal Types ───────────────────────────────────────────────────────────
@@ -81,7 +79,6 @@ export class CacheManager {
       const serialized = JSON.stringify(entry)
 
       // Guard: refuse entries that are too large
-      // With images stored in Storage (not base64), this should never trigger
       if (serialized.length > CACHE_CONFIG.MAX_CACHE_SIZE) {
         console.warn(
           `[Cache] Refusing oversized entry for "${key}": ` +
