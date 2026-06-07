@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useUser } from "@/components/UserContext"
 import Dashboard from "@/components/dashboard"
+import EmailVerificationBanner from "@/components/email-verification-banner"
 import type { Vehicle } from "@/types/vehicle"
 
 export const dynamic = 'force-dynamic'
@@ -13,6 +14,8 @@ export default function DashboardPage() {
   const searchParams = useSearchParams()
   const {
     user,
+    authUser,
+    isEmailVerified,
     listedVehicles = [],
     savedVehicles, // Set<string> of IDs — used only for triggering reloads
     deleteListedVehicle,
@@ -124,22 +127,28 @@ export default function DashboardPage() {
   if (!user) return null
 
   return (
-    <Dashboard
-      user={user}
-      listedCars={activeListedVehicles}
-      savedCars={activeSavedVehicles}
-      onEditListedCar={handleEditListedCar}
-      onDeleteListedCar={handleDeleteListedCar}
-      onViewDetails={handleViewListedCar}
-      onLoginClick={() => router.push("/login")}
-      onGoHome={() => router.push("/")}
-      onShowAllCars={() => router.push("/results")}
-      onGoToSellPage={() => router.push("/upload-vehicle")}
-      onViewProfileSettings={() => router.push("/settings")}
-      onViewUploadVehicle={() => router.push("/upload-vehicle")}
-      onBack={() => router.back()}
-      onSaveCar={refreshSavedVehicles}
-      onNavigateToUpload={() => router.push("/upload-vehicle")}
-    />
+    <>
+      <EmailVerificationBanner
+        isEmailVerified={isEmailVerified}
+        userEmail={authUser?.email}
+      />
+      <Dashboard
+        user={user}
+        listedCars={activeListedVehicles}
+        savedCars={activeSavedVehicles}
+        onEditListedCar={handleEditListedCar}
+        onDeleteListedCar={handleDeleteListedCar}
+        onViewDetails={handleViewListedCar}
+        onLoginClick={() => router.push("/login")}
+        onGoHome={() => router.push("/")}
+        onShowAllCars={() => router.push("/results")}
+        onGoToSellPage={() => router.push("/upload-vehicle")}
+        onViewProfileSettings={() => router.push("/settings")}
+        onViewUploadVehicle={() => router.push("/upload-vehicle")}
+        onBack={() => router.back()}
+        onSaveCar={refreshSavedVehicles}
+        onNavigateToUpload={() => router.push("/upload-vehicle")}
+      />
+    </>
   )
 }

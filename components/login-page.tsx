@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Header } from "@/components/ui/header"
-import { createClient } from "@/lib/supabase-client"  // ← NEW: cookie‑based client
+import { createClient } from "@/lib/supabase-client"
 import type { UserProfile } from "@/types/user"
 
 // Custom error class to mimic old AuthError
@@ -117,11 +117,24 @@ export default function LoginPage({
       if (signUpError) throw signUpError
 
       if (data.user) {
-        console.log("✅ Sign up successful, showing verification message")
-        setVerificationEmail(email)
-        setVerificationType("signup")
-        setViewMode("verification")
-        setSuccessMessage("We've sent a verification link to your email. Please check your inbox (and spam folder).")
+        console.log("✅ Sign up successful, redirecting directly to dashboard (email verification is non‑blocking)")
+        
+        // Build user profile from metadata
+        const userProfile: UserProfile = {
+          id: data.user.id,
+          email: data.user.email || "",
+          firstName: data.user.user_metadata?.first_name || "",
+          lastName: data.user.user_metadata?.last_name || "",
+          profilePic: data.user.user_metadata?.avatar_url || "",
+        }
+        
+        // Call the success callback immediately – no verification screen
+        if (onSignUpSuccess) {
+          onSignUpSuccess(userProfile)
+        } else {
+          // Default redirect to dashboard
+          router.push("/dashboard")
+        }
       }
     } catch (e: any) {
       console.error("❌ Sign up error:", e)
@@ -187,16 +200,7 @@ export default function LoginPage({
       }
 
       console.log("✅ Sign in successful:", user.email)
-      console.log("📧 Email verified:", !!user.email_confirmed_at)
-
-      if (!user.email_confirmed_at) {
-        console.warn("⚠️ Email not verified")
-        setError("Please verify your email address before signing in. Check your inbox for a verification link.")
-        setVerificationEmail(email)
-        setVerificationType("signup")
-        setViewMode("verification")
-        return
-      }
+      // Email verification is no longer a blocker – even unverified users can sign in
 
       // Fetch user profile from metadata
       const userProfile: UserProfile = {
@@ -219,12 +223,9 @@ export default function LoginPage({
       }
     } catch (e: any) {
       console.error("❌ Sign in error:", e)
-      if (e.message?.includes("Email not confirmed")) {
-        setError("Please verify your email address before signing in. Check your inbox for a verification link.")
-        setVerificationEmail(email)
-        setVerificationType("signup")
-        setViewMode("verification")
-      } else if (e.message?.includes("Invalid login credentials")) {
+      // We no longer treat "Email not confirmed" as a special case because the Supabase dashboard setting
+      // "Confirm email" is disabled, so this error should not be thrown. But if it appears, treat it as a generic error.
+      if (e.message?.includes("Invalid login credentials")) {
         setError("Invalid email or password. Please try again.")
       } else {
         setError(e.message || "An unexpected error occurred during sign in.")
@@ -440,9 +441,9 @@ export default function LoginPage({
     )
   }
 
-  // Verification View – now handles both sign‑up email verification and password reset confirmation
+  // Verification View – now ONLY used for password reset flow (not for signup)
   if (viewMode === "verification") {
-    const isReset = verificationType === "reset"
+    const isReset = verificationType === "reset" // This will always be true because signup never goes here
     
     return (
       <>
@@ -519,7 +520,7 @@ export default function LoginPage({
                     </>
                   </Button>
 
-                  {/* Only show resend button for sign‑up verification */}
+                  {/* Only show resend button for sign‑up verification – but since isReset is always true here, this button is hidden */}
                   {!isReset && (
                     <Button
                       variant="outline"
