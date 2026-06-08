@@ -116,6 +116,23 @@ const bodyTypeOptionsList: {
     { value: "Station Wagon", label: "Station Wagon", IconComponent: Car },
   ]
 
+// Helper: format engine capacity input (1.2 or 1,2 -> 1.2L)
+const formatEngineCapacity = (value: string): string => {
+  let cleaned = value.trim()
+  if (!cleaned) return ""
+  // Replace comma with dot
+  cleaned = cleaned.replace(",", ".")
+  // Remove any non-numeric/dot characters except trailing L
+  let numeric = cleaned.replace(/[^0-9.]/g, "")
+  // Ensure only one dot
+  const parts = numeric.split(".")
+  if (parts.length > 2) numeric = parts[0] + "." + parts.slice(1).join("")
+  // Parse float and format to 1 decimal place
+  const num = parseFloat(numeric)
+  if (isNaN(num)) return ""
+  return `${num.toFixed(1)}L`
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function UploadVehicle({
@@ -140,13 +157,13 @@ export default function UploadVehicle({
   const user = propUser || userProfile || authUser
   const profile = userProfile || propUser || authUser
 
-  // Profile completeness check (no longer includes location)
+  // Profile completeness check (no location)
   const isProfileIncomplete =
     !profile?.firstName ||
     !profile?.lastName ||
     !profile?.phone
 
-  // Navigation handlers (unchanged)
+  // Navigation handlers
   const handleLogin =
     HeaderPropsOverride?.onLoginClick ?? (() => router.push("/login"))
   const handleDashboard =
@@ -187,16 +204,19 @@ export default function UploadVehicle({
   const [isImageCardExpanded, setIsImageCardExpanded] = useState(false)
   const [isProcessingImages, setIsProcessingImages] = useState(false)
   const [imageUploadProgress, setImageUploadProgress] = useState(0)
+  // Drag & drop for image upload (new)
+  const [isDragOver, setIsDragOver] = useState<boolean>(false)
 
   const imageGridRef = useRef<HTMLDivElement>(null)
   const expandedGridRef = useRef<HTMLDivElement>(null)
   const dragItemRef = useRef<HTMLDivElement | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // ─── Privacy State ────────────────────────────────────────────────────────
 
   const [contactPrivacyEnabled, setContactPrivacyEnabled] = useState(false)
 
-  // ─── Form State (vehicle details, no location) ───────────────────────────
+  // ─── Form State (vehicle details, engine capacity optional) ──────────────
 
   const [formData, setFormData] = useState({
     make: "",
@@ -224,7 +244,7 @@ export default function UploadVehicle({
     contactPrivacyEnabled: false,
   })
 
-  // ─── Independent Vehicle Location State (NEW) ────────────────────────────
+  // ─── Independent Vehicle Location State ───────────────────────────────────
 
   const [vehicleLocation, setVehicleLocation] = useState({
     suburb: "",
@@ -247,7 +267,7 @@ export default function UploadVehicle({
   // ─── Location confirmation modal state ───────────────────────────────────
 
   const [showLocationConfirmModal, setShowLocationConfirmModal] = useState(false)
-  const hasShownModal = useRef(false)  // prevent repeated triggers
+  const [locationConfirmedOrRejected, setLocationConfirmedOrRejected] = useState(false)
 
   // ─── Submission State ─────────────────────────────────────────────────────
 
@@ -258,7 +278,6 @@ export default function UploadVehicle({
 
   // ─── Dropdown State ───────────────────────────────────────────────────────
 
-  const fileInputRef = useRef<HTMLInputElement>(null)
   const engineCapacityRef = useRef<HTMLDivElement>(null)
   const bodyTypeRef = useRef<HTMLDivElement>(null)
   const makeRef = useRef<HTMLDivElement>(null)
@@ -277,7 +296,7 @@ export default function UploadVehicle({
   const [showMakeDropdown, setShowMakeDropdown] = useState(false)
   const [showModelDropdown, setShowModelDropdown] = useState(false)
 
-  // ─── Make/Model Helpers (unchanged) ───────────────────────────────────────
+  // ─── Make/Model Helpers ───────────────────────────────────────────────────
 
   const normalizeMakeName = (make: string): string =>
     make.toLowerCase().replace(/[^a-z0-9]/g, "").trim()
@@ -329,7 +348,37 @@ export default function UploadVehicle({
     )
   }
 
-  // ─── Effects (only those that are truly needed) ────────────────────────────
+  // ─── Load saved location from localStorage on mount (only for new uploads) ─
+
+  useEffect(() => {
+    if (!editMode) {
+      try {
+        const saved = localStorage.getItem("lastVehicleLocation")
+        if (saved) {
+          const parsed = JSON.parse(saved)
+          if (parsed.suburb && parsed.city && parsed.province) {
+            setVehicleLocation(parsed)
+          } else if (profile?.suburb && profile?.city && profile?.province) {
+            setVehicleLocation({
+              suburb: profile.suburb,
+              city: profile.city,
+              province: profile.province,
+            })
+          }
+        } else if (profile?.suburb && profile?.city && profile?.province) {
+          setVehicleLocation({
+            suburb: profile.suburb,
+            city: profile.city,
+            province: profile.province,
+          })
+        }
+      } catch (e) {
+        console.error("Failed to load saved location", e)
+      }
+    }
+  }, [editMode, profile])
+
+  // ─── Effects ─────────────────────────────────────────────────────────────
 
   // Load vehicle makes/models from JSON
   useEffect(() => {
@@ -357,7 +406,7 @@ export default function UploadVehicle({
     loadVehicleData()
   }, [])
 
-  // Edit mode: pre‑fill from existing vehicle (no prop sync issue)
+  // Edit mode: pre‑fill from existing vehicle
   useEffect(() => {
     if (editMode && existingVehicle) {
       setFormData({
@@ -383,12 +432,12 @@ export default function UploadVehicle({
       if (existingVehicle.images && existingVehicle.images.length > 0) {
         setVehicleImages(existingVehicle.images)
       }
-      // Pre‑fill vehicle location from existing listing
       setVehicleLocation({
         suburb: existingVehicle.sellerSuburb || "",
         city: existingVehicle.sellerCity || existingVehicle.city || "",
         province: existingVehicle.sellerProvince || existingVehicle.province || "",
       })
+      setLocationConfirmedOrRejected(true)
     }
   }, [editMode, existingVehicle])
 
@@ -412,14 +461,13 @@ export default function UploadVehicle({
     }
   }, [editMode, existingVehicle, vehicleData, formData.make])
 
-  // Sync engine/body search inputs
+  // Sync engine search input with formatted value
   useEffect(() => {
-    const selectedEngineOption = engineCapacityOptionsList.find(
-      (opt) => opt.value === formData.engineCapacity
-    )
-    setEngineCapacitySearch(
-      selectedEngineOption ? selectedEngineOption.label : formData.engineCapacity || ""
-    )
+    if (formData.engineCapacity) {
+      setEngineCapacitySearch(formData.engineCapacity)
+    } else {
+      setEngineCapacitySearch("")
+    }
   }, [formData.engineCapacity])
 
   useEffect(() => {
@@ -466,23 +514,21 @@ export default function UploadVehicle({
     return () => document.removeEventListener("mousedown", handleClickOutside)
   }, [])
 
-  // ─── INLINE STATE SYNC (replaces effects that sync props to state) ─────────
-  // This fixes React Doctor issue #3: State synced to a prop inside an effect.
-
-  // 1. Sync derived state from userProfile (already fixed in previous step)
+  // Sync seller form data when profile changes (inline)
   const [prevUserProfile, setPrevUserProfile] = useState(userProfile)
 
   if (userProfile !== prevUserProfile) {
     setPrevUserProfile(userProfile)
-
     if (!editMode && userProfile) {
-      setVehicleLocation(prev => ({
-        suburb: prev.suburb || userProfile.suburb || "",
-        city: prev.city || userProfile.city || "",
-        province: prev.province || userProfile.province || "",
-      }))
+      setVehicleLocation(prev => {
+        if (prev.suburb && prev.city) return prev
+        return {
+          suburb: prev.suburb || userProfile.suburb || "",
+          city: prev.city || userProfile.city || "",
+          province: prev.province || userProfile.province || "",
+        }
+      })
     }
-
     if (userProfile) {
       setSellerFormData({
         firstName: userProfile.firstName || "",
@@ -503,7 +549,7 @@ export default function UploadVehicle({
     }
   }
 
-  // ─── Make/Model Handlers (unchanged) ──────────────────────────────────────
+  // ─── Make/Model Handlers ──────────────────────────────────────────────────
 
   const handleMakeInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = event.target.value
@@ -642,7 +688,7 @@ export default function UploadVehicle({
     setSubmitError(null)
   }
 
-  // Seller profile handlers (no location)
+  // Seller profile handlers
   const handleSellerInputChange = (
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
@@ -651,16 +697,33 @@ export default function UploadVehicle({
     setSubmitError(null)
   }
 
+  // ─── Engine Capacity Smart Input ─────────────────────────────────────────
+
   const handleEngineCapacitySearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const searchTerm = e.target.value
-    setEngineCapacitySearch(searchTerm)
-    setFormData((prev) => ({ ...prev, engineCapacity: searchTerm }))
+    const raw = e.target.value
+    setEngineCapacitySearch(raw)
     setEngineCapacityFiltered(
       engineCapacityOptionsList.filter((option) =>
-        option.label.toLowerCase().includes(searchTerm.toLowerCase())
+        option.label.toLowerCase().includes(raw.toLowerCase())
       )
     )
     setShowEngineCapacityDropdown(true)
+  }
+
+  const handleEngineCapacityBlurOrEnter = () => {
+    let raw = engineCapacitySearch.trim()
+    if (!raw) {
+      setFormData((prev) => ({ ...prev, engineCapacity: "" }))
+      return
+    }
+    const formatted = formatEngineCapacity(raw)
+    if (formatted) {
+      setFormData((prev) => ({ ...prev, engineCapacity: formatted }))
+      setEngineCapacitySearch(formatted)
+    } else {
+      setFormData((prev) => ({ ...prev, engineCapacity: "" }))
+    }
+    setShowEngineCapacityDropdown(false)
   }
 
   const handleEngineCapacitySelect = (option: { value: string; label: string }) => {
@@ -725,7 +788,7 @@ export default function UploadVehicle({
     }
   }
 
-  // ─── Seller Save (no location fields) ─────────────────────────────────────
+  // ─── Seller Save ─────────────────────────────────────────────────────────
 
   const handleSaveSellerInfo = async () => {
     try {
@@ -745,7 +808,6 @@ export default function UploadVehicle({
         lastName: sellerFormData.lastName,
         phone: sellerFormData.phone,
         profilePic: sellerFormData.profilePic,
-        // IMPORTANT: no suburb, city, province
       }
 
       if (onSaveProfile) {
@@ -764,12 +826,10 @@ export default function UploadVehicle({
     }
   }
 
-  // ─── Image Handling (unchanged) ───────────────────────────────────────────
+  // ─── Image Handling with Drag & Drop ─────────────────────────────────────
 
-  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files
+  const handleImageUpload = async (files: FileList | null) => {
     if (!files) return
-
     const fileArray = Array.from(files)
 
     if (vehicleImages.length + fileArray.length > 21) {
@@ -837,7 +897,25 @@ export default function UploadVehicle({
     setSubmitError(null)
   }
 
-  // ─── Drag/Drop (unchanged) ────────────────────────────────────────────────
+  // Drag & drop handlers for image upload area
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragOver(true)
+  }
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragOver(false)
+  }
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault()
+    setIsDragOver(false)
+    const files = e.dataTransfer.files
+    if (files && files.length > 0) {
+      handleImageUpload(files)
+    }
+  }
+
+  // ─── Drag to reorder images ──────────────────────────────────────────────
 
   const handlePointerDown = useCallback(
     (index: number, e: React.PointerEvent<HTMLDivElement>) => {
@@ -901,9 +979,49 @@ export default function UploadVehicle({
     dragItemRef.current = null
   }, [])
 
-  // ─── Submit with independent vehicle location validation ──────────────────
+  // ─── Validation Helper (returns list of missing required fields, engine capacity excluded) ──
 
-  const handleSubmitVehicle = async () => {
+  const getMissingRequiredFields = (): string[] => {
+    const missing: string[] = []
+    if (!formData.make.trim()) missing.push("Make")
+    if (!formData.model.trim()) missing.push("Model")
+    if (!formData.year.trim()) missing.push("Year")
+    if (!formData.price || parseFloat(formData.price) <= 0) missing.push("Price")
+    if (!formData.mileage || parseFloat(formData.mileage) <= 0) missing.push("Mileage")
+    if (!formData.transmission) missing.push("Transmission")
+    if (!formData.fuel) missing.push("Fuel Type")
+    if (!formData.condition) missing.push("Condition")
+    if (vehicleImages.length < 5) missing.push(`Images (need at least 5, have ${vehicleImages.length})`)
+    if (!vehicleLocation.suburb.trim()) missing.push("Vehicle Suburb")
+    if (!vehicleLocation.city.trim()) missing.push("Vehicle City")
+    if (!vehicleLocation.province.trim()) missing.push("Vehicle Province")
+    if (!editMode && isEditingSeller && (!sellerFormData.firstName.trim() || !sellerFormData.lastName.trim() || !sellerFormData.phone.trim())) {
+      missing.push("Seller information (Name & Phone)")
+    }
+    return missing
+  }
+
+  // ─── Auto-submit trigger from location confirmation ──────────────────────
+
+  const handleLocationConfirmYes = async () => {
+    setShowLocationConfirmModal(false)
+    setLocationConfirmedOrRejected(true)
+
+    const missing = getMissingRequiredFields()
+    if (missing.length > 0) {
+      setSubmitError(`Please complete the following required fields before listing:\n• ${missing.join("\n• ")}`)
+      const firstFieldId = missing[0].toLowerCase().replace(/\s/g, "-")
+      const element = document.getElementById(`field-${firstFieldId}`)
+      if (element) element.scrollIntoView({ behavior: "smooth", block: "center" })
+      return
+    }
+
+    await performSubmit()
+  }
+
+  // ─── Main Submit Logic ───────────────────────────────────────────────────
+
+  const performSubmit = async () => {
     setIsSubmitting(true)
     setSubmitError(null)
     setSubmitSuccess(null)
@@ -928,69 +1046,9 @@ export default function UploadVehicle({
       }
     }
 
-    // 1. Vehicle location validation (mandatory, independent)
-    if (!vehicleLocation.suburb?.trim()) {
-      setSubmitError("Please enter the suburb where this vehicle is located.")
-      setIsSubmitting(false)
-      return
-    }
-    if (!vehicleLocation.city?.trim()) {
-      setSubmitError("Please enter the city where this vehicle is located.")
-      setIsSubmitting(false)
-      return
-    }
-    if (!vehicleLocation.province?.trim()) {
-      setSubmitError("Please select the province where this vehicle is located.")
-      setIsSubmitting(false)
-      return
-    }
-
-    // 2. Profile completeness (no location required)
-    if (!editMode && isEditingSeller) {
-      setSubmitError("Please save your updated seller information before listing a vehicle.")
-      setIsSubmitting(false)
-      return
-    }
-    if (!editMode) {
-      const isProfileStillIncomplete =
-        !profile?.firstName ||
-        !profile?.lastName ||
-        !profile?.phone
-      if (isProfileStillIncomplete) {
-        setSubmitError(
-          "Your seller profile is incomplete. Please edit and save your information to proceed."
-        )
-        setUserClickedEdit(true)
-        setIsSubmitting(false)
-        return
-      }
-    }
-
-    // 3. Vehicle details validation
-    if (
-      !formData.make ||
-      !formData.model ||
-      !formData.year ||
-      !formData.price ||
-      !formData.mileage ||
-      !formData.transmission ||
-      !formData.fuel ||
-      !formData.engineCapacity ||
-      !formData.condition
-    ) {
-      setSubmitError("Please fill in all required fields.")
-      setIsSubmitting(false)
-      return
-    }
-
-    // 4. Images validation
-    if (vehicleImages.length < 5) {
-      setSubmitError(`Please upload at least 5 images. You have ${vehicleImages.length}.`)
-      setIsSubmitting(false)
-      return
-    }
-    if (vehicleImages.length > 21) {
-      setSubmitError(`You can upload a maximum of 21 images. You have ${vehicleImages.length}.`)
+    const missing = getMissingRequiredFields()
+    if (missing.length > 0) {
+      setSubmitError(`Please complete the following required fields:\n• ${missing.join("\n• ")}`)
       setIsSubmitting(false)
       return
     }
@@ -1005,11 +1063,9 @@ export default function UploadVehicle({
         images: vehicleImages,
         contactPrivacyEnabled: contactPrivacyEnabled,
         contact_privacy_enabled: contactPrivacyEnabled,
-        // Snapshot the independent vehicle location
         sellerSuburb: vehicleLocation.suburb,
         sellerCity: vehicleLocation.city,
         sellerProvince: vehicleLocation.province,
-        // Keep top-level city/province for backwards compatibility (will be overwritten in DB? but safe)
         city: vehicleLocation.city,
         province: vehicleLocation.province,
       }
@@ -1030,6 +1086,12 @@ export default function UploadVehicle({
           }
         }
       }
+
+      localStorage.setItem("lastVehicleLocation", JSON.stringify({
+        suburb: vehicleLocation.suburb,
+        city: vehicleLocation.city,
+        province: vehicleLocation.province,
+      }))
 
       clearInterval(progressInterval)
       setUploadProgress(100)
@@ -1054,6 +1116,10 @@ export default function UploadVehicle({
     } finally {
       setIsSubmitting(false)
     }
+  }
+
+  const handleSubmitVehicle = async () => {
+    await performSubmit()
   }
 
   // ─── Early Returns ────────────────────────────────────────────────────────
@@ -1082,22 +1148,13 @@ export default function UploadVehicle({
     )
   }
 
-  // ─── INLINE LOCATION CONFIRMATION MODAL TRIGGER (replaces useEffect) ─────
-  // This fixes the React Doctor issue: side effect in useEffect that sets state.
-  // Instead of a separate effect, we check the condition during render
-  // and set the modal state once, guarded by a ref.
-  if (
-    !editMode &&
-    !userLoading &&
-    profile &&
-    authUser?.email &&
-    !hasShownModal.current &&
+  const shouldShowModal = !editMode && !locationConfirmedOrRejected && !showLocationConfirmModal && 
+    (vehicleLocation.suburb && vehicleLocation.city) && 
     !isPrivilegedUser(authUser.email) &&
-    vehicleLocation.suburb &&
-    vehicleLocation.city
-  ) {
-    setShowLocationConfirmModal(true)
-    hasShownModal.current = true
+    !existingVehicle
+
+  if (shouldShowModal) {
+    setTimeout(() => setShowLocationConfirmModal(true), 0)
   }
 
   // ─── Render ───────────────────────────────────────────────────────────────
@@ -1120,7 +1177,7 @@ export default function UploadVehicle({
         </h1>
         <div className="max-w-6xl mx-auto">
           {submitError && (
-            <Alert variant="destructive" className="mb-4">
+            <Alert variant="destructive" className="mb-4 whitespace-pre-line">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>{submitError}</AlertDescription>
             </Alert>
@@ -1164,7 +1221,7 @@ export default function UploadVehicle({
             </div>
           )}
 
-          {/* Expanded Image Modal (unchanged) */}
+          {/* Expanded Image Modal */}
           {isImageCardExpanded && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
               <div className="relative bg-white dark:bg-[#2A352A] rounded-3xl w-full max-w-6xl max-h-[90vh] overflow-hidden">
@@ -1224,7 +1281,7 @@ export default function UploadVehicle({
             </div>
           )}
 
-          {/* LOCATION CONFIRMATION MODAL (based on vehicleLocation) */}
+          {/* LOCATION CONFIRMATION MODAL */}
           {showLocationConfirmModal && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
               <div className="bg-white dark:bg-[#2A352A] rounded-3xl p-6 max-w-md w-full shadow-xl border border-[#9FA791]/20 dark:border-[#4A4D45]/20">
@@ -1240,7 +1297,7 @@ export default function UploadVehicle({
                 </p>
                 <div className="flex flex-col gap-3">
                   <button
-                    onClick={() => setShowLocationConfirmModal(false)}
+                    onClick={handleLocationConfirmYes}
                     className="w-full bg-[#FF6700] hover:bg-[#FF7D33] text-white font-semibold py-3 px-6 rounded-xl transition-colors"
                   >
                     Yes, that's correct
@@ -1248,9 +1305,8 @@ export default function UploadVehicle({
                   <button
                     onClick={() => {
                       setShowLocationConfirmModal(false)
-                      // Clear vehicle location to force user to fill manually
+                      setLocationConfirmedOrRejected(true)
                       setVehicleLocation({ suburb: "", city: "", province: "" })
-                      // Scroll to the vehicle location card
                       document.getElementById("vehicle-location-card")?.scrollIntoView({ behavior: "smooth", block: "center" })
                     }}
                     className="w-full border border-[#9FA791] dark:border-[#4A4D45] text-[#3E5641] dark:text-white font-semibold py-3 px-6 rounded-xl hover:bg-gray-50 dark:hover:bg-[#1F2B20] transition-colors"
@@ -1265,7 +1321,7 @@ export default function UploadVehicle({
           <div className="flex flex-col lg:flex-row gap-6">
             {/* LEFT COLUMN */}
             <div className="lg:w-1/3 flex flex-col">
-              {/* Image Card (unchanged) */}
+              {/* Image Card with Drag & Drop */}
               <Card className="rounded-3xl overflow-hidden p-4 sm:p-6 flex flex-col w-full border-[#9FA791]/20 dark:border-[#4A4D45]/20 bg-white dark:bg-[#2A352A] mb-6">
                 <div className="flex justify-between items-center mb-4">
                   <h2 className="text-xl font-bold text-[#3E5641] dark:text-white">Vehicle Images</h2>
@@ -1276,8 +1332,13 @@ export default function UploadVehicle({
                   )}
                 </div>
                 <div
-                  className="relative w-full aspect-video mb-4 bg-gray-200 dark:bg-gray-700 rounded-2xl flex items-center justify-center overflow-hidden cursor-pointer hover:opacity-90 transition-opacity"
+                  className={`relative w-full aspect-video mb-4 bg-gray-200 dark:bg-gray-700 rounded-2xl flex items-center justify-center overflow-hidden cursor-pointer transition-all ${
+                    isDragOver ? "ring-4 ring-[#FF6700] bg-gray-300 dark:bg-gray-600" : ""
+                  }`}
                   onClick={triggerFileInput}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
                 >
                   {vehicleImages.length > 0 ? (
                     <Image
@@ -1290,8 +1351,8 @@ export default function UploadVehicle({
                   ) : (
                     <div className="text-center text-gray-500 dark:text-gray-400">
                       <Camera className="w-12 h-12 mx-auto mb-2" />
-                      <span className="text-xl font-bold">Upload Vehicle Images</span>
-                      <p className="text-sm mt-1">(Min 5, Max 21)</p>
+                      <span className="text-xl font-bold">Drag & Drop or Click</span>
+                      <p className="text-sm mt-1">Upload images (Min 5, Max 21)</p>
                     </div>
                   )}
                   <Button
@@ -1310,7 +1371,7 @@ export default function UploadVehicle({
                       className="hidden"
                       accept="image/png, image/jpeg, image/webp"
                       multiple
-                      onChange={handleImageUpload}
+                      onChange={(e) => handleImageUpload(e.target.files)}
                     />
                   </Button>
                 </div>
@@ -1365,7 +1426,7 @@ export default function UploadVehicle({
                 )}
               </Card>
 
-              {/* Contact Privacy Card (unchanged) */}
+              {/* Contact Privacy Card */}
               <Card className="rounded-3xl overflow-hidden p-6 flex flex-col w-full border-[#9FA791]/20 dark:border-[#4A4D45]/20 bg-white dark:bg-[#2A352A] mb-6">
                 <h2 className="text-xl font-bold mb-4 text-[#3E5641] dark:text-white flex items-center">
                   Contact Privacy Settings
@@ -1406,7 +1467,7 @@ export default function UploadVehicle({
                 </div>
               </Card>
 
-              {/* DEDICATED VEHICLE LOCATION CARD (NEW) */}
+              {/* DEDICATED VEHICLE LOCATION CARD */}
               <Card
                 id="vehicle-location-card"
                 className="rounded-3xl overflow-hidden p-6 flex flex-col w-full border-[#9FA791]/20 dark:border-[#4A4D45]/20 bg-white dark:bg-[#2A352A] mb-6"
@@ -1561,7 +1622,7 @@ export default function UploadVehicle({
               )}
             </div>
 
-            {/* RIGHT COLUMN — Vehicle Details Form (unchanged except removed any location fields) */}
+            {/* RIGHT COLUMN — Vehicle Details Form (properly aligned) */}
             <div className="lg:w-2/3 flex">
               <Card className="rounded-3xl p-6 w-full border-[#9FA791]/20 dark:border-[#4A4D45]/20 bg-white dark:bg-[#2A352A]">
                 <h2 className="text-xl font-bold mb-6 text-[#3E5641] dark:text-white">Vehicle Details</h2>
@@ -1572,7 +1633,7 @@ export default function UploadVehicle({
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div className="space-y-1.5">
                         <div className="relative" ref={makeRef}>
-                          <Label className="text-sm font-medium text-[#3E5641] dark:text-gray-300">Make</Label>
+                          <Label className="text-sm font-medium text-[#3E5641] dark:text-gray-300">Make *</Label>
                           <Input
                             name="make"
                             value={formData.make}
@@ -1607,7 +1668,7 @@ export default function UploadVehicle({
                       </div>
                       <div className="space-y-1.5">
                         <div className="relative" ref={modelRef}>
-                          <Label className="text-sm font-medium text-[#3E5641] dark:text-gray-300">Model</Label>
+                          <Label className="text-sm font-medium text-[#3E5641] dark:text-gray-300">Model *</Label>
                           <Input
                             name="model"
                             value={formData.model}
@@ -1661,7 +1722,7 @@ export default function UploadVehicle({
                     <h3 className="text-lg font-semibold mb-3 text-[#3E5641] dark:text-white">Price, Mileage &amp; Year</h3>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       <div className="space-y-1.5">
-                        <Label className="text-sm font-medium text-[#3E5641] dark:text-gray-300">Price (ZAR)</Label>
+                        <Label className="text-sm font-medium text-[#3E5641] dark:text-gray-300">Price (ZAR) *</Label>
                         <Input
                           name="price"
                           type="text"
@@ -1673,7 +1734,7 @@ export default function UploadVehicle({
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-sm font-medium text-[#3E5641] dark:text-gray-300">Mileage (km)</Label>
+                        <Label className="text-sm font-medium text-[#3E5641] dark:text-gray-300">Mileage (km) *</Label>
                         <Input
                           name="mileage"
                           type="number"
@@ -1687,7 +1748,7 @@ export default function UploadVehicle({
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-sm font-medium text-[#3E5641] dark:text-gray-300">Year</Label>
+                        <Label className="text-sm font-medium text-[#3E5641] dark:text-gray-300">Year *</Label>
                         <Input
                           name="year"
                           type="number"
@@ -1703,12 +1764,12 @@ export default function UploadVehicle({
                     </div>
                   </div>
 
-                  {/* Technical Specs */}
+                  {/* Technical Specs - Improved Alignment (2x2 grid) */}
                   <div>
                     <h3 className="text-lg font-semibold mb-3 text-[#3E5641] dark:text-white">Technical Specifications</h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-1.5">
-                        <Label className="text-sm font-medium text-[#3E5641] dark:text-gray-300">Transmission</Label>
+                        <Label className="text-sm font-medium text-[#3E5641] dark:text-gray-300">Transmission *</Label>
                         <select
                           name="transmission"
                           value={formData.transmission}
@@ -1722,7 +1783,7 @@ export default function UploadVehicle({
                         </select>
                       </div>
                       <div className="space-y-1.5">
-                        <Label className="text-sm font-medium text-[#3E5641] dark:text-gray-300">Fuel Type</Label>
+                        <Label className="text-sm font-medium text-[#3E5641] dark:text-gray-300">Fuel Type *</Label>
                         <select
                           name="fuel"
                           value={formData.fuel}
@@ -1739,11 +1800,18 @@ export default function UploadVehicle({
                       </div>
                       <div className="space-y-1.5">
                         <div className="relative" ref={engineCapacityRef}>
-                          <Label className="text-sm font-medium text-[#3E5641] dark:text-gray-300">Engine Capacity</Label>
+                          <Label className="text-sm font-medium text-[#3E5641] dark:text-gray-300">Engine Capacity (Optional)</Label>
                           <Input
                             type="text"
                             value={engineCapacitySearch}
                             onChange={handleEngineCapacitySearchChange}
+                            onBlur={handleEngineCapacityBlurOrEnter}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault()
+                                handleEngineCapacityBlurOrEnter()
+                              }
+                            }}
                             onFocus={() => {
                               setShowEngineCapacityDropdown(true)
                               setEngineCapacityFiltered(
@@ -1752,13 +1820,13 @@ export default function UploadVehicle({
                                   : engineCapacityOptionsList
                               )
                             }}
-                            placeholder="Select Capacity"
+                            placeholder="e.g., 1.4L"
                             className="border-[#9FA791] dark:border-[#4A4D45] dark:bg-[#1F2B20] dark:text-white"
                             disabled={isSubmitting}
                             autoComplete="off"
                           />
                           {showEngineCapacityDropdown && engineCapacityFiltered.length > 0 && (
-                            <div className="absolute z-10 w-full mt-4 bg-white dark:bg-[#1F2B20] border border-[#9FA791] dark:border-[#4A4D45] rounded-md shadow-lg max-h-60 overflow-y-auto">
+                            <div className="absolute z-10 w-full mt-1 bg-white dark:bg-[#1F2B20] border border-[#9FA791] dark:border-[#4A4D45] rounded-md shadow-lg max-h-60 overflow-y-auto">
                               {engineCapacityFiltered.map((option) => (
                                 <div
                                   key={option.value}
@@ -1777,7 +1845,7 @@ export default function UploadVehicle({
                       </div>
                       <div className="space-y-1.5">
                         <div className="relative" ref={bodyTypeRef}>
-                          <Label className="text-sm font-medium text-[#3E5641] dark:text-gray-300">Body Type</Label>
+                          <Label className="text-sm font-medium text-[#3E5641] dark:text-gray-300">Body Type *</Label>
                           <Input
                             type="text"
                             value={bodyTypeSearch}
@@ -1821,7 +1889,7 @@ export default function UploadVehicle({
                   <div>
                     <h3 className="text-lg font-semibold mb-3 text-[#3E5641] dark:text-white">Vehicle Condition</h3>
                     <div className="space-y-1.5">
-                      <Label className="text-sm font-medium text-[#3E5641] dark:text-gray-300">Condition</Label>
+                      <Label className="text-sm font-medium text-[#3E5641] dark:text-gray-300">Condition *</Label>
                       <select
                         name="condition"
                         value={formData.condition}
