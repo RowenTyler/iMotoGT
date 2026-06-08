@@ -14,6 +14,7 @@ export const SUPER_ADMIN_EMAILS: string[] = [
   "rowenrichardson@gmail.com",
   "richardson.rowen@gmail.com",
   "tyler.rowend@gmail.com",
+  "crytrich@gmail.com",
 ]
 
 export const PLUS_TIER_EMAILS: string[] = [

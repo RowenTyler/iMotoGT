@@ -6,6 +6,7 @@ const SUPER_ADMIN_EMAILS = new Set([
   "rowenrichardson@gmail.com",
   "richardson.rowen@gmail.com",
   "tyler.rowend@gmail.com",
+  "crytrich@gmail.com",
 ])
 
 export interface AdminSession {
