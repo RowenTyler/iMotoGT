@@ -4,6 +4,14 @@ import { createClient } from '@/utils/supabase/server';
 export async function POST(req: NextRequest) {
   try {
     const supabase = await createClient();
+
+    // 1. Verify user is authenticated
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      console.error('Upload auth error:', authError);
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const formData = await req.formData();
     const file = formData.get('file') as File | null;
 
@@ -24,28 +32,28 @@ export async function POST(req: NextRequest) {
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    // Generate unique filename
+    // Generate unique filename (no subfolder – upload directly to bucket root)
     const ext = file.name.split('.').pop() || 'jpg';
     const filename = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${ext}`;
-    const filePath = `public/${filename}`; // folder inside the bucket
 
-    // Upload to Supabase Storage bucket 'blog-images'
-    const { data, error } = await supabase.storage
+    // Upload to Supabase Storage bucket 'blog-images' (must exist and be public)
+    const { error: uploadError } = await supabase.storage
       .from('blog-images')
-      .upload(filePath, buffer, {
+      .upload(filename, buffer, {
         contentType: file.type,
+        cacheControl: '3600',
         upsert: false,
       });
 
-    if (error) {
-      console.error('Supabase storage upload error:', error);
-      return NextResponse.json({ error: 'Failed to upload to storage' }, { status: 500 });
+    if (uploadError) {
+      console.error('Supabase storage upload error:', uploadError);
+      return NextResponse.json({ error: `Failed to upload to storage: ${uploadError.message}` }, { status: 500 });
     }
 
-    // Get public URL
+    // Get public URL (bucket must be public or you need a signed URL)
     const { data: { publicUrl } } = supabase.storage
       .from('blog-images')
-      .getPublicUrl(filePath);
+      .getPublicUrl(filename);
 
     return NextResponse.json({ url: publicUrl });
   } catch (error) {
