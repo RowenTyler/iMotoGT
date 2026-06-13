@@ -705,27 +705,29 @@ export default function BlogEditor({
       let command: any;
       switch (type) {
         case 'text':
-          command = editor.chain().focus().insertContentAt(from, { type: 'paragraph', content: [] });
+          command = editor.chain().insertContentAt(from, { type: 'paragraph', content: [] });
           break;
         case 'heading':
-          command = editor.chain().focus().insertContentAt(from, { type: 'heading', attrs: { level: 2 }, content: [] });
+          command = editor.chain().insertContentAt(from, { type: 'heading', attrs: { level: 2 }, content: [] });
           break;
         case 'subheading':
-          command = editor.chain().focus().insertContentAt(from, { type: 'heading', attrs: { level: 3 }, content: [] });
+          command = editor.chain().insertContentAt(from, { type: 'heading', attrs: { level: 3 }, content: [] });
           break;
         case 'quote':
-          command = editor.chain().focus().insertContentAt(from, {
+          command = editor.chain().insertContentAt(from, {
             type: 'blockquote',
             content: [{ type: 'paragraph', content: [] }],
           });
           break;
         case 'divider':
-          command = editor.chain().focus().insertContentAt(from, { type: 'horizontalRule' });
+          command = editor.chain().insertContentAt(from, { type: 'horizontalRule' });
           break;
         default:
-          command = editor.chain().focus().insertContentAt(from, { type: 'paragraph', content: [] });
+          command = editor.chain().insertContentAt(from, { type: 'paragraph', content: [] });
       }
       command?.run();
+      // Force focus back to the editor after insertion
+      setTimeout(() => editor.commands.focus(), 10);
     },
     [editor]
   );
