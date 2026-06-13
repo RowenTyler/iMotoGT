@@ -50,8 +50,8 @@ export async function POST(request: Request) {
       {
         user_id: userId || null,
         event_type: eventType,
-        target_table: targetTable || null,
-        target_id: targetId || null,
+        entity_type: targetTable || null,
+        entity_id: targetId || null,
         metadata: metadata ?? null,
         created_at: new Date().toISOString(),
       },

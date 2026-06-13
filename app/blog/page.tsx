@@ -7,7 +7,7 @@ export default async function BlogIndexPage() {
   const supabase = await createClient()
   const { data: blogs } = await supabase
     .from("blogs")
-    .select("id,title,subtitle,slug,category,hero_image,published_at,views,reading_time")
+    .select("id,title,subtitle,slug,category,hero_image,published_at,views")
     .eq("status", "published")
     .order("published_at", { ascending: false })
     .limit(12)

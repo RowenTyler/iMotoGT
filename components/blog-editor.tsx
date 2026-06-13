@@ -1,25 +1,31 @@
 'use client';
 
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Image from '@tiptap/extension-image';
 import Placeholder from '@tiptap/extension-placeholder';
+import Link from '@tiptap/extension-link';
 import {
   Plus,
   Image as ImageIcon,
-  Video,
-  Quote,
   Heading1,
   Heading2,
+  Quote,
   Minus,
+  Bold,
+  Italic,
+  Underline,
+  Strikethrough,
+  Link as LinkIcon,
   X,
+  Edit,
 } from 'lucide-react';
 
 // ----------------------------------------------------------------------
-// Types (matching your existing EditorBlock interface)
+// Types
 // ----------------------------------------------------------------------
-type BlockType = 'text' | 'image' | 'video' | 'quote' | 'divider' | 'heading' | 'subheading';
+type BlockType = 'text' | 'heading' | 'subheading' | 'image' | 'quote' | 'divider';
 
 interface EditorBlock {
   id: string;
@@ -41,12 +47,12 @@ interface BlogEditorProps {
 }
 
 // ----------------------------------------------------------------------
-// Image upload helper – calls your API route
+// Image upload helper
 // ----------------------------------------------------------------------
 async function uploadImage(file: File): Promise<string> {
   const formData = new FormData();
   formData.append('file', file);
-  const response = await fetch('/api/admin/upload', {
+  const response = await fetch('/admin/upload', {
     method: 'POST',
     body: formData,
   });
@@ -60,16 +66,12 @@ async function uploadImage(file: File): Promise<string> {
 }
 
 // ----------------------------------------------------------------------
-// Convert EditorBlock[] to TipTap JSON document
+// Convert EditorBlock[] to TipTap JSON
 // ----------------------------------------------------------------------
-function blocksToTipTapDocument(blocks: EditorBlock[]): any {
+function blocksToTipTapContent(blocks: EditorBlock[]): any {
   if (!blocks.length) {
-    return {
-      type: 'doc',
-      content: [{ type: 'paragraph', content: [] }],
-    };
+    return { type: 'doc', content: [{ type: 'paragraph', content: [] }] };
   }
-
   const content = blocks.map((block) => {
     switch (block.type) {
       case 'text':
@@ -89,15 +91,6 @@ function blocksToTipTapDocument(blocks: EditorBlock[]): any {
           attrs: { level: 3 },
           content: block.content ? [{ type: 'text', text: block.content }] : [],
         };
-      case 'image':
-        return {
-          type: 'image',
-          attrs: {
-            src: block.content,
-            alt: block.sourceLabel || '',
-            title: block.sourceLabel || '',
-          },
-        };
       case 'quote':
         return {
           type: 'blockquote',
@@ -105,13 +98,16 @@ function blocksToTipTapDocument(blocks: EditorBlock[]): any {
         };
       case 'divider':
         return { type: 'horizontalRule' };
-      case 'video':
-        // Store video as a special paragraph marker (you can improve later)
+      case 'image':
         return {
-          type: 'paragraph',
-          content: block.content
-            ? [{ type: 'text', text: `[VIDEO: ${block.content}]` }]
-            : [],
+          type: 'image',
+          attrs: {
+            src: block.content,
+            alt: block.sourceLabel || '',
+            title: block.sourceLabel || '',
+            caption: block.sourceLabel || '',
+            captionUrl: block.sourceUrl || '',
+          },
         };
       default:
         return { type: 'paragraph', content: [] };
@@ -120,25 +116,47 @@ function blocksToTipTapDocument(blocks: EditorBlock[]): any {
   return { type: 'doc', content };
 }
 
-// ----------------------------------------------------------------------
-// Convert TipTap JSON document back to EditorBlock[]
-// ----------------------------------------------------------------------
-function tipTapDocumentToBlocks(doc: any): EditorBlock[] {
-  if (!doc || !doc.content) return [];
+/**
+ * Convert a TipTap node (with marks) into HTML string.
+ */
+function nodeToHtml(node: any): string {
+  if (node.type === 'text') {
+    let text = node.text || '';
+    if (node.marks) {
+      for (const mark of node.marks) {
+        if (mark.type === 'bold') text = `<strong>${text}</strong>`;
+        if (mark.type === 'italic') text = `<em>${text}</em>`;
+        if (mark.type === 'underline') text = `<u>${text}</u>`;
+        if (mark.type === 'strike') text = `<s>${text}</s>`;
+        if (mark.type === 'link') {
+          const href = mark.attrs?.href || '#';
+          text = `<a href="${href}" target="_blank" rel="noopener noreferrer" class="text-orange-500 hover:underline">${text}</a>`;
+        }
+      }
+    }
+    return text;
+  }
+  if (node.type === 'paragraph') {
+    const inner = node.content?.map((c: any) => nodeToHtml(c)).join('') || '';
+    return `<p>${inner}</p>`;
+  }
+  return '';
+}
 
+// ----------------------------------------------------------------------
+// Convert TipTap JSON to EditorBlock[] (now preserving links as HTML)
+// ----------------------------------------------------------------------
+function tipTapContentToBlocks(doc: any): EditorBlock[] {
+  if (!doc || !doc.content) return [];
   const blocks: EditorBlock[] = [];
   let index = 0;
   for (const node of doc.content) {
     const id = `block-${Date.now()}-${index++}`;
     switch (node.type) {
       case 'paragraph': {
-        const text = node.content?.map((c: any) => c.text || '').join('') || '';
-        if (text.startsWith('[VIDEO:')) {
-          const url = text.slice(7, -1).trim();
-          blocks.push({ id, type: 'video', content: url });
-        } else {
-          blocks.push({ id, type: 'text', content: text });
-        }
+        const html = node.content?.map((c: any) => nodeToHtml(c)).join('') || '';
+        const content = html === '<p></p>' ? '' : html;
+        blocks.push({ id, type: 'text', content });
         break;
       }
       case 'heading': {
@@ -151,15 +169,6 @@ function tipTapDocumentToBlocks(doc: any): EditorBlock[] {
         });
         break;
       }
-      case 'image':
-        blocks.push({
-          id,
-          type: 'image',
-          content: node.attrs?.src || '',
-          sourceLabel: node.attrs?.alt || '',
-          sourceUrl: node.attrs?.src || '',
-        });
-        break;
       case 'blockquote': {
         const text = node.content?.map((c: any) => c.text || '').join('') || '';
         blocks.push({ id, type: 'quote', content: text });
@@ -167,6 +176,15 @@ function tipTapDocumentToBlocks(doc: any): EditorBlock[] {
       }
       case 'horizontalRule':
         blocks.push({ id, type: 'divider', content: '' });
+        break;
+      case 'image':
+        blocks.push({
+          id,
+          type: 'image',
+          content: node.attrs?.src || '',
+          sourceLabel: node.attrs?.caption || node.attrs?.alt || '',
+          sourceUrl: node.attrs?.captionUrl || '',
+        });
         break;
       default:
         blocks.push({ id, type: 'text', content: '' });
@@ -176,45 +194,42 @@ function tipTapDocumentToBlocks(doc: any): EditorBlock[] {
 }
 
 // ----------------------------------------------------------------------
-// Floating Plus Button with Block Menu
+// Floating Plus Button with Menu
 // ----------------------------------------------------------------------
 interface FloatingPlusButtonProps {
   editor: any;
-  onAddBlock: (type: BlockType, atPosition?: number) => void;
+  onInsertBlock: (type: BlockType) => void;
 }
 
-function FloatingPlusButton({ editor, onAddBlock }: FloatingPlusButtonProps) {
+function FloatingPlusButton({ editor, onInsertBlock }: FloatingPlusButtonProps) {
   const [position, setPosition] = useState({ top: 0, left: 0 });
   const [showMenu, setShowMenu] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!editor) return;
-
-    const updatePosition = () => {
-      const { state } = editor;
-      const { from } = state.selection;
-      const coords = editor.view.coordsAtPos(from);
-      const editorRect = editor.view.dom.getBoundingClientRect();
-      const scrollY = window.scrollY || window.pageYOffset;
-      setPosition({
-        top: coords.top + scrollY - editorRect.top - 4,
-        left: -32,
-      });
-    };
-
-    editor.on('selectionUpdate', updatePosition);
-    editor.on('update', updatePosition);
-    updatePosition();
-
-    return () => {
-      editor.off('selectionUpdate', updatePosition);
-      editor.off('update', updatePosition);
-    };
+  const updatePosition = useCallback(() => {
+    if (!editor || !editor.isFocused) return;
+    const { from, to } = editor.state.selection;
+    if (from !== to) return;
+    const coords = editor.view.coordsAtPos(from);
+    const editorRect = editor.view.dom.getBoundingClientRect();
+    setPosition({
+      top: coords.top - editorRect.top + (coords.bottom - coords.top) / 2,
+      left: -32,
+    });
   }, [editor]);
 
-  // Close menu when clicking outside
+  useEffect(() => {
+    if (!editor) return;
+    editor.on('selectionUpdate', updatePosition);
+    editor.on('focus', updatePosition);
+    updatePosition();
+    return () => {
+      editor.off('selectionUpdate', updatePosition);
+      editor.off('focus', updatePosition);
+    };
+  }, [editor, updatePosition]);
+
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (
@@ -231,36 +246,31 @@ function FloatingPlusButton({ editor, onAddBlock }: FloatingPlusButtonProps) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showMenu]);
 
-  if (!editor) return null;
+  if (!editor || !editor.isFocused) return null;
 
-  const handleButtonClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setShowMenu(!showMenu);
-  };
-
-  const handleSelectBlock = (type: BlockType) => {
-    onAddBlock(type);
-    setShowMenu(false);
-  };
-
-  const blockOptions: { type: BlockType; label: string; icon: React.ReactNode }[] = [
-    { type: 'text', label: 'Text', icon: <Plus size={16} /> },
-    { type: 'heading', label: 'Heading', icon: <Heading1 size={16} /> },
-    { type: 'subheading', label: 'Subheading', icon: <Heading2 size={16} /> },
-    { type: 'image', label: 'Image', icon: <ImageIcon size={16} /> },
-    { type: 'video', label: 'Video', icon: <Video size={16} /> },
-    { type: 'quote', label: 'Quote', icon: <Quote size={16} /> },
-    { type: 'divider', label: 'Divider', icon: <Minus size={16} /> },
+  const menuItems = [
+    { type: 'text' as const, label: 'Text', icon: <Plus size={16} /> },
+    { type: 'heading' as const, label: 'Heading', icon: <Heading1 size={16} /> },
+    { type: 'subheading' as const, label: 'Subheading', icon: <Heading2 size={16} /> },
+    { type: 'image' as const, label: 'Image', icon: <ImageIcon size={16} /> },
+    { type: 'quote' as const, label: 'Quote', icon: <Quote size={16} /> },
+    { type: 'divider' as const, label: 'Divider', icon: <Minus size={16} /> },
   ];
 
   return (
-    <div className="absolute z-20" style={{ top: `${position.top}px`, left: `${position.left}px` }}>
+    <div
+      className="absolute z-20"
+      style={{
+        top: `${position.top}px`,
+        left: `${position.left}px`,
+        transform: 'translateY(-50%)',
+      }}
+    >
       <button
         ref={buttonRef}
         type="button"
-        onClick={handleButtonClick}
+        onClick={() => setShowMenu(!showMenu)}
         className="flex h-7 w-7 items-center justify-center rounded-full bg-slate-200 text-slate-600 shadow-md transition hover:bg-slate-300 focus:outline-none"
-        style={{ transform: 'translateY(-50%)' }}
         aria-label="Add block"
       >
         <Plus size={16} />
@@ -270,20 +280,342 @@ function FloatingPlusButton({ editor, onAddBlock }: FloatingPlusButtonProps) {
           ref={menuRef}
           className="absolute left-0 top-full mt-1 z-50 w-40 rounded-md border border-slate-200 bg-white shadow-lg"
         >
-          {blockOptions.map((opt) => (
+          {menuItems.map((item) => (
             <button
-              key={opt.type}
-              onClick={() => handleSelectBlock(opt.type)}
+              key={item.type}
+              onClick={() => {
+                onInsertBlock(item.type);
+                setShowMenu(false);
+              }}
               className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-slate-50"
             >
-              <span className="text-slate-400">{opt.icon}</span>
-              <span>{opt.label}</span>
+              <span className="text-slate-400">{item.icon}</span>
+              <span>{item.label}</span>
             </button>
           ))}
         </div>
       )}
     </div>
   );
+}
+
+// ----------------------------------------------------------------------
+// Floating Toolbar (formatting + link using inline input)
+// ----------------------------------------------------------------------
+interface FloatingToolbarProps {
+  editor: any;
+}
+
+function FloatingToolbar({ editor }: FloatingToolbarProps) {
+  const [position, setPosition] = useState({ top: 0, left: 0 });
+  const [visible, setVisible] = useState(false);
+  const [showLinkInput, setShowLinkInput] = useState(false);
+  const [linkUrl, setLinkUrl] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const updatePosition = useCallback(() => {
+    if (!editor) return;
+    const { from, to, empty } = editor.state.selection;
+    if (empty || from === to) {
+      setVisible(false);
+      return;
+    }
+    try {
+      const coords = editor.view.coordsAtPos(from);
+      const editorRect = editor.view.dom.getBoundingClientRect();
+      setPosition({
+        top: coords.top - editorRect.top - 40,
+        left: coords.left - editorRect.left,
+      });
+      setVisible(true);
+    } catch (e) {
+      setVisible(false);
+    }
+  }, [editor]);
+
+  useEffect(() => {
+    if (!editor) return;
+    editor.on('selectionUpdate', updatePosition);
+    editor.on('focus', updatePosition);
+    updatePosition();
+    return () => {
+      editor.off('selectionUpdate', updatePosition);
+      editor.off('focus', updatePosition);
+    };
+  }, [editor, updatePosition]);
+
+  const normalizeUrl = (url: string): string => {
+    url = url.trim();
+    if (!url) return '';
+    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+    if (url.startsWith('/')) return url; // internal link
+    // Assume it's a domain, add https://
+    return `https://${url}`;
+  };
+
+  const openLinkInput = () => {
+    const previousUrl = editor.getAttributes('link').href || '';
+    setLinkUrl(previousUrl);
+    setShowLinkInput(true);
+  };
+
+  const saveLink = () => {
+    let finalUrl = normalizeUrl(linkUrl);
+    if (finalUrl === '') {
+      editor.chain().focus().unsetLink().run();
+    } else {
+      editor.chain().focus().setLink({ href: finalUrl }).run();
+    }
+    setShowLinkInput(false);
+    setLinkUrl('');
+  };
+
+  const cancelLink = () => {
+    setShowLinkInput(false);
+    setLinkUrl('');
+  };
+
+  useEffect(() => {
+    if (showLinkInput && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [showLinkInput]);
+
+  if (!visible || !editor) return null;
+
+  return (
+    <>
+      <div
+        className="absolute z-30 flex gap-1 rounded-md border border-slate-200 bg-white p-1 shadow-md"
+        style={{ top: position.top, left: position.left }}
+      >
+        <button
+          onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleBold().run(); }}
+          className={`rounded p-1 ${editor.isActive('bold') ? 'bg-slate-200' : 'hover:bg-slate-100'}`}
+          title="Bold"
+        >
+          <Bold size={16} />
+        </button>
+        <button
+          onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleItalic().run(); }}
+          className={`rounded p-1 ${editor.isActive('italic') ? 'bg-slate-200' : 'hover:bg-slate-100'}`}
+          title="Italic"
+        >
+          <Italic size={16} />
+        </button>
+        <button
+          onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleUnderline().run(); }}
+          className={`rounded p-1 ${editor.isActive('underline') ? 'bg-slate-200' : 'hover:bg-slate-100'}`}
+          title="Underline"
+        >
+          <Underline size={16} />
+        </button>
+        <button
+          onMouseDown={(e) => { e.preventDefault(); editor.chain().focus().toggleStrike().run(); }}
+          className={`rounded p-1 ${editor.isActive('strike') ? 'bg-slate-200' : 'hover:bg-slate-100'}`}
+          title="Strikethrough"
+        >
+          <Strikethrough size={16} />
+        </button>
+        <button
+          onMouseDown={(e) => { e.preventDefault(); openLinkInput(); }}
+          className={`rounded p-1 ${editor.isActive('link') ? 'bg-slate-200' : 'hover:bg-slate-100'}`}
+          title="Hyperlink"
+        >
+          <LinkIcon size={16} />
+        </button>
+      </div>
+      {showLinkInput && (
+        <div
+          className="absolute z-40 flex gap-2 rounded-md border border-slate-200 bg-white p-2 shadow-md"
+          style={{ top: position.top + 40, left: position.left }}
+        >
+          <input
+            ref={inputRef}
+            type="text"
+            value={linkUrl}
+            onChange={(e) => setLinkUrl(e.target.value)}
+            placeholder="https://example.com or imotogt.co.za"
+            className="w-64 rounded border border-slate-300 px-2 py-1 text-sm"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') saveLink();
+              if (e.key === 'Escape') cancelLink();
+            }}
+          />
+          <button
+            onClick={saveLink}
+            className="rounded bg-blue-500 px-2 py-1 text-xs text-white hover:bg-blue-600"
+          >
+            Apply
+          </button>
+          <button
+            onClick={cancelLink}
+            className="rounded bg-gray-300 px-2 py-1 text-xs hover:bg-gray-400"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
+    </>
+  );
+}
+
+// ----------------------------------------------------------------------
+// Image Component with Caption Editor
+// ----------------------------------------------------------------------
+interface ImageComponentProps {
+  editor: any;
+  node: any;
+  updateAttributes: (attrs: any) => void;
+  deleteNode: () => void;
+}
+
+function ImageWithCaption({ editor, node, updateAttributes, deleteNode }: ImageComponentProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [caption, setCaption] = useState(node.attrs.caption || '');
+  const [captionUrl, setCaptionUrl] = useState(node.attrs.captionUrl || '');
+
+  const saveCaption = () => {
+    updateAttributes({ caption, captionUrl, alt: caption });
+    setIsEditing(false);
+  };
+
+  return (
+    <div className="relative my-4">
+      <div className="relative">
+        <img src={node.attrs.src} alt={node.attrs.alt} className="max-w-full rounded-lg" />
+        <div className="absolute right-2 top-2 flex gap-1">
+          {!isEditing && (
+            <button
+              onClick={() => setIsEditing(true)}
+              className="rounded-full bg-black/50 p-1 text-white hover:bg-black/70"
+              title="Edit caption"
+            >
+              <Edit size={14} />
+            </button>
+          )}
+          <button
+            onClick={() => deleteNode()}
+            className="rounded-full bg-black/50 p-1 text-white hover:bg-black/70"
+            title="Remove image"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      </div>
+      {isEditing ? (
+        <div className="mt-2 space-y-2 rounded-md border border-slate-200 bg-slate-50 p-3">
+          <input
+            type="text"
+            value={caption}
+            onChange={(e) => setCaption(e.target.value)}
+            placeholder="Caption text"
+            className="w-full rounded border border-slate-300 p-1 text-sm"
+            autoFocus
+          />
+          <input
+            type="text"
+            value={captionUrl}
+            onChange={(e) => setCaptionUrl(e.target.value)}
+            placeholder="Source URL (optional)"
+            className="w-full rounded border border-slate-300 p-1 text-sm"
+          />
+          <div className="flex gap-2">
+            <button
+              onClick={saveCaption}
+              className="rounded bg-blue-500 px-2 py-1 text-xs text-white hover:bg-blue-600"
+            >
+              Save
+            </button>
+            <button
+              onClick={() => setIsEditing(false)}
+              className="rounded bg-gray-300 px-2 py-1 text-xs hover:bg-gray-400"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : (
+        caption && (
+          <div className="mt-1 text-center text-sm text-gray-500">
+            {captionUrl ? (
+              <a href={captionUrl} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline">
+                {caption}
+              </a>
+            ) : (
+              caption
+            )}
+          </div>
+        )
+      )}
+    </div>
+  );
+}
+
+// ----------------------------------------------------------------------
+// Custom Image Extension with Caption support
+// ----------------------------------------------------------------------
+const CaptionedImage = Image.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      caption: { default: '' },
+      captionUrl: { default: '' },
+    };
+  },
+  addNodeView() {
+    return ({ editor, node, getPos, updateAttributes, deleteNode }) => {
+      const dom = document.createElement('div');
+      const reactRoot = (window as any).ReactDOM?.createRoot?.(dom);
+      if (reactRoot) {
+        reactRoot.render(
+          <ImageWithCaption
+            editor={editor}
+            node={node}
+            updateAttributes={updateAttributes}
+            deleteNode={deleteNode}
+          />
+        );
+      } else {
+        dom.innerHTML = `<img src="${node.attrs.src}" alt="${node.attrs.alt}" class="max-w-full rounded-lg" />`;
+      }
+      return {
+        dom,
+        update: (updatedNode) => {
+          if (updatedNode.type !== node.type) return false;
+          if (reactRoot) {
+            reactRoot.render(
+              <ImageWithCaption
+                editor={editor}
+                node={updatedNode}
+                updateAttributes={updateAttributes}
+                deleteNode={deleteNode}
+              />
+            );
+          } else {
+            dom.innerHTML = `<img src="${updatedNode.attrs.src}" alt="${updatedNode.attrs.alt}" class="max-w-full rounded-lg" />`;
+          }
+          return true;
+        },
+        destroy: () => {
+          if (reactRoot) reactRoot.unmount();
+        },
+      };
+    };
+  },
+});
+
+// ----------------------------------------------------------------------
+// Helper to insert image via upload
+// ----------------------------------------------------------------------
+async function handleImageUpload(editor: any, file: File) {
+  try {
+    const url = await uploadImage(file);
+    editor.chain().focus().setImage({ src: url }).run();
+  } catch (err) {
+    console.error('Image upload failed:', err);
+    alert('Failed to upload image. Please try again.');
+  }
 }
 
 // ----------------------------------------------------------------------
@@ -299,23 +631,35 @@ export default function BlogEditor({
   onBlocksChange,
   initialBlocks = [],
 }: BlogEditorProps) {
-  const [editorReady, setEditorReady] = useState(false);
-  const initialDocument = blocksToTipTapDocument(initialBlocks);
+  const initialContent = blocksToTipTapContent(initialBlocks);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const editor = useEditor({
     extensions: [
-      StarterKit.configure({ placeholder: false }),
-      Image.configure({
-        inline: false,
-        allowBase64: false,
-        HTMLAttributes: { class: 'my-4 max-w-full rounded-lg' },
+      StarterKit.configure({
+        heading: { levels: [2, 3] },
+        link: false,
       }),
+      Link.configure({
+        openOnClick: false,
+        HTMLAttributes: {
+          class: 'text-orange-500 underline hover:text-orange-600',
+          target: '_blank',
+          rel: 'noopener noreferrer',
+        },
+      }),
+      CaptionedImage,
       Placeholder.configure({
         placeholder: 'Start writing...',
         emptyEditorClass: 'is-editor-empty',
       }),
     ],
-    content: initialDocument,
+    content: initialContent,
+    onUpdate: ({ editor }) => {
+      const doc = editor.getJSON();
+      const blocks = tipTapContentToBlocks(doc);
+      onBlocksChange(blocks);
+    },
     editorProps: {
       attributes: {
         class: 'prose prose-slate max-w-none focus:outline-none min-h-[300px] px-1 py-4',
@@ -326,11 +670,7 @@ export default function BlogEditor({
           files.forEach((file) => {
             if (file.type.startsWith('image/')) {
               event.preventDefault();
-              uploadImage(file)
-                .then((url) => {
-                  editor?.chain().focus().setImage({ src: url }).run();
-                })
-                .catch(console.error);
+              handleImageUpload(editor, file);
             }
           });
           return true;
@@ -344,11 +684,7 @@ export default function BlogEditor({
             const file = item.getAsFile();
             if (file) {
               event.preventDefault();
-              uploadImage(file)
-                .then((url) => {
-                  editor?.chain().focus().setImage({ src: url }).run();
-                })
-                .catch(console.error);
+              handleImageUpload(editor, file);
             }
             return true;
           }
@@ -356,52 +692,51 @@ export default function BlogEditor({
         return false;
       },
     },
-    onUpdate: ({ editor }) => {
-      const doc = editor.getJSON();
-      const newBlocks = tipTapDocumentToBlocks(doc);
-      onBlocksChange(newBlocks);
-    },
-    onTransaction: () => {
-      if (!editorReady) setEditorReady(true);
-    },
   });
 
-  // Insert a new block of given type after the current cursor position
   const insertBlock = useCallback(
     (type: BlockType) => {
       if (!editor) return;
+      if (type === 'image') {
+        fileInputRef.current?.click();
+        return;
+      }
       const { from } = editor.state.selection;
-      let newNode: any;
+      let command: any;
       switch (type) {
         case 'text':
-          newNode = { type: 'paragraph', content: [] };
+          command = editor.chain().focus().insertContentAt(from, { type: 'paragraph', content: [] });
           break;
         case 'heading':
-          newNode = { type: 'heading', attrs: { level: 2 }, content: [] };
+          command = editor.chain().focus().insertContentAt(from, { type: 'heading', attrs: { level: 2 }, content: [] });
           break;
         case 'subheading':
-          newNode = { type: 'heading', attrs: { level: 3 }, content: [] };
-          break;
-        case 'image':
-          // For image, insert an empty image node – user can later add URL via an edit modal
-          newNode = { type: 'image', attrs: { src: '', alt: '' } };
+          command = editor.chain().focus().insertContentAt(from, { type: 'heading', attrs: { level: 3 }, content: [] });
           break;
         case 'quote':
-          newNode = { type: 'blockquote', content: [] };
+          command = editor.chain().focus().insertContentAt(from, {
+            type: 'blockquote',
+            content: [{ type: 'paragraph', content: [] }],
+          });
           break;
         case 'divider':
-          newNode = { type: 'horizontalRule' };
-          break;
-        case 'video':
-          newNode = {
-            type: 'paragraph',
-            content: [{ type: 'text', text: '[VIDEO: ]' }],
-          };
+          command = editor.chain().focus().insertContentAt(from, { type: 'horizontalRule' });
           break;
         default:
-          newNode = { type: 'paragraph', content: [] };
+          command = editor.chain().focus().insertContentAt(from, { type: 'paragraph', content: [] });
       }
-      editor.chain().focus().insertContentAt(from, newNode).run();
+      command?.run();
+    },
+    [editor]
+  );
+
+  const handleFileInputChange = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (file && editor) {
+        await handleImageUpload(editor, file);
+        e.target.value = '';
+      }
     },
     [editor]
   );
@@ -421,6 +756,7 @@ export default function BlogEditor({
           onHeroImageChange(url);
         } catch (err) {
           console.error(err);
+          alert('Failed to upload hero image');
         }
       }
     },
@@ -440,6 +776,7 @@ export default function BlogEditor({
               onHeroImageChange(url);
             } catch (err) {
               console.error(err);
+              alert('Failed to upload hero image');
             }
           }
           break;
@@ -458,15 +795,26 @@ export default function BlogEditor({
           onHeroImageChange(url);
         } catch (err) {
           console.error(err);
+          alert('Failed to upload hero image');
         }
       }
     },
     [onHeroImageChange]
   );
 
+  // ------------------------------------------------------------------
+  // Render
+  // ------------------------------------------------------------------
   return (
     <div className="space-y-6">
-      {/* Hero Image Section */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleFileInputChange}
+      />
+
       <div
         className="relative rounded-lg border-2 border-dashed border-slate-200 bg-slate-50 p-4 transition hover:border-slate-300"
         onDragOver={(e) => e.preventDefault()}
@@ -508,7 +856,6 @@ export default function BlogEditor({
         )}
       </div>
 
-      {/* Title & Subtitle */}
       <input
         type="text"
         value={title}
@@ -524,15 +871,16 @@ export default function BlogEditor({
         className="w-full border-0 bg-transparent text-xl text-slate-600 outline-none placeholder:text-slate-300 focus:ring-0"
       />
 
-      {/* Editor with floating plus button */}
-      <div className="relative">
-        {editor && editorReady && (
-          <FloatingPlusButton editor={editor} onAddBlock={insertBlock} />
+      <div className="relative min-h-[300px]">
+        {editor && (
+          <>
+            <FloatingToolbar editor={editor} />
+            <FloatingPlusButton editor={editor} onInsertBlock={insertBlock} />
+          </>
         )}
         <EditorContent editor={editor} />
       </div>
 
-      {/* Global styles */}
       <style jsx global>{`
         .ProseMirror {
           padding: 0 !important;
@@ -567,6 +915,10 @@ export default function BlogEditor({
           font-size: 1.4rem;
           font-weight: 600;
           margin: 1em 0 0.5em;
+        }
+        .ProseMirror a {
+          color: #f97316 !important;
+          text-decoration: underline;
         }
         .ProseMirror p.is-editor-empty:first-child::before {
           content: "Start writing...";

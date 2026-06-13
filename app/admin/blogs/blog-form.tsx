@@ -1,31 +1,31 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Label } from "@/components/ui/label"
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import BlogEditor from "@/components/blog-editor"
-import { ArrowLeft, Save, Send, Loader2, CheckCircle } from "lucide-react"
-import { createBlogAction, updateBlogAction, type BlogInput } from "@/app/admin/actions"
+} from "@/components/ui/select";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import BlogEditor from "@/components/blog-editor";
+import { ArrowLeft, Save, Send, Loader2, CheckCircle, CalendarIcon } from "lucide-react";
+import { createBlogAction, updateBlogAction, type BlogInput } from "@/app/admin/actions";
 
 interface EditorBlock {
-  id: string
-  type: string
-  content: string
-  sourceLabel?: string
-  sourceUrl?: string
+  id: string;
+  type: string;
+  content: string;
+  sourceLabel?: string;
+  sourceUrl?: string;
 }
 
 const BLOG_CATEGORIES = [
@@ -37,44 +37,54 @@ const BLOG_CATEGORIES = [
   "Dealer News",
   "Tips & Tricks",
   "Market Trends",
-]
+];
 
 export interface BlogFormInitial {
-  id?: string
-  title?: string
-  subtitle?: string
-  category?: string
-  hero_image?: string
-  seo_title?: string
-  seo_description?: string
-  blocks?: EditorBlock[]
-  status?: "draft" | "published" | "archived"
+  id?: string;
+  title?: string;
+  subtitle?: string;
+  category?: string;
+  hero_image?: string;
+  seo_title?: string;
+  seo_description?: string;
+  blocks?: EditorBlock[];
+  status?: "draft" | "published" | "archived";
+  scheduled_publish_at?: string;
 }
 
 export function BlogForm({ initial }: { initial?: BlogFormInitial }) {
-  const router = useRouter()
-  const isEdit = Boolean(initial?.id)
+  const router = useRouter();
+  const isEdit = Boolean(initial?.id);
 
-  const [title, setTitle] = useState(initial?.title ?? "")
-  const [subtitle, setSubtitle] = useState(initial?.subtitle ?? "")
-  const [category, setCategory] = useState(initial?.category ?? "")
-  const [heroImage, setHeroImage] = useState(initial?.hero_image ?? "")
-  const [blocks, setBlocks] = useState<EditorBlock[]>(initial?.blocks ?? [])
-  const [seoTitle, setSeoTitle] = useState(initial?.seo_title ?? "")
-  const [seoDescription, setSeoDescription] = useState(initial?.seo_description ?? "")
+  const [title, setTitle] = useState(initial?.title ?? "");
+  const [subtitle, setSubtitle] = useState(initial?.subtitle ?? "");
+  const [category, setCategory] = useState(initial?.category ?? "");
+  const [heroImage, setHeroImage] = useState(initial?.hero_image ?? "");
+  const [blocks, setBlocks] = useState<EditorBlock[]>(initial?.blocks ?? []);
+  const [seoTitle, setSeoTitle] = useState(initial?.seo_title ?? "");
+  const [seoDescription, setSeoDescription] = useState(initial?.seo_description ?? "");
+  const [scheduledDate, setScheduledDate] = useState(initial?.scheduled_publish_at ?? "");
 
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState<string | null>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  // Auto-update SEO title when title changes, if SEO title is empty
+  const handleTitleChange = (newTitle: string) => {
+    setTitle(newTitle);
+    if (!seoTitle.trim() && newTitle.trim()) {
+      setSeoTitle(newTitle);
+    }
+  };
 
   const submit = async (status: "draft" | "published") => {
     if (!title.trim()) {
-      setError("Title is required")
-      return
+      setError("Title is required");
+      return;
     }
-    setIsSubmitting(true)
-    setError(null)
-    setSuccess(null)
+    setIsSubmitting(true);
+    setError(null);
+    setSuccess(null);
 
     const payload: BlogInput = {
       title,
@@ -85,30 +95,31 @@ export function BlogForm({ initial }: { initial?: BlogFormInitial }) {
       seo_title: seoTitle || title,
       seo_description: seoDescription,
       status,
-    }
+      scheduled_publish_at: scheduledDate || null,
+    };
 
     try {
       const result = isEdit
         ? await updateBlogAction(initial!.id!, payload)
-        : await createBlogAction(payload)
+        : await createBlogAction(payload);
 
       if (result.success) {
         setSuccess(
-          status === "published" ? "Blog published successfully." : "Blog saved as draft.",
-        )
+          status === "published" ? "Blog published successfully." : "Blog saved as draft."
+        );
         setTimeout(() => {
-          router.push("/admin/blogs")
-          router.refresh()
-        }, 900)
+          router.push("/admin/blogs");
+          router.refresh();
+        }, 900);
       } else {
-        setError(result.error || "Failed to save blog")
+        setError(result.error || "Failed to save blog");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred")
+      setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
-  }
+  };
 
   return (
     <div className="space-y-6">
@@ -136,7 +147,11 @@ export function BlogForm({ initial }: { initial?: BlogFormInitial }) {
             {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
             Save Draft
           </Button>
-          <Button onClick={() => submit("published")} disabled={isSubmitting || !title.trim()} className="gap-2">
+          <Button
+            onClick={() => submit("published")}
+            disabled={isSubmitting || !title.trim()}
+            className="gap-2"
+          >
             {isSubmitting ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
             Publish
           </Button>
@@ -161,7 +176,7 @@ export function BlogForm({ initial }: { initial?: BlogFormInitial }) {
             title={title}
             subtitle={subtitle}
             heroImage={heroImage}
-            onTitleChange={setTitle}
+            onTitleChange={handleTitleChange}
             onSubtitleChange={setSubtitle}
             onHeroImageChange={setHeroImage}
             onBlocksChange={setBlocks}
@@ -196,7 +211,9 @@ export function BlogForm({ initial }: { initial?: BlogFormInitial }) {
                 placeholder={title || "Will use article title"}
                 maxLength={60}
               />
-              <p className="text-xs text-slate-500">{seoTitle.length}/60</p>
+              <p className="text-xs text-slate-500">
+                {seoTitle.length}/60 characters
+              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="seoDescription">SEO Description</Label>
@@ -208,7 +225,28 @@ export function BlogForm({ initial }: { initial?: BlogFormInitial }) {
                 maxLength={160}
                 rows={3}
               />
-              <p className="text-xs text-slate-500">{seoDescription.length}/160</p>
+              <p className="text-xs text-slate-500">
+                {seoDescription.length}/160 characters
+              </p>
+            </div>
+          </Card>
+
+          {/* Scheduling Card */}
+          <Card className="space-y-4 p-6">
+            <h3 className="flex items-center gap-2 font-semibold">
+              <CalendarIcon size={16} /> Schedule Publish
+            </h3>
+            <div className="space-y-2">
+              <Label htmlFor="schedule">Future publish date/time</Label>
+              <Input
+                id="schedule"
+                type="datetime-local"
+                value={scheduledDate.slice(0, 16)}
+                onChange={(e) => setScheduledDate(e.target.value)}
+              />
+              <p className="text-xs text-slate-500">
+                Leave empty to publish immediately. Use your local time – will be stored as UTC.
+              </p>
             </div>
           </Card>
 
@@ -232,5 +270,5 @@ export function BlogForm({ initial }: { initial?: BlogFormInitial }) {
         </div>
       </div>
     </div>
-  )
+  );
 }

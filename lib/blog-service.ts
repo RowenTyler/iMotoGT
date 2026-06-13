@@ -18,6 +18,7 @@ export interface BlogCreateInput {
   category?: string
   seo_title?: string
   seo_description?: string
+  scheduled_publish_at?: string | null
 }
 
 export interface BlogUpdateInput extends Partial<BlogCreateInput> {
@@ -69,6 +70,13 @@ export async function createBlog(
       return { success: false, error: "A blog with this title already exists" }
     }
 
+    const now = new Date().toISOString()
+    const status = "draft"
+    let published_at = null
+    if (input.scheduled_publish_at && status === "published") {
+      published_at = input.scheduled_publish_at
+    }
+
     const { data: blog, error } = await supabase
       .from("blogs")
       .insert({
@@ -82,7 +90,11 @@ export async function createBlog(
         category: input.category,
         seo_title: input.seo_title,
         seo_description: input.seo_description,
-        status: "draft",
+        status,
+        published_at,
+        scheduled_publish_at: input.scheduled_publish_at || null,
+        created_at: now,
+        updated_at: now,
       })
       .select()
       .single()
@@ -109,7 +121,9 @@ export async function updateBlog(
   input: BlogUpdateInput,
 ): Promise<{ success: boolean; data?: Blog; error?: string }> {
   try {
-    const updateData: any = {}
+    const updateData: any = {
+      updated_at: new Date().toISOString(),
+    }
 
     if (input.title) {
       updateData.slug = generateSlug(input.title)
@@ -122,10 +136,15 @@ export async function updateBlog(
     if (input.category !== undefined) updateData.category = input.category
     if (input.seo_title !== undefined) updateData.seo_title = input.seo_title
     if (input.seo_description !== undefined) updateData.seo_description = input.seo_description
+    if (input.scheduled_publish_at !== undefined) updateData.scheduled_publish_at = input.scheduled_publish_at
     if (input.status) {
       updateData.status = input.status
       if (input.status === "published") {
-        updateData.published_at = new Date().toISOString()
+        if (input.scheduled_publish_at) {
+          updateData.published_at = input.scheduled_publish_at
+        } else {
+          updateData.published_at = new Date().toISOString()
+        }
       }
     }
 
@@ -274,7 +293,7 @@ export async function getLatestBlogs(
 }
 
 /**
- * Get featured blogs
+ * Get featured blogs (by views)
  */
 export async function getFeaturedBlogs(limit: number = 5): Promise<{
   success: boolean
@@ -302,7 +321,7 @@ export async function getFeaturedBlogs(limit: number = 5): Promise<{
 }
 
 /**
- * Get trending blogs
+ * Get trending blogs (last 30 days, by views)
  */
 export async function getTrendingBlogs(limit: number = 5): Promise<{
   success: boolean
@@ -518,6 +537,7 @@ export async function unsaveBlog(blogId: string): Promise<{ success: boolean; er
 
 /**
  * Get user's saved blogs
+ * Fixed to avoid ambiguous column references by explicitly selecting blog columns
  */
 export async function getSavedBlogs(): Promise<{ success: boolean; data?: Blog[]; error?: string }> {
   try {
@@ -529,15 +549,38 @@ export async function getSavedBlogs(): Promise<{ success: boolean; data?: Blog[]
       return { success: false, error: "User not authenticated" }
     }
 
-    const { data: blogs, error } = await supabase
+    // Explicitly select blog columns to avoid ambiguity with saved_blogs.user_id
+    const { data: saved, error } = await supabase
       .from("saved_blogs")
-      .select("blogs(*)")
+      .select(`
+        blog_id,
+        blogs!inner (
+          id,
+          title,
+          subtitle,
+          slug,
+          content_json,
+          hero_image,
+          hero_video,
+          author_id,
+          category,
+          seo_title,
+          seo_description,
+          status,
+          views,
+          published_at,
+          scheduled_publish_at,
+          created_at,
+          updated_at
+        )
+      `)
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
 
     if (error) throw error
 
-    return { success: true, data: blogs?.map((item: any) => item.blogs) || [] }
+    const blogs = saved?.map((item: any) => item.blogs).filter(Boolean) || []
+    return { success: true, data: blogs }
   } catch (error) {
     console.error("Error fetching saved blogs:", error)
     return {

@@ -13,7 +13,7 @@ export default async function HomePage() {
   const [{ data: blogs }, { data: reviews }] = await Promise.all([
     supabase
       .from("blogs")
-      .select("id,title,subtitle,slug,category,hero_image,published_at,views,reading_time")
+      .select("id,title,subtitle,slug,category,hero_image,published_at,views")
       .eq("status", "published")
       .order("published_at", { ascending: false })
       .limit(3),
