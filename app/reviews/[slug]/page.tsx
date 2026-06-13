@@ -1,50 +1,148 @@
 import { notFound } from "next/navigation"
 import { createClient } from "@/utils/supabase/server"
 import AnalyticsTracker from "@/components/analytics-tracker"
+import Link from "next/link"
 
 export const dynamic = "force-dynamic"
 
-export default async function ReviewDetailPage({ params }: { params: { slug: string } }) {
+async function getReview(slug: string) {
   const supabase = await createClient()
-  const { data: review } = await supabase
+  
+  // Fetch review with only existing columns (no hero_image, content, vehicle_name, author)
+  const { data: review, error } = await supabase
     .from("reviews")
-    .select("id,title,slug,hero_image,review_type,content,vehicle_name,created_at,views,author")
-    .eq("slug", params.slug)
+    .select("id, title, slug, review_type, video_url, content_json, views, vehicle_id, author_id, created_at")
+    .eq("slug", slug)
     .eq("status", "published")
     .single()
+  
+  if (error || !review) return null
+  
+  // Parallel lookups for vehicle and author
+  const [vehicleResult, authorResult] = await Promise.all([
+    supabase
+      .from("vehicles")
+      .select("make, model, year")
+      .eq("id", review.vehicle_id)
+      .maybeSingle(),
+    supabase
+      .from("users")
+      .select("first_name, last_name")
+      .eq("id", review.author_id)
+      .maybeSingle(),
+  ])
+  
+  const vehicleName = vehicleResult.data
+    ? `${vehicleResult.data.year} ${vehicleResult.data.make} ${vehicleResult.data.model}`
+    : null
+  
+  const authorName = authorResult.data
+    ? `${authorResult.data.first_name} ${authorResult.data.last_name}`
+    : "iMoto GT Team"
+  
+  return { review, vehicleName, authorName }
+}
 
-  if (!review) {
-    return notFound()
+function formatDate(dateString: string | null) {
+  if (!dateString) return "Recent"
+  return new Date(dateString).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  })
+}
+
+function getYouTubeEmbedUrl(url: string | null) {
+  if (!url) return null
+  // Convert youtube.com/watch?v=ID or youtu.be/ID to embed URL
+  const youtubeMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/)
+  if (youtubeMatch) {
+    return `https://www.youtube.com/embed/${youtubeMatch[1]}`
   }
+  return url
+}
 
+export default async function ReviewDetailPage({ params }: { params: { slug: string } }) {
+  const result = await getReview(params.slug)
+  if (!result) return notFound()
+  
+  const { review, vehicleName, authorName } = result
+  const embedUrl = getYouTubeEmbedUrl(review.video_url)
+  const reviewContent = review.content_json?.body || ""
+  
+  // Determine badge color based on review_type
+  const getBadgeColor = (type: string) => {
+    switch (type?.toLowerCase()) {
+      case "video":
+        return "bg-[#FF6700] text-white"
+      case "written":
+        return "bg-[#3E5641] text-white"
+      default:
+        return "bg-gray-600 text-white"
+    }
+  }
+  
   return (
-    <article className="space-y-10">
-      <section className="rounded-3xl bg-white p-8 shadow-sm">
-        <p className="text-sm uppercase tracking-[0.45em] text-orange-500">{review.review_type ?? "Review"}</p>
-        <h1 className="mt-4 text-4xl font-semibold text-slate-900">{review.title}</h1>
-        <div className="mt-4 flex flex-wrap items-center gap-4 text-sm text-slate-500">
-          {review.vehicle_name && <span>{review.vehicle_name}</span>}
-          {review.author && <span>By {review.author}</span>}
-          {review.created_at && <span>{new Date(review.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>}
+    <>
+      <article className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+        {/* Back link */}
+        <Link href="/reviews" className="inline-flex items-center text-sm text-[#FF6700] hover:underline">
+          ← Back to all reviews
+        </Link>
+        
+        {/* Type badge */}
+        <div className="inline-block">
+          <span className={`text-sm font-semibold px-3 py-1 rounded-full ${getBadgeColor(review.review_type)}`}>
+            {review.review_type?.toUpperCase() || "REVIEW"}
+          </span>
+        </div>
+        
+        {/* Title */}
+        <h1 className="text-4xl md:text-5xl font-bold text-[#3E5641] dark:text-white">
+          {review.title}
+        </h1>
+        
+        {/* Meta row */}
+        <div className="flex flex-wrap items-center gap-3 text-sm text-gray-500 dark:text-gray-400">
+          {vehicleName && <span>{vehicleName}</span>}
+          {vehicleName && <span>·</span>}
+          <span>By {authorName}</span>
+          <span>·</span>
+          <span>{formatDate(review.created_at)}</span>
+          <span>·</span>
           <span>{review.views ?? 0} views</span>
         </div>
-      </section>
-
-      {review.hero_image ? (
-        <div className="rounded-3xl overflow-hidden bg-slate-100 shadow-sm">
-          <img src={review.hero_image} alt={review.title} className="h-[420px] w-full object-cover" />
+        
+        {/* Video embed if video_url exists */}
+        {embedUrl && (
+          <div className="rounded-2xl overflow-hidden bg-black">
+            <div className="aspect-video">
+              <iframe
+                src={embedUrl}
+                title={`${review.title} video review`}
+                className="w-full h-full"
+                allowFullScreen
+              />
+            </div>
+          </div>
+        )}
+        
+        {/* Written content section */}
+        <div className="max-w-3xl mx-auto">
+          <div className="prose prose-slate dark:prose-invert max-w-none">
+            {reviewContent ? (
+              // Simple rendering of content string (assumes plain text or basic HTML)
+              <div dangerouslySetInnerHTML={{ __html: reviewContent.replace(/\n/g, '<br/>') }} />
+            ) : (
+              <p className="text-gray-500 dark:text-gray-400 italic">
+                Full review content will appear here.
+              </p>
+            )}
+          </div>
         </div>
-      ) : null}
-
-      <section className="prose prose-slate max-w-none rounded-3xl bg-white p-8 shadow-sm">
-        <p>{review.content ?? "Detailed vehicle review and insights will appear here."}</p>
-      </section>
-
-      <AnalyticsTracker
-        eventType="review_view"
-        targetTable="reviews"
-        targetId={review.id}
-      />
-    </article>
+      </article>
+      
+      <AnalyticsTracker eventType="review_view" targetTable="reviews" targetId={review.id} />
+    </>
   )
 }

@@ -89,6 +89,17 @@ export const VehicleProvider = ({ children }: { children: React.ReactNode }) => 
     currentRouteKeyRef.current = paramsString ? `${pathname}?${paramsString}` : pathname;
   }, [pathname, searchParams]);
 
+  // --- PRUNING HELPER: strips large fields before cache persistence ---
+  const pruneVehicleForCache = (v: Vehicle): Vehicle => ({
+    ...v,
+    // Keep only first image if it's a URL (not base64). Strip base64 entirely.
+    images: Array.isArray(v.images)
+      ? v.images.filter(img => img && typeof img === 'string' && img.startsWith('http')).slice(0, 1)
+      : [],
+    description: '',
+  });
+
+  // --- Cache cleanup and persistence (with pruning) ---
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const timeoutId = setTimeout(() => {
@@ -103,7 +114,14 @@ export const VehicleProvider = ({ children }: { children: React.ReactNode }) => 
           delete updatedCache.timestamps[`vehicle:${id}`];
         });
       }
-      CacheManager.set('vehicleCache', updatedCache);
+      // 🔥 PRUNE before writing to localStorage
+      const prunedCache = {
+        ...updatedCache,
+        byId: Object.fromEntries(
+          Object.entries(updatedCache.byId).map(([id, vehicle]) => [id, pruneVehicleForCache(vehicle)])
+        ),
+      };
+      CacheManager.set('vehicleCache', prunedCache);
     }, 1000);
     return () => clearTimeout(timeoutId);
   }, [cache]);
@@ -208,7 +226,11 @@ export const VehicleProvider = ({ children }: { children: React.ReactNode }) => 
     },
     getCachedList: (key: string) => cacheRef.current.lists[key] || null,
     isFresh,
-    updateVehicleInCache: (v: Vehicle) => setCache(p => ({ ...p, byId: { ...p.byId, [v.id]: v } })),
+    // 🔥 Prune vehicle when it is added via updateVehicleInCache
+    updateVehicleInCache: (v: Vehicle) => setCache(p => ({ 
+      ...p, 
+      byId: { ...p.byId, [v.id]: pruneVehicleForCache(v) } 
+    })),
     preloadCache: (key: string, data: VehicleListResponse) => setCache(p => ({ ...p, lists: { ...p.lists, [key]: data }, timestamps: { ...p.timestamps, [key]: Date.now() } })),
     clearCache: (key?: string) => key ? setCache(p => { const n = {...p}; delete n.lists[key]; return n; }) : setCache({byId:{}, lists:{}, timestamps:{}, lastAccessed:{}, navigationHistory:[]}),
     savePageState,

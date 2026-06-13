@@ -33,6 +33,7 @@ export interface BlogInput {
   seo_description?: string
   content_json?: Record<string, unknown>
   status?: "draft" | "published" | "archived"
+  scheduled_publish_at?: string | null   // ISO datetime string (e.g., "2025-12-25T10:00:00")
 }
 
 export async function createBlogAction(input: BlogInput): Promise<ActionResult> {
@@ -51,6 +52,17 @@ export async function createBlogAction(input: BlogInput): Promise<ActionResult> 
   }
 
   const status = input.status ?? "draft"
+  let published_at: string | null = null
+  if (status === "published") {
+    // If scheduled date is provided and it's a future date, use it; otherwise now
+    if (input.scheduled_publish_at) {
+      published_at = input.scheduled_publish_at
+    } else {
+      published_at = new Date().toISOString()
+    }
+  }
+
+  const now = new Date().toISOString()
 
   const { data, error } = await supabase
     .from("blogs")
@@ -66,7 +78,10 @@ export async function createBlogAction(input: BlogInput): Promise<ActionResult> 
       seo_title: input.seo_title || input.title,
       seo_description: input.seo_description || null,
       status,
-      published_at: status === "published" ? new Date().toISOString() : null,
+      published_at,
+      scheduled_publish_at: input.scheduled_publish_at || null,
+      created_at: now,
+      updated_at: now,
     })
     .select("id")
     .single()
@@ -84,7 +99,10 @@ export async function updateBlogAction(id: string, input: BlogInput): Promise<Ac
   await requireAdminSession()
   const supabase = await createClient()
 
-  const updateData: Record<string, unknown> = {}
+  const updateData: Record<string, unknown> = {
+    updated_at: new Date().toISOString(),
+  }
+
   if (input.title !== undefined) {
     updateData.title = input.title
     updateData.slug = slugify(input.title)
@@ -96,10 +114,16 @@ export async function updateBlogAction(id: string, input: BlogInput): Promise<Ac
   if (input.hero_video !== undefined) updateData.hero_video = input.hero_video || null
   if (input.seo_description !== undefined) updateData.seo_description = input.seo_description || null
   if (input.content_json !== undefined) updateData.content_json = input.content_json
+  if (input.scheduled_publish_at !== undefined) updateData.scheduled_publish_at = input.scheduled_publish_at || null
   if (input.status !== undefined) {
     updateData.status = input.status
     if (input.status === "published") {
-      updateData.published_at = new Date().toISOString()
+      // Use scheduled date if provided and it's a future date, else now
+      if (input.scheduled_publish_at) {
+        updateData.published_at = input.scheduled_publish_at
+      } else {
+        updateData.published_at = new Date().toISOString()
+      }
     }
   }
 
@@ -120,9 +144,20 @@ export async function setBlogStatusAction(
   await requireAdminSession()
   const supabase = await createClient()
 
-  const updateData: Record<string, unknown> = { status }
+  const updateData: Record<string, unknown> = {
+    status,
+    updated_at: new Date().toISOString(),
+  }
   if (status === "published") {
-    updateData.published_at = new Date().toISOString()
+    // If there is a scheduled_publish_at in the future, use it; otherwise now
+    const { data: blog } = await supabase
+      .from("blogs")
+      .select("scheduled_publish_at")
+      .eq("id", id)
+      .single()
+    const scheduled = blog?.scheduled_publish_at
+    const now = new Date().toISOString()
+    updateData.published_at = scheduled && scheduled > now ? scheduled : now
   }
 
   const { error } = await supabase.from("blogs").update(updateData).eq("id", id)
@@ -177,6 +212,7 @@ export async function createReviewAction(input: ReviewInput): Promise<ActionResu
 
   const slug = slugify(input.title)
   const status = input.status ?? "draft"
+  const now = new Date().toISOString()
 
   const { data, error } = await supabase
     .from("reviews")
@@ -189,6 +225,8 @@ export async function createReviewAction(input: ReviewInput): Promise<ActionResu
       video_url: input.video_url || null,
       author_id: admin.userId,
       status,
+      created_at: now,
+      updated_at: now,
     })
     .select("id")
     .single()
@@ -206,7 +244,9 @@ export async function updateReviewAction(id: string, input: ReviewInput): Promis
   await requireAdminSession()
   const supabase = await createClient()
 
-  const updateData: Record<string, unknown> = {}
+  const updateData: Record<string, unknown> = {
+    updated_at: new Date().toISOString(),
+  }
   if (input.title !== undefined) {
     updateData.title = input.title
     updateData.slug = slugify(input.title)
@@ -234,7 +274,10 @@ export async function setReviewStatusAction(
   await requireAdminSession()
   const supabase = await createClient()
 
-  const { error } = await supabase.from("reviews").update({ status }).eq("id", id)
+  const { error } = await supabase
+    .from("reviews")
+    .update({ status, updated_at: new Date().toISOString() })
+    .eq("id", id)
   if (error) {
     return { success: false, error: error.message }
   }
