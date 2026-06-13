@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { writeFile, mkdir } from 'fs/promises';
-import path from 'path';
+import { createClient } from '@/utils/supabase/server';
 
 export async function POST(req: NextRequest) {
   try {
+    const supabase = await createClient();
     const formData = await req.formData();
     const file = formData.get('file') as File | null;
 
@@ -27,15 +27,27 @@ export async function POST(req: NextRequest) {
     // Generate unique filename
     const ext = file.name.split('.').pop() || 'jpg';
     const filename = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}.${ext}`;
-    const uploadDir = path.join(process.cwd(), 'public', 'uploads');
-    const filePath = path.join(uploadDir, filename);
+    const filePath = `public/${filename}`; // folder inside the bucket
 
-    // Ensure directory exists
-    await mkdir(uploadDir, { recursive: true });
-    await writeFile(filePath, buffer);
+    // Upload to Supabase Storage bucket 'blog-images'
+    const { data, error } = await supabase.storage
+      .from('blog-images')
+      .upload(filePath, buffer, {
+        contentType: file.type,
+        upsert: false,
+      });
 
-    const url = `/uploads/${filename}`;
-    return NextResponse.json({ url });
+    if (error) {
+      console.error('Supabase storage upload error:', error);
+      return NextResponse.json({ error: 'Failed to upload to storage' }, { status: 500 });
+    }
+
+    // Get public URL
+    const { data: { publicUrl } } = supabase.storage
+      .from('blog-images')
+      .getPublicUrl(filePath);
+
+    return NextResponse.json({ url: publicUrl });
   } catch (error) {
     console.error('Upload error:', error);
     return NextResponse.json({ error: 'Upload failed' }, { status: 500 });
