@@ -7,17 +7,17 @@ export const dynamic = "force-dynamic"
 
 async function getReview(slug: string) {
   const supabase = await createClient()
-  
-  // Fetch review with only existing columns (no hero_image, content, vehicle_name, author)
+
+  // Added `hero_image` to the select list
   const { data: review, error } = await supabase
     .from("reviews")
-    .select("id, title, slug, review_type, video_url, content_json, views, vehicle_id, author_id, created_at")
+    .select("id, title, slug, review_type, video_url, hero_image, content_json, views, vehicle_id, author_id, created_at")
     .eq("slug", slug)
     .eq("status", "published")
     .single()
-  
+
   if (error || !review) return null
-  
+
   // Parallel lookups for vehicle and author
   const [vehicleResult, authorResult] = await Promise.all([
     supabase
@@ -31,16 +31,51 @@ async function getReview(slug: string) {
       .eq("id", review.author_id)
       .maybeSingle(),
   ])
-  
+
   const vehicleName = vehicleResult.data
     ? `${vehicleResult.data.year} ${vehicleResult.data.make} ${vehicleResult.data.model}`
     : null
-  
+
   const authorName = authorResult.data
     ? `${authorResult.data.first_name} ${authorResult.data.last_name}`
     : "iMoto GT Team"
-  
+
   return { review, vehicleName, authorName }
+}
+
+export async function generateMetadata({ params }: { params: { slug: string } }) {
+  const result = await getReview(params.slug)
+
+  if (!result) {
+    return { title: "Review Not Found - iMoto GT" }
+  }
+
+  const { review, vehicleName } = result
+  const title = vehicleName ? `${review.title} | ${vehicleName} Review` : review.title
+  const description = vehicleName
+    ? `${review.review_type === "video" ? "Watch" : "Read"} our review of the ${vehicleName} on iMoto GT.`
+    : "Read this vehicle review on iMoto GT."
+  const ogImage = review.hero_image || undefined
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: "article",
+      url: `https://imotogt.co.za/reviews/${review.slug}`,
+      images: ogImage
+        ? [{ url: ogImage, width: 1200, height: 630, alt: title }]
+        : undefined,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: ogImage ? [ogImage] : undefined,
+    },
+  }
 }
 
 function formatDate(dateString: string | null) {
@@ -65,11 +100,11 @@ function getYouTubeEmbedUrl(url: string | null) {
 export default async function ReviewDetailPage({ params }: { params: { slug: string } }) {
   const result = await getReview(params.slug)
   if (!result) return notFound()
-  
+
   const { review, vehicleName, authorName } = result
   const embedUrl = getYouTubeEmbedUrl(review.video_url)
   const reviewContent = review.content_json?.body || ""
-  
+
   // Determine badge color based on review_type
   const getBadgeColor = (type: string) => {
     switch (type?.toLowerCase()) {
@@ -81,7 +116,7 @@ export default async function ReviewDetailPage({ params }: { params: { slug: str
         return "bg-gray-600 text-white"
     }
   }
-  
+
   return (
     <>
       <article className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
@@ -89,19 +124,19 @@ export default async function ReviewDetailPage({ params }: { params: { slug: str
         <Link href="/reviews" className="inline-flex items-center text-sm text-[#FF6700] hover:underline">
           ← Back to all reviews
         </Link>
-        
+
         {/* Type badge */}
         <div className="inline-block">
           <span className={`text-sm font-semibold px-3 py-1 rounded-full ${getBadgeColor(review.review_type)}`}>
             {review.review_type?.toUpperCase() || "REVIEW"}
           </span>
         </div>
-        
+
         {/* Title */}
         <h1 className="text-4xl md:text-5xl font-bold text-[#3E5641] dark:text-white">
           {review.title}
         </h1>
-        
+
         {/* Meta row */}
         <div className="flex flex-wrap items-center gap-3 text-sm text-gray-500 dark:text-gray-400">
           {vehicleName && <span>{vehicleName}</span>}
@@ -112,7 +147,7 @@ export default async function ReviewDetailPage({ params }: { params: { slug: str
           <span>·</span>
           <span>{review.views ?? 0} views</span>
         </div>
-        
+
         {/* Video embed if video_url exists */}
         {embedUrl && (
           <div className="rounded-2xl overflow-hidden bg-black">
@@ -126,7 +161,7 @@ export default async function ReviewDetailPage({ params }: { params: { slug: str
             </div>
           </div>
         )}
-        
+
         {/* Written content section */}
         <div className="max-w-3xl mx-auto">
           <div className="prose prose-slate dark:prose-invert max-w-none">
@@ -141,7 +176,7 @@ export default async function ReviewDetailPage({ params }: { params: { slug: str
           </div>
         </div>
       </article>
-      
+
       <AnalyticsTracker eventType="review_view" targetTable="reviews" targetId={review.id} />
     </>
   )

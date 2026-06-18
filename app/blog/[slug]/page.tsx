@@ -45,14 +45,34 @@ async function getBlog(slug: string) {
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
   const result = await getBlog(slug)
-  if (!result) return {}
-  
+
+  if (!result) {
+    return { title: "Blog Not Found - iMoto GT" }
+  }
+
   const { blog } = result
+  const title = blog.seo_title || blog.title
+  const description =
+    blog.seo_description || blog.subtitle || `Read "${blog.title}" on iMoto GT.`
+  const ogImage = blog.hero_image || undefined
+
   return {
-    title: blog.seo_title ?? blog.title,
-    description: blog.seo_description ?? blog.subtitle ?? "",
+    title,
+    description,
     openGraph: {
-      images: blog.hero_image ? [blog.hero_image] : [],
+      title,
+      description,
+      type: "article",
+      url: `https://imotogt.co.za/blog/${blog.slug}`,
+      images: ogImage
+        ? [{ url: ogImage, width: 1200, height: 630, alt: blog.title }]
+        : undefined,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: ogImage ? [ogImage] : undefined,
     },
   }
 }
