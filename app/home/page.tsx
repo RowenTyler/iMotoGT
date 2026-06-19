@@ -115,7 +115,7 @@ export default async function HomePage() {
                   <a href="#" className="text-sm text-gray-300 hover:text-[#FF7D33]">Press</a>
                 </li>
                 <li>
-                  <a href="#" className="text-sm text-[#FF7D33]">Contact Us</a>
+                  <a href="/contact" className="text-sm text-[#FF7D33]">Contact Us</a>
                 </li>
               </ul>
             </div>
