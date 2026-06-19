@@ -248,7 +248,7 @@ export function Header({
                   ))}
 
                   {isLoggedIn ? (
-                    <div className="pt-4 space-y-4 text-center">
+                    <div className="pt-4 flex flex-col items-center space-y-4 text-center">
                       <button
                         onClick={() => handleNavigation("dashboard")}
                         className="text-black text-xl hover:text-orange-500 transition-colors"
@@ -274,7 +274,7 @@ export function Header({
                   )}
 
                   {/* Privacy & Cookie Settings */}
-                  <div className="pt-8 border-t border-gray-200 space-y-4 text-center">
+                  <div className="pt-8 border-t border-gray-200 flex flex-col items-center space-y-4 text-center">
                     <button
                       onClick={() => handleNavigation("privacy")}
                       className="text-gray-600 text-sm hover:text-orange-500 transition-colors flex items-center justify-center gap-2"
