@@ -955,6 +955,7 @@ export default function Dashboard({
                 onChange={(e) => setDeleteReason(e.target.value)}
                 className="w-full p-2 border border-gray-300 rounded-md"
                 disabled={isDeleting}
+                aria-label="Reason for deleting this vehicle listing"
               >
                 <option value="">Select a reason</option>
                 <option value="sold">Vehicle has been sold</option>

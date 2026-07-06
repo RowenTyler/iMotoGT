@@ -58,6 +58,7 @@ export default function LocationPage({ province, vehicles, onBack, user, onLogin
             <select
               value={selectedCity}
               onChange={(e) => setSelectedCity(e.target.value)}
+              aria-label="Filter vehicles by city"
               className="px-4 py-2 rounded-md border border-[#9FA791] dark:border-[#4A4D45] focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] bg-white dark:bg-[#2A352A] text-[#3E5641] dark:text-white"
             >
               <option value="">All Cities</option>

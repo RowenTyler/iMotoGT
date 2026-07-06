@@ -931,6 +931,7 @@ export default function CarMarketplace({ children }: { children?: React.ReactNod
                   <select
                     ref={locationSelectRef}
                     id="location-select"
+                    aria-label="Filter by province location"
                     className="w-full px-4 py-3 rounded-lg border border-white/30 dark:border-[#4A4D45]/60 focus:outline-none focus:border-[#FF6700] dark:focus:border-[#FF7D33] appearance-none bg-white/10 dark:bg-[#2A352A]/30 backdrop-blur-sm text-white dark:text-white"
                     defaultValue=""
                   >

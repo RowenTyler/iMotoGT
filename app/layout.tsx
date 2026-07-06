@@ -92,14 +92,10 @@ export default function RootLayout({
           href="https://mwzrrrnmtyiyrwdqhcqb.supabase.co"
         />
 
-        {/* Hero image: preload so it starts downloading before the browser
-            even parses the body, cutting LCP time. */}
-        <link
-          rel="preload"
-          href="/home-page.png"
-          as="image"
-          type="image/png"
-        />
+        {/* Next.js Image with `priority` in car-marketplace.tsx automatically
+            generates an optimized image preload. Do NOT add a manual preload
+            here — it would fetch the raw 2.4 MB PNG instead of the optimized
+            WebP/AVIF version. */}
 
         {/* Preconnect to Google Fonts */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
