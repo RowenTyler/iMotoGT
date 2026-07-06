@@ -144,6 +144,7 @@ export async function searchVehicles(query: string): Promise<Vehicle[]> {
         .select(VEHICLE_LIST_QUERY)
         .eq("status", "active")
         .order("created_at", { ascending: false })
+        .limit(50)
 
       if (error) {
         console.error("[VehicleOps] searchVehicles error:", error)
@@ -167,6 +168,7 @@ export async function searchVehicles(query: string): Promise<Vehicle[]> {
       )
       .eq("status", "active")
       .order("created_at", { ascending: false })
+      .limit(50)
 
     if (error) {
       console.error("[VehicleOps] searchVehicles error:", error)
@@ -344,9 +346,9 @@ export async function filterVehicles(
       }
     }
 
-    const { data, error } = await query.order("created_at", {
-      ascending: false,
-    })
+    const { data, error } = await query
+      .order("created_at", { ascending: false })
+      .limit(50)
 
     if (error) {
       console.error("[VehicleOps] filterVehicles error:", error)
@@ -373,7 +375,6 @@ export async function saveVehicle(
 
     if (error) {
       if (error.code === "23505") {
-        console.log("[VehicleOps] Vehicle already saved")
         return true
       }
       console.error("[VehicleOps] saveVehicle error:", error)
@@ -436,12 +437,10 @@ export async function getSavedVehicles(userId: string): Promise<Vehicle[]> {
     }
 
     if (!savedRows || savedRows.length === 0) {
-      console.log("[VehicleOps] No saved vehicles for user:", userId)
       return []
     }
 
     const vehicleIds = savedRows.map((row: any) => row.vehicle_id)
-    console.log(`[VehicleOps] Found ${vehicleIds.length} saved vehicle IDs`)
 
     // Step 2: fetch full vehicle details including images and seller info.
     // NOTE: No .eq("status", "active") filter — show all saved vehicles

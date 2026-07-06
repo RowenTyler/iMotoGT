@@ -5,10 +5,8 @@ const config: Config = {
 
   content: {
     files: [
-      "./pages/**/*.{js,ts,jsx,tsx,mdx}",
       "./components/**/*.{js,ts,jsx,tsx,mdx}",
       "./app/**/*.{js,ts,jsx,tsx,mdx}",
-      "*.{js,ts,jsx,tsx,mdx}",
     ],
 
     transform: {
@@ -95,47 +93,6 @@ const config: Config = {
           "3": "hsl(var(--chart-3))",
           "4": "hsl(var(--chart-4))",
           "5": "hsl(var(--chart-5))",
-        },
-
-        sidebar: {
-          DEFAULT: "hsl(var(--sidebar-background))",
-          foreground: "hsl(var(--sidebar-foreground))",
-          primary: "hsl(var(--sidebar-primary))",
-          "primary-foreground": "hsl(var(--sidebar-primary-foreground))",
-          accent: "hsl(var(--sidebar-accent))",
-          "accent-foreground": "hsl(var(--sidebar-accent-foreground))",
-          border: "hsl(var(--sidebar-border))",
-          ring: "hsl(var(--sidebar-ring))",
-        },
-
-        cornsilk: {
-          DEFAULT: "#FFF8E0",
-          dark: "#1A1C18",
-        },
-
-        ashgray: {
-          DEFAULT: "#9FA791",
-          dark: "#4A4D45",
-        },
-
-        reseda: {
-          DEFAULT: "#6F7F69",
-          dark: "#3A4237",
-        },
-
-        feldgrau: {
-          DEFAULT: "#576B55",
-          dark: "#2A352A",
-        },
-
-        hunter: {
-          DEFAULT: "#3E5641",
-          dark: "#1F2B20",
-        },
-
-        pumpkin: {
-          DEFAULT: "#FF6700",
-          dark: "#FF7D33",
         },
       },
 

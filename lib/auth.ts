@@ -24,7 +24,6 @@ export class AuthError extends Error {
 
 function clearAllStorage() {
   try {
-    console.log("🧹 Clearing all browser storage and cookies")
     localStorage.clear()
     sessionStorage.clear()
 
@@ -37,7 +36,6 @@ function clearAllStorage() {
       document.cookie = name + "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=" + window.location.hostname
     }
 
-    console.log("✅ All storage and cookies cleared")
   } catch (error) {
     console.error("❌ Error clearing storage:", error)
   }
@@ -49,7 +47,6 @@ async function signUp(
   metadata?: { firstName?: string; lastName?: string },
 ): Promise<{ user: AuthUser | null; error: AuthError | null }> {
   try {
-    console.log("🔐 Signing up user:", email, "with metadata:", metadata)
 
     const emailRedirectTo = `${window.location.origin}/dashboard`
 
@@ -75,7 +72,6 @@ async function signUp(
       return { user: null, error: new AuthError("Failed to create user", "SIGNUP_FAILED") }
     }
 
-    console.log("✅ User signed up successfully, creating profile in database")
 
     await createUserProfile(data.user.id, email, metadata?.firstName, metadata?.lastName)
 
@@ -98,7 +94,6 @@ async function signUp(
 
 async function signIn(email: string, password: string): Promise<{ user: AuthUser | null; error: AuthError | null }> {
   try {
-    console.log("🔐 Signing in user:", email)
 
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
@@ -114,9 +109,6 @@ async function signIn(email: string, password: string): Promise<{ user: AuthUser
       return { user: null, error: new AuthError("Failed to sign in", "SIGNIN_FAILED") }
     }
 
-    console.log("✅ User signed in successfully")
-    console.log("📧 Email confirmed at:", data.user.email_confirmed_at)
-    console.log("🔐 Is email verified:", !!data.user.email_confirmed_at)
 
     await syncUserToPublic(data.user)
     await syncUserToEditors(data.user)
@@ -138,7 +130,6 @@ async function signIn(email: string, password: string): Promise<{ user: AuthUser
 
 async function signOut(): Promise<{ error: AuthError | null }> {
   try {
-    console.log("🔐 Signing out user")
 
     try {
       const { error } = await supabase.auth.signOut()
@@ -146,7 +137,6 @@ async function signOut(): Promise<{ error: AuthError | null }> {
       if (error) {
         console.error("❌ Sign out error:", error)
         if (error.message?.includes("session") || error.message?.includes("Auth session")) {
-          console.log("✅ No active session, proceeding with cleanup")
         }
       }
     } catch (authError: any) {
@@ -155,7 +145,6 @@ async function signOut(): Promise<{ error: AuthError | null }> {
 
     clearAllStorage()
 
-    console.log("✅ User signed out successfully")
     return { error: null }
   } catch (error: any) {
     console.error("❌ Error in signOut:", error)
@@ -166,11 +155,9 @@ async function signOut(): Promise<{ error: AuthError | null }> {
 
 async function forceLogoutAll(): Promise<void> {
   try {
-    console.log("🚨 Force logging out all users")
     await supabase.auth.signOut()
     clearAllStorage()
     window.location.href = "/home"
-    console.log("✅ All users logged out and cache cleared")
   } catch (error) {
     console.error("❌ Error in forceLogoutAll:", error)
     clearAllStorage()
@@ -180,20 +167,15 @@ async function forceLogoutAll(): Promise<void> {
 
 async function getCurrentUser(): Promise<AuthUser | null> {
   try {
-    console.log("🔍 Getting current user")
 
     const {
       data: { user },
     } = await supabase.auth.getUser()
 
     if (!user) {
-      console.log("⚠️ No user found")
       return null
     }
 
-    console.log("✅ Current user found:", user.email)
-    console.log("📧 Email confirmed at:", user.email_confirmed_at)
-    console.log("🔐 Is email verified:", !!user.email_confirmed_at)
 
     const authUser: AuthUser = {
       id: user.id,
@@ -216,7 +198,6 @@ async function isEmailVerified(): Promise<boolean> {
     if (!user) return false
 
     const isVerified = !!user.email_confirmed_at
-    console.log("📧 Email verification status:", isVerified)
     return isVerified
   } catch (error) {
     console.error("❌ Error checking email verification:", error)
@@ -226,20 +207,15 @@ async function isEmailVerified(): Promise<boolean> {
 
 async function getSession() {
   try {
-    console.log("🔍 Getting current session")
 
     const {
       data: { session },
     } = await supabase.auth.getSession()
 
     if (!session) {
-      console.log("⚠️ No session found")
       return null
     }
 
-    console.log("✅ Session found")
-    console.log("📧 Email confirmed at:", session.user.email_confirmed_at)
-    console.log("🔐 Is email verified:", !!session.user.email_confirmed_at)
     return session
   } catch (error) {
     console.error("❌ Error getting session:", error)
@@ -249,7 +225,6 @@ async function getSession() {
 
 async function getUserProfile(userId: string): Promise<UserProfile | null> {
   try {
-    console.log("👤 Fetching user profile for:", userId)
 
     const { data, error } = await supabase
       .from("users")
@@ -264,7 +239,6 @@ async function getUserProfile(userId: string): Promise<UserProfile | null> {
     }
 
     if (!data || data.length === 0) {
-      console.log("⚠️ No user profile found for:", userId)
       return null
     }
 
@@ -306,11 +280,9 @@ async function createUserProfile(
   lastName?: string,
 ): Promise<{ error: AuthError | null }> {
   try {
-    console.log("📝 Creating user profile for:", userId, "with name:", firstName, lastName)
 
     const existing = await getUserProfile(userId)
     if (existing) {
-      console.log("✅ Profile already exists, skipping creation")
       return { error: null }
     }
 
@@ -333,7 +305,6 @@ async function createUserProfile(
 
     if (error) {
       if (error.code === "23505" || error.code === "42501") {
-        console.log("✅ Profile already exists or insert permission denied, treating as success")
         return { error: null }
       }
 
@@ -341,7 +312,6 @@ async function createUserProfile(
       return { error: new AuthError(error.message, "CREATE_PROFILE_FAILED") }
     }
 
-    console.log("✅ User profile created successfully")
     return { error: null }
   } catch (error: any) {
     console.error("❌ Error in createUserProfile:", error)
@@ -351,7 +321,6 @@ async function createUserProfile(
 
 async function updateUserProfile(userId: string, updates: Partial<UserProfile>): Promise<{ error: AuthError | null }> {
   try {
-    console.log("📝 Updating user profile for:", userId, "with updates:", updates)
 
     const dbUpdates: Record<string, any> = {
       updated_at: new Date().toISOString(),
@@ -365,7 +334,6 @@ async function updateUserProfile(userId: string, updates: Partial<UserProfile>):
     if (updates.city !== undefined) dbUpdates.city = updates.city
     if (updates.province !== undefined) dbUpdates.province = updates.province
 
-    console.log("🔵 Database updates:", dbUpdates)
 
     const { error } = await supabase
       .from("users")
@@ -392,7 +360,6 @@ async function updateUserProfile(userId: string, updates: Partial<UserProfile>):
       return { error: new AuthError(error.message, "UPDATE_PROFILE_FAILED") }
     }
 
-    console.log("✅ User profile updated successfully")
     return { error: null }
   } catch (error: any) {
     console.error("❌ Error in updateUserProfile:", error)
@@ -402,7 +369,6 @@ async function updateUserProfile(userId: string, updates: Partial<UserProfile>):
 
 async function requestPasswordReset(email: string): Promise<{ error: AuthError | null }> {
   try {
-    console.log("🔐 Requesting password reset for:", email)
 
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/reset-password`,
@@ -413,7 +379,6 @@ async function requestPasswordReset(email: string): Promise<{ error: AuthError |
       return { error: new AuthError(error.message, error.name) }
     }
 
-    console.log("✅ Password reset email sent")
     return { error: null }
   } catch (error: any) {
     console.error("❌ Error in requestPasswordReset:", error)
@@ -423,7 +388,6 @@ async function requestPasswordReset(email: string): Promise<{ error: AuthError |
 
 async function resetPassword(newPassword: string): Promise<{ error: AuthError | null }> {
   try {
-    console.log("🔐 Resetting password")
 
     const { error } = await supabase.auth.updateUser({
       password: newPassword,
@@ -434,7 +398,6 @@ async function resetPassword(newPassword: string): Promise<{ error: AuthError | 
       return { error: new AuthError(error.message, error.name) }
     }
 
-    console.log("✅ Password reset successfully")
     return { error: null }
   } catch (error: any) {
     console.error("❌ Error in resetPassword:", error)
@@ -444,7 +407,6 @@ async function resetPassword(newPassword: string): Promise<{ error: AuthError | 
 
 async function updatePassword(newPassword: string): Promise<{ error: AuthError | null }> {
   try {
-    console.log("🔐 Updating password")
 
     const { error } = await supabase.auth.updateUser({
       password: newPassword,
@@ -455,7 +417,6 @@ async function updatePassword(newPassword: string): Promise<{ error: AuthError |
       return { error: new AuthError(error.message, error.name) }
     }
 
-    console.log("✅ Password updated successfully")
     return { error: null }
   } catch (error: any) {
     console.error("❌ Error in updatePassword:", error)
@@ -465,7 +426,6 @@ async function updatePassword(newPassword: string): Promise<{ error: AuthError |
 
 async function resendVerificationEmail(email: string): Promise<void> {
   try {
-    console.log("📧 Resending verification email to:", email)
 
     const { error } = await supabase.auth.resend({
       type: "signup",
@@ -480,7 +440,6 @@ async function resendVerificationEmail(email: string): Promise<void> {
       throw new AuthError(error.message, "RESEND_VERIFICATION_ERROR")
     }
 
-    console.log("✅ Verification email sent")
   } catch (error: any) {
     console.error("❌ Error in resendVerificationEmail:", error)
     throw error
@@ -489,7 +448,6 @@ async function resendVerificationEmail(email: string): Promise<void> {
 
 async function signInWithOAuth(provider: "google" | "facebook" | "apple"): Promise<void> {
   try {
-    console.log("🔐 Signing in with OAuth:", provider)
 
     // ✅ Updated redirect URL to match your callback route
     const { error } = await supabase.auth.signInWithOAuth({
@@ -504,7 +462,6 @@ async function signInWithOAuth(provider: "google" | "facebook" | "apple"): Promi
       throw new AuthError(error.message, error.name)
     }
 
-    console.log("✅ OAuth sign in initiated")
   } catch (error: any) {
     console.error("❌ Error in signInWithOAuth:", error)
     throw error
@@ -512,17 +469,12 @@ async function signInWithOAuth(provider: "google" | "facebook" | "apple"): Promi
 }
 
 function onAuthStateChange(callback: (user: AuthUser | null) => void) {
-  console.log("👂 Setting up auth state listener")
 
   const {
     data: { subscription },
   } = supabase.auth.onAuthStateChange((_event, session) => {
-    console.log("🔄 Auth state change event:", _event)
 
     if (session?.user) {
-      console.log("✅ Auth state: User present")
-      console.log("📧 Email confirmed at:", session.user.email_confirmed_at)
-      console.log("🔐 Is email verified:", !!session.user.email_confirmed_at)
 
       const authUser: AuthUser = {
         id: session.user.id,
@@ -533,13 +485,11 @@ function onAuthStateChange(callback: (user: AuthUser | null) => void) {
       }
       callback(authUser)
     } else {
-      console.log("⚠️ Auth state: No user")
       callback(null)
     }
   })
 
   return () => {
-    console.log("👋 Cleaning up auth state listener")
     subscription.unsubscribe()
   }
 }

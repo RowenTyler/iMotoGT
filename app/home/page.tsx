@@ -1,12 +1,15 @@
 import Link from "next/link"
+import { Suspense } from "react"
 import CarMarketplace from "@/components/car-marketplace"
+import { HeroHeading } from "@/components/hero-heading"
 import PlatformStats from "@/components/platform-stats"
 import BlogCard from "@/components/blog-card"
 import ReviewCard from "@/components/review-card"
 import { Facebook, Instagram, Twitter } from "lucide-react"
+import { SOCIAL_LINKS } from "@/lib/social-config"
 import { createClient } from "@/utils/supabase/server"
 
-export const dynamic = "force-dynamic"
+export const revalidate = 600 // ISR: revalidate every 10 minutes
 
 export default async function HomePage() {
   const supabase = await createClient()
@@ -27,7 +30,9 @@ export default async function HomePage() {
 
   return (
     <>
-      <CarMarketplace />
+      <CarMarketplace>
+        <HeroHeading />
+      </CarMarketplace>
       <PlatformStats />
 
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-10">
@@ -122,9 +127,9 @@ export default async function HomePage() {
             <div>
               <h4 className="font-semibold mb-4 text-gray-200">Connect With Us</h4>
               <div className="flex space-x-4">
-                <a href="#" className="text-gray-300 hover:text-[#FF7D33]"><Facebook className="w-6 h-6" /></a>
-                <a href="#" className="text-gray-300 hover:text-[#FF7D33]"><Instagram className="w-6 h-6" /></a>
-                <a href="#" className="text-gray-300 hover:text-[#FF7D33]"><Twitter className="w-6 h-6" /></a>
+                <a href={SOCIAL_LINKS.facebook} target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="text-gray-300 hover:text-[#FF7D33]"><Facebook className="w-6 h-6" /></a>
+                <a href={SOCIAL_LINKS.instagram} target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="text-gray-300 hover:text-[#FF7D33]"><Instagram className="w-6 h-6" /></a>
+                <a href={SOCIAL_LINKS.twitter} target="_blank" rel="noopener noreferrer" aria-label="Twitter" className="text-gray-300 hover:text-[#FF7D33]"><Twitter className="w-6 h-6" /></a>
               </div>
             </div>
           </div>

@@ -90,7 +90,6 @@ export function useSavedVehicles() {
     if (!user) return
 
     const subscription = vehicleService.subscribeToSavedVehicles(user.id, (payload) => {
-      console.log("Real-time saved vehicle update:", payload)
 
       if (payload.eventType === "INSERT") {
         // Fetch the vehicle details and add to saved list

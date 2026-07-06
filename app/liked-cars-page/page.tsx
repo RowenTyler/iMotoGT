@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation"
 import { useUser } from "@/components/UserContext"
 import LikedCarsPage from "@/components/liked-cars-page"
+import { VehicleCardSkeleton } from "@/components/skeletons"
 import { useEffect, useState } from "react"
 import { vehicleService } from "@/lib/vehicle-service"
 import type { Vehicle } from "@/types/vehicle"
@@ -40,8 +41,16 @@ export default function LikedCarsRoute() {
 
   if (isLoading || loadingVehicles) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-500">Loading your saved cars...</p>
+      <div className="min-h-screen animate-pulse">
+        <div className="pt-20 pb-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center mb-6">
+            <div className="h-10 w-40 bg-muted rounded" />
+            <div className="h-8 w-64 bg-muted rounded" />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <VehicleCardSkeleton count={6} />
+          </div>
+        </div>
       </div>
     )
   }

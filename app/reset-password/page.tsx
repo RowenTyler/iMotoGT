@@ -50,7 +50,6 @@ export default function ResetPasswordPage() {
     setSuccessMessage(null)
 
     try {
-      console.log("🔐 Requesting password reset for:", email)
       
       const { error: resetError } = await authService.requestPasswordReset(email)
       
@@ -105,7 +104,6 @@ export default function ResetPasswordPage() {
     setSuccessMessage(null)
 
     try {
-      console.log("🔐 Resetting password...")
       
       const { error: resetError } = await authService.resetPassword(newPassword)
       

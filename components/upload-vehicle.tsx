@@ -29,7 +29,7 @@ import { Header } from "@/components/ui/header"
 import type { UserProfile } from "@/types/user"
 import type { Vehicle } from "@/types/vehicle"
 import { useUser } from "@/components/UserContext"
-import { vehicleService } from "@/lib/vehicle-service"
+import { createVehicle, updateVehicle } from "@/lib/vehicle-service"
 import { compressImage } from "@/lib/image-utils"
 import { isPrivilegedUser } from "@/lib/admin-config"
 
@@ -1071,7 +1071,7 @@ export default function UploadVehicle({
       }
 
       if (editMode && existingVehicle) {
-        const result = await vehicleService.updateVehicle(existingVehicle.id, vehicleDataForSubmit)
+        const result = await updateVehicle(existingVehicle.id, vehicleDataForSubmit)
         if (!result || !result.id) {
           throw new Error("Failed to update vehicle. Please try again.")
         }
@@ -1080,7 +1080,7 @@ export default function UploadVehicle({
         if (onVehicleSubmit) {
           await onVehicleSubmit(vehicleDataForSubmit)
         } else {
-          const result = await vehicleService.createVehicle(vehicleDataForSubmit, authUser?.id || "")
+          const result = await createVehicle(vehicleDataForSubmit, authUser?.id || "")
           if (!result || !result.id) {
             throw new Error("Failed to create vehicle. Please try again.")
           }

@@ -58,7 +58,6 @@ export async function compressImage(
 export async function compressImages(images: string[]): Promise<string[]> {
   if (!images || images.length === 0) return []
   
-  console.log(`[ImageUtils] Compressing ${images.length} images...`)
   
   const compressed = await Promise.all(
     images.map((img) => {

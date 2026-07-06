@@ -8,7 +8,7 @@ function initializeClient() {
   const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
   if (!supabaseUrl || !supabaseKey) {
-    throw new Error("Supabase configuration missing for analytics route")
+    return null
   }
 
   return createClient(supabaseUrl, supabaseKey, {
@@ -17,7 +17,7 @@ function initializeClient() {
 }
 
 async function safeIncrementViews(
-  supabase: ReturnType<typeof createClient>,
+  supabase: NonNullable<ReturnType<typeof initializeClient>>,
   table: string,
   recordId?: string | null,
 ) {
@@ -45,6 +45,11 @@ export async function POST(request: Request) {
     }
 
     const supabase = initializeClient()
+
+    if (!supabase) {
+      // Gracefully skip analytics when Supabase is not configured (e.g. local dev)
+      return NextResponse.json({ success: true })
+    }
 
     const { error: eventError } = await supabase.from("analytics_events").insert([
       {

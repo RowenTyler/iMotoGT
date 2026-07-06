@@ -1,0 +1,2466 @@
+{
+  "directed": false,
+  "multigraph": false,
+  "graph": {},
+  "nodes": [
+    {
+      "label": "AccessDenied",
+      "file_type": "code",
+      "source_file": "app/403/page.tsx",
+      "source_location": "L8",
+      "_origin": "ast",
+      "id": "app_403_page_accessdenied",
+      "community": 1,
+      "norm_label": "accessdenied"
+    },
+    {
+      "label": "AboutPage",
+      "file_type": "code",
+      "source_file": "app/about/page.tsx",
+      "source_location": "L14",
+      "_origin": "ast",
+      "id": "app_about_page_aboutpage",
+      "community": 2,
+      "norm_label": "aboutpage"
+    },
+    {
+      "label": "ActionResult",
+      "file_type": "code",
+      "source_file": "app/admin/actions.ts",
+      "source_location": "L7",
+      "_origin": "ast",
+      "id": "app_admin_actions_actionresult",
+      "community": 3,
+      "norm_label": "actionresult"
+    },
+    {
+      "label": "BlogInput",
+      "file_type": "code",
+      "source_file": "app/admin/actions.ts",
+      "source_location": "L26",
+      "_origin": "ast",
+      "id": "app_admin_actions_bloginput",
+      "community": 5,
+      "norm_label": "bloginput"
+    },
+    {
+      "label": "createBlogAction",
+      "file_type": "code",
+      "source_file": "app/admin/actions.ts",
+      "source_location": "L39",
+      "_origin": "ast",
+      "id": "app_admin_actions_createblogaction",
+      "community": 6,
+      "norm_label": "createblogaction"
+    },
+    {
+      "label": "updateBlogAction",
+      "file_type": "code",
+      "source_file": "app/admin/actions.ts",
+      "source_location": "L98",
+      "_origin": "ast",
+      "id": "app_admin_actions_updateblogaction",
+      "community": 18,
+      "norm_label": "updateblogaction"
+    },
+    {
+      "label": "setBlogStatusAction",
+      "file_type": "code",
+      "source_file": "app/admin/actions.ts",
+      "source_location": "L140",
+      "_origin": "ast",
+      "id": "app_admin_actions_setblogstatusaction",
+      "community": 15,
+      "norm_label": "setblogstatusaction"
+    },
+    {
+      "label": "deleteBlogAction",
+      "file_type": "code",
+      "source_file": "app/admin/actions.ts",
+      "source_location": "L173",
+      "_origin": "ast",
+      "id": "app_admin_actions_deleteblogaction",
+      "community": 10,
+      "norm_label": "deleteblogaction"
+    },
+    {
+      "label": "ReviewInput",
+      "file_type": "code",
+      "source_file": "app/admin/actions.ts",
+      "source_location": "L193",
+      "_origin": "ast",
+      "id": "app_admin_actions_reviewinput",
+      "community": 14,
+      "norm_label": "reviewinput"
+    },
+    {
+      "label": "createReviewAction",
+      "file_type": "code",
+      "source_file": "app/admin/actions.ts",
+      "source_location": "L202",
+      "_origin": "ast",
+      "id": "app_admin_actions_createreviewaction",
+      "community": 8,
+      "norm_label": "createreviewaction"
+    },
+    {
+      "label": "updateReviewAction",
+      "file_type": "code",
+      "source_file": "app/admin/actions.ts",
+      "source_location": "L243",
+      "_origin": "ast",
+      "id": "app_admin_actions_updatereviewaction",
+      "community": 20,
+      "norm_label": "updatereviewaction"
+    },
+    {
+      "label": "setReviewStatusAction",
+      "file_type": "code",
+      "source_file": "app/admin/actions.ts",
+      "source_location": "L270",
+      "_origin": "ast",
+      "id": "app_admin_actions_setreviewstatusaction",
+      "community": 17,
+      "norm_label": "setreviewstatusaction"
+    },
+    {
+      "label": "deleteReviewAction",
+      "file_type": "code",
+      "source_file": "app/admin/actions.ts",
+      "source_location": "L290",
+      "_origin": "ast",
+      "id": "app_admin_actions_deletereviewaction",
+      "community": 12,
+      "norm_label": "deletereviewaction"
+    },
+    {
+      "label": "DealerInput",
+      "file_type": "code",
+      "source_file": "app/admin/actions.ts",
+      "source_location": "L308",
+      "_origin": "ast",
+      "id": "app_admin_actions_dealerinput",
+      "community": 9,
+      "norm_label": "dealerinput"
+    },
+    {
+      "label": "createDealerAction",
+      "file_type": "code",
+      "source_file": "app/admin/actions.ts",
+      "source_location": "L317",
+      "_origin": "ast",
+      "id": "app_admin_actions_createdealeraction",
+      "community": 7,
+      "norm_label": "createdealeraction"
+    },
+    {
+      "label": "updateDealerAction",
+      "file_type": "code",
+      "source_file": "app/admin/actions.ts",
+      "source_location": "L350",
+      "_origin": "ast",
+      "id": "app_admin_actions_updatedealeraction",
+      "community": 19,
+      "norm_label": "updatedealeraction"
+    },
+    {
+      "label": "setDealerStatusAction",
+      "file_type": "code",
+      "source_file": "app/admin/actions.ts",
+      "source_location": "L371",
+      "_origin": "ast",
+      "id": "app_admin_actions_setdealerstatusaction",
+      "community": 16,
+      "norm_label": "setdealerstatusaction"
+    },
+    {
+      "label": "deleteDealerAction",
+      "file_type": "code",
+      "source_file": "app/admin/actions.ts",
+      "source_location": "L388",
+      "_origin": "ast",
+      "id": "app_admin_actions_deletedealeraction",
+      "community": 11,
+      "norm_label": "deletedealeraction"
+    },
+    {
+      "label": "approveDealerApplicationAction",
+      "file_type": "code",
+      "source_file": "app/admin/actions.ts",
+      "source_location": "L404",
+      "_origin": "ast",
+      "id": "app_admin_actions_approvedealerapplicationaction",
+      "community": 4,
+      "norm_label": "approvedealerapplicationaction"
+    },
+    {
+      "label": "rejectDealerApplicationAction",
+      "file_type": "code",
+      "source_file": "app/admin/actions.ts",
+      "source_location": "L440",
+      "_origin": "ast",
+      "id": "app_admin_actions_rejectdealerapplicationaction",
+      "community": 13,
+      "norm_label": "rejectdealerapplicationaction"
+    },
+    {
+      "label": "LegacyNewBlogPage",
+      "file_type": "code",
+      "source_file": "app/admin/blog/new/page.tsx",
+      "source_location": "L3",
+      "_origin": "ast",
+      "id": "app_admin_blog_new_page_legacynewblogpage",
+      "community": 21,
+      "norm_label": "legacynewblogpage"
+    },
+    {
+      "label": "BlogFormInitial",
+      "file_type": "code",
+      "source_file": "app/admin/blogs/blog-form.tsx",
+      "source_location": "L42",
+      "_origin": "ast",
+      "id": "app_admin_blogs_blog_form_blogforminitial",
+      "community": 22,
+      "norm_label": "blogforminitial"
+    },
+    {
+      "label": "NewBlogPage",
+      "file_type": "code",
+      "source_file": "app/admin/blogs/new/page.tsx",
+      "source_location": "L6",
+      "_origin": "ast",
+      "id": "app_admin_blogs_new_page_newblogpage",
+      "community": 23,
+      "norm_label": "newblogpage"
+    },
+    {
+      "label": "AdminLayout",
+      "file_type": "code",
+      "source_file": "app/admin/layout.tsx",
+      "source_location": "L6",
+      "_origin": "ast",
+      "id": "app_admin_layout_adminlayout",
+      "community": 24,
+      "norm_label": "adminlayout"
+    },
+    {
+      "label": "AdminDashboardPage",
+      "file_type": "code",
+      "source_file": "app/admin/page.tsx",
+      "source_location": "L7",
+      "_origin": "ast",
+      "id": "app_admin_page_admindashboardpage",
+      "community": 25,
+      "norm_label": "admindashboardpage"
+    },
+    {
+      "label": "EditReviewPage",
+      "file_type": "code",
+      "source_file": "app/admin/reviews/[id]/edit/page.tsx",
+      "source_location": "L8",
+      "_origin": "ast",
+      "id": "app_admin_reviews_id_edit_page_editreviewpage",
+      "community": 26,
+      "norm_label": "editreviewpage"
+    },
+    {
+      "label": "NewReviewPage",
+      "file_type": "code",
+      "source_file": "app/admin/reviews/new/page.tsx",
+      "source_location": "L7",
+      "_origin": "ast",
+      "id": "app_admin_reviews_new_page_newreviewpage",
+      "community": 27,
+      "norm_label": "newreviewpage"
+    },
+    {
+      "label": "VehicleOption",
+      "file_type": "code",
+      "source_file": "app/admin/reviews/review-form.tsx",
+      "source_location": "L22",
+      "_origin": "ast",
+      "id": "app_admin_reviews_review_form_vehicleoption",
+      "community": 29,
+      "norm_label": "vehicleoption"
+    },
+    {
+      "label": "ReviewFormInitial",
+      "file_type": "code",
+      "source_file": "app/admin/reviews/review-form.tsx",
+      "source_location": "L27",
+      "_origin": "ast",
+      "id": "app_admin_reviews_review_form_reviewforminitial",
+      "community": 28,
+      "norm_label": "reviewforminitial"
+    },
+    {
+      "label": "POST",
+      "file_type": "code",
+      "source_file": "app/admin/upload/route.ts",
+      "source_location": "L5",
+      "_origin": "ast",
+      "id": "app_admin_upload_route_post",
+      "community": 30,
+      "norm_label": "post"
+    },
+    {
+      "label": "POST",
+      "file_type": "code",
+      "source_file": "app/api/analytics/route.ts",
+      "source_location": "L38",
+      "_origin": "ast",
+      "id": "app_api_analytics_route_post",
+      "community": 31,
+      "norm_label": "post"
+    },
+    {
+      "label": "POST",
+      "file_type": "code",
+      "source_file": "app/api/auth/callback/route.ts",
+      "source_location": "L8",
+      "_origin": "ast",
+      "id": "app_api_auth_callback_route_post",
+      "community": 33,
+      "norm_label": "post"
+    },
+    {
+      "label": "GET",
+      "file_type": "code",
+      "source_file": "app/api/auth/callback/route.ts",
+      "source_location": "L58",
+      "_origin": "ast",
+      "id": "app_api_auth_callback_route_get",
+      "community": 32,
+      "norm_label": "get"
+    },
+    {
+      "label": "POST",
+      "file_type": "code",
+      "source_file": "app/api/contact/route.ts",
+      "source_location": "L6",
+      "_origin": "ast",
+      "id": "app_api_contact_route_post",
+      "community": 34,
+      "norm_label": "post"
+    },
+    {
+      "label": "POST",
+      "file_type": "code",
+      "source_file": "app/api/dealers/applications/route.ts",
+      "source_location": "L9",
+      "_origin": "ast",
+      "id": "app_api_dealers_applications_route_post",
+      "community": 36,
+      "norm_label": "post"
+    },
+    {
+      "label": "GET",
+      "file_type": "code",
+      "source_file": "app/api/dealers/applications/route.ts",
+      "source_location": "L70",
+      "_origin": "ast",
+      "id": "app_api_dealers_applications_route_get",
+      "community": 35,
+      "norm_label": "get"
+    },
+    {
+      "label": "GET",
+      "file_type": "code",
+      "source_file": "app/api/platform-stats/route.ts",
+      "source_location": "L7",
+      "_origin": "ast",
+      "id": "app_api_platform_stats_route_get",
+      "community": 37,
+      "norm_label": "get"
+    },
+    {
+      "label": "POST",
+      "file_type": "code",
+      "source_file": "app/api/sync-user/route.ts",
+      "source_location": "L7",
+      "_origin": "ast",
+      "id": "app_api_sync_user_route_post",
+      "community": 38,
+      "norm_label": "post"
+    },
+    {
+      "label": "GET",
+      "file_type": "code",
+      "source_file": "app/api/user/profile/route.ts",
+      "source_location": "L8",
+      "_origin": "ast",
+      "id": "app_api_user_profile_route_get",
+      "community": 39,
+      "norm_label": "get"
+    },
+    {
+      "label": "PUT",
+      "file_type": "code",
+      "source_file": "app/api/user/profile/route.ts",
+      "source_location": "L34",
+      "_origin": "ast",
+      "id": "app_api_user_profile_route_put",
+      "community": 40,
+      "norm_label": "put"
+    },
+    {
+      "label": "POST",
+      "file_type": "code",
+      "source_file": "app/api/vehicles/[id]/delete/route.ts",
+      "source_location": "L19",
+      "_origin": "ast",
+      "id": "app_api_vehicles_id_delete_route_post",
+      "community": 41,
+      "norm_label": "post"
+    },
+    {
+      "label": "GET",
+      "file_type": "code",
+      "source_file": "app/api/vehicles/[id]/route.ts",
+      "source_location": "L8",
+      "_origin": "ast",
+      "id": "app_api_vehicles_id_route_get",
+      "community": 43,
+      "norm_label": "get"
+    },
+    {
+      "label": "PUT",
+      "file_type": "code",
+      "source_file": "app/api/vehicles/[id]/route.ts",
+      "source_location": "L27",
+      "_origin": "ast",
+      "id": "app_api_vehicles_id_route_put",
+      "community": 44,
+      "norm_label": "put"
+    },
+    {
+      "label": "DELETE",
+      "file_type": "code",
+      "source_file": "app/api/vehicles/[id]/route.ts",
+      "source_location": "L58",
+      "_origin": "ast",
+      "id": "app_api_vehicles_id_route_delete",
+      "community": 42,
+      "norm_label": "delete"
+    },
+    {
+      "label": "GET",
+      "file_type": "code",
+      "source_file": "app/api/vehicles/route.ts",
+      "source_location": "L9",
+      "_origin": "ast",
+      "id": "app_api_vehicles_route_get",
+      "community": 45,
+      "norm_label": "get"
+    },
+    {
+      "label": "POST",
+      "file_type": "code",
+      "source_file": "app/api/vehicles/route.ts",
+      "source_location": "L46",
+      "_origin": "ast",
+      "id": "app_api_vehicles_route_post",
+      "community": 46,
+      "norm_label": "post"
+    },
+    {
+      "label": "GET",
+      "file_type": "code",
+      "source_file": "app/api/vehicles/saved/route.ts",
+      "source_location": "L8",
+      "_origin": "ast",
+      "id": "app_api_vehicles_saved_route_get",
+      "community": 47,
+      "norm_label": "get"
+    },
+    {
+      "label": "POST",
+      "file_type": "code",
+      "source_file": "app/api/vehicles/saved/route.ts",
+      "source_location": "L30",
+      "_origin": "ast",
+      "id": "app_api_vehicles_saved_route_post",
+      "community": 48,
+      "norm_label": "post"
+    },
+    {
+      "label": "generateStaticParams",
+      "file_type": "code",
+      "source_file": "app/articles/[slug]/page.tsx",
+      "source_location": "L15",
+      "_origin": "ast",
+      "id": "app_articles_slug_page_generatestaticparams",
+      "community": 50,
+      "norm_label": "generatestaticparams"
+    },
+    {
+      "label": "generateMetadata",
+      "file_type": "code",
+      "source_file": "app/articles/[slug]/page.tsx",
+      "source_location": "L21",
+      "_origin": "ast",
+      "id": "app_articles_slug_page_generatemetadata",
+      "community": 49,
+      "norm_label": "generatemetadata"
+    },
+    {
+      "label": "Loading",
+      "file_type": "code",
+      "source_file": "app/auth/reset-password/loading.tsx",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "app_auth_reset_password_loading_loading",
+      "community": 51,
+      "norm_label": "loading"
+    },
+    {
+      "label": "generateMetadata",
+      "file_type": "code",
+      "source_file": "app/blog/[slug]/page.tsx",
+      "source_location": "L45",
+      "_origin": "ast",
+      "id": "app_blog_slug_page_generatemetadata",
+      "community": 52,
+      "norm_label": "generatemetadata"
+    },
+    {
+      "label": "ContactPage",
+      "file_type": "code",
+      "source_file": "app/contact/page.tsx",
+      "source_location": "L13",
+      "_origin": "ast",
+      "id": "app_contact_page_contactpage",
+      "community": 53,
+      "norm_label": "contactpage"
+    },
+    {
+      "label": "Loading",
+      "file_type": "code",
+      "source_file": "app/dashboard/loading.tsx",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "app_dashboard_loading_loading",
+      "community": 54,
+      "norm_label": "loading"
+    },
+    {
+      "label": "DashboardPage",
+      "file_type": "code",
+      "source_file": "app/dashboard/page.tsx",
+      "source_location": "L12",
+      "_origin": "ast",
+      "id": "app_dashboard_page_dashboardpage",
+      "community": 55,
+      "norm_label": "dashboardpage"
+    },
+    {
+      "label": "LikedCarsRoute",
+      "file_type": "code",
+      "source_file": "app/liked-cars-page/page.tsx",
+      "source_location": "L12",
+      "_origin": "ast",
+      "id": "app_liked_cars_page_page_likedcarsroute",
+      "community": 56,
+      "norm_label": "likedcarsroute"
+    },
+    {
+      "label": "LoginPageRoute",
+      "file_type": "code",
+      "source_file": "app/login/page.tsx",
+      "source_location": "L13",
+      "_origin": "ast",
+      "id": "app_login_page_loginpageroute",
+      "community": 57,
+      "norm_label": "loginpageroute"
+    },
+    {
+      "label": "RootPage",
+      "file_type": "code",
+      "source_file": "app/page.tsx",
+      "source_location": "L3",
+      "_origin": "ast",
+      "id": "app_page_rootpage",
+      "community": 58,
+      "norm_label": "rootpage"
+    },
+    {
+      "label": "Page",
+      "file_type": "code",
+      "source_file": "app/results/page.tsx",
+      "source_location": "L16",
+      "_origin": "ast",
+      "id": "app_results_page_page",
+      "community": 59,
+      "norm_label": "page"
+    },
+    {
+      "label": "generateMetadata",
+      "file_type": "code",
+      "source_file": "app/reviews/[slug]/page.tsx",
+      "source_location": "L46",
+      "_origin": "ast",
+      "id": "app_reviews_slug_page_generatemetadata",
+      "community": 60,
+      "norm_label": "generatemetadata"
+    },
+    {
+      "label": "ServicesPage",
+      "file_type": "code",
+      "source_file": "app/services/page.tsx",
+      "source_location": "L13",
+      "_origin": "ast",
+      "id": "app_services_page_servicespage",
+      "community": 61,
+      "norm_label": "servicespage"
+    },
+    {
+      "label": "SettingsPage",
+      "file_type": "code",
+      "source_file": "app/settings/page.tsx",
+      "source_location": "L13",
+      "_origin": "ast",
+      "id": "app_settings_page_settingspage",
+      "community": 62,
+      "norm_label": "settingspage"
+    },
+    {
+      "label": "UpgradePage",
+      "file_type": "code",
+      "source_file": "app/upgrade/page.tsx",
+      "source_location": "L11",
+      "_origin": "ast",
+      "id": "app_upgrade_page_upgradepage",
+      "community": 63,
+      "norm_label": "upgradepage"
+    },
+    {
+      "label": "generateMetadata",
+      "file_type": "code",
+      "source_file": "app/vehicle-details/[id]/page.tsx",
+      "source_location": "L9",
+      "_origin": "ast",
+      "id": "app_vehicle_details_id_page_generatemetadata",
+      "community": 64,
+      "norm_label": "generatemetadata"
+    },
+    {
+      "label": "VehicleDetailsPage",
+      "file_type": "code",
+      "source_file": "app/vehicle-details/[id]/page.tsx",
+      "source_location": "L78",
+      "_origin": "ast",
+      "id": "app_vehicle_details_id_page_vehicledetailspage",
+      "community": 65,
+      "norm_label": "vehicledetailspage"
+    },
+    {
+      "label": "NavigationCacheHandler",
+      "file_type": "code",
+      "source_file": "components/NavigationCacheHandler.tsx",
+      "source_location": "L33",
+      "_origin": "ast",
+      "id": "components_navigationcachehandler_navigationcachehandler",
+      "community": 74,
+      "norm_label": "navigationcachehandler"
+    },
+    {
+      "label": "useComponentCache",
+      "file_type": "code",
+      "source_file": "components/NavigationCacheHandler.tsx",
+      "source_location": "L116",
+      "_origin": "ast",
+      "id": "components_navigationcachehandler_usecomponentcache",
+      "community": 75,
+      "norm_label": "usecomponentcache"
+    },
+    {
+      "label": "useForceRefresh",
+      "file_type": "code",
+      "source_file": "components/NavigationCacheHandler.tsx",
+      "source_location": "L135",
+      "_origin": "ast",
+      "id": "components_navigationcachehandler_useforcerefresh",
+      "community": 76,
+      "norm_label": "useforcerefresh"
+    },
+    {
+      "label": "UserProvider",
+      "file_type": "code",
+      "source_file": "components/UserContext.tsx",
+      "source_location": "L32",
+      "_origin": "ast",
+      "id": "components_usercontext_userprovider",
+      "community": 83,
+      "norm_label": "userprovider"
+    },
+    {
+      "label": "AnalyticsTracker",
+      "file_type": "code",
+      "source_file": "components/analytics-tracker.tsx",
+      "source_location": "L15",
+      "_origin": "ast",
+      "id": "components_analytics_tracker_analyticstracker",
+      "community": 66,
+      "norm_label": "analyticstracker"
+    },
+    {
+      "label": "ArticleCard",
+      "file_type": "code",
+      "source_file": "components/article-card.tsx",
+      "source_location": "L11",
+      "_origin": "ast",
+      "id": "components_article_card_articlecard",
+      "community": 67,
+      "norm_label": "articlecard"
+    },
+    {
+      "label": "BlogCard",
+      "file_type": "code",
+      "source_file": "components/blog-card.tsx",
+      "source_location": "L27",
+      "_origin": "ast",
+      "id": "components_blog_card_blogcard",
+      "community": 68,
+      "norm_label": "blogcard"
+    },
+    {
+      "label": "Dashboard",
+      "file_type": "code",
+      "source_file": "components/dashboard.tsx",
+      "source_location": "L76",
+      "_origin": "ast",
+      "id": "components_dashboard_dashboard",
+      "community": 69,
+      "norm_label": "dashboard"
+    },
+    {
+      "label": "CookieConsentBanner",
+      "file_type": "code",
+      "source_file": "components/gdpr/cookie-consent-banner.tsx",
+      "source_location": "L15",
+      "_origin": "ast",
+      "id": "components_gdpr_cookie_consent_banner_cookieconsentbanner",
+      "community": 70,
+      "norm_label": "cookieconsentbanner"
+    },
+    {
+      "label": "useConsent",
+      "file_type": "code",
+      "source_file": "components/gdpr/gdpr-provider.tsx",
+      "source_location": "L26",
+      "_origin": "ast",
+      "id": "components_gdpr_gdpr_provider_useconsent",
+      "community": 72,
+      "norm_label": "useconsent"
+    },
+    {
+      "label": "GDPRProvider",
+      "file_type": "code",
+      "source_file": "components/gdpr/gdpr-provider.tsx",
+      "source_location": "L38",
+      "_origin": "ast",
+      "id": "components_gdpr_gdpr_provider_gdprprovider",
+      "community": 71,
+      "norm_label": "gdprprovider"
+    },
+    {
+      "label": "LocationPage",
+      "file_type": "code",
+      "source_file": "components/location-page.tsx",
+      "source_location": "L22",
+      "_origin": "ast",
+      "id": "components_location_page_locationpage",
+      "community": 73,
+      "norm_label": "locationpage"
+    },
+    {
+      "label": "ResultsPage",
+      "file_type": "code",
+      "source_file": "components/results-page.tsx",
+      "source_location": "L16",
+      "_origin": "ast",
+      "id": "components_results_page_resultspage",
+      "community": 77,
+      "norm_label": "resultspage"
+    },
+    {
+      "label": "ReviewCard",
+      "file_type": "code",
+      "source_file": "components/review-card.tsx",
+      "source_location": "L26",
+      "_origin": "ast",
+      "id": "components_review_card_reviewcard",
+      "community": 78,
+      "norm_label": "reviewcard"
+    },
+    {
+      "label": "ThemeProvider",
+      "file_type": "code",
+      "source_file": "components/theme-provider.tsx",
+      "source_location": "L9",
+      "_origin": "ast",
+      "id": "components_theme_provider_themeprovider",
+      "community": 79,
+      "norm_label": "themeprovider"
+    },
+    {
+      "label": "ThemeToggle",
+      "file_type": "code",
+      "source_file": "components/theme-toggle.tsx",
+      "source_location": "L6",
+      "_origin": "ast",
+      "id": "components_theme_toggle_themetoggle",
+      "community": 80,
+      "norm_label": "themetoggle"
+    },
+    {
+      "label": "BadgeProps",
+      "file_type": "code",
+      "source_file": "components/ui/badge.tsx",
+      "source_location": "L26",
+      "_origin": "ast",
+      "id": "components_ui_badge_badgeprops",
+      "community": 81,
+      "norm_label": "badgeprops"
+    },
+    {
+      "label": "ButtonProps",
+      "file_type": "code",
+      "source_file": "components/ui/button.tsx",
+      "source_location": "L36",
+      "_origin": "ast",
+      "id": "components_ui_button_buttonprops",
+      "community": 82,
+      "norm_label": "buttonprops"
+    },
+    {
+      "label": "VehicleCard",
+      "file_type": "code",
+      "source_file": "components/vehicle-card.tsx",
+      "source_location": "L43",
+      "_origin": "ast",
+      "id": "components_vehicle_card_vehiclecard",
+      "community": 84,
+      "norm_label": "vehiclecard"
+    },
+    {
+      "label": "useSuperAdminCheck",
+      "file_type": "code",
+      "source_file": "hooks/use-admin.tsx",
+      "source_location": "L17",
+      "_origin": "ast",
+      "id": "hooks_use_admin_usesuperadmincheck",
+      "community": 87,
+      "norm_label": "usesuperadmincheck"
+    },
+    {
+      "label": "useAdminCheck",
+      "file_type": "code",
+      "source_file": "hooks/use-admin.tsx",
+      "source_location": "L52",
+      "_origin": "ast",
+      "id": "hooks_use_admin_useadmincheck",
+      "community": 85,
+      "norm_label": "useadmincheck"
+    },
+    {
+      "label": "useUserRole",
+      "file_type": "code",
+      "source_file": "hooks/use-admin.tsx",
+      "source_location": "L87",
+      "_origin": "ast",
+      "id": "hooks_use_admin_useuserrole",
+      "community": 88,
+      "norm_label": "useuserrole"
+    },
+    {
+      "label": "usePermission",
+      "file_type": "code",
+      "source_file": "hooks/use-admin.tsx",
+      "source_location": "L122",
+      "_origin": "ast",
+      "id": "hooks_use_admin_usepermission",
+      "community": 86,
+      "norm_label": "usepermission"
+    },
+    {
+      "label": "withSuperAdminProtection",
+      "file_type": "code",
+      "source_file": "hooks/use-admin.tsx",
+      "source_location": "L157",
+      "_origin": "ast",
+      "id": "hooks_use_admin_withsuperadminprotection",
+      "community": 90,
+      "norm_label": "withsuperadminprotection"
+    },
+    {
+      "label": "withAdminProtection",
+      "file_type": "code",
+      "source_file": "hooks/use-admin.tsx",
+      "source_location": "L185",
+      "_origin": "ast",
+      "id": "hooks_use_admin_withadminprotection",
+      "community": 89,
+      "norm_label": "withadminprotection"
+    },
+    {
+      "label": "useDebounce",
+      "file_type": "code",
+      "source_file": "hooks/use-debounce.ts",
+      "source_location": "L24",
+      "_origin": "ast",
+      "id": "hooks_use_debounce_usedebounce",
+      "community": 91,
+      "norm_label": "usedebounce"
+    },
+    {
+      "label": "useMobile",
+      "file_type": "code",
+      "source_file": "hooks/use-mobile.tsx",
+      "source_location": "L5",
+      "_origin": "ast",
+      "id": "hooks_use_mobile_usemobile",
+      "community": 92,
+      "norm_label": "usemobile"
+    },
+    {
+      "label": "useSavedVehicles",
+      "file_type": "code",
+      "source_file": "hooks/use-saved-vehicles.ts",
+      "source_location": "L8",
+      "_origin": "ast",
+      "id": "hooks_use_saved_vehicles_usesavedvehicles",
+      "community": 93,
+      "norm_label": "usesavedvehicles"
+    },
+    {
+      "label": "useVehicles",
+      "file_type": "code",
+      "source_file": "hooks/use-vehicles.ts",
+      "source_location": "L26",
+      "_origin": "ast",
+      "id": "hooks_use_vehicles_usevehicles",
+      "community": 94,
+      "norm_label": "usevehicles"
+    },
+    {
+      "label": "useNetworkStatus",
+      "file_type": "code",
+      "source_file": "hooks/useNetworkStatus.ts",
+      "source_location": "L16",
+      "_origin": "ast",
+      "id": "hooks_usenetworkstatus_usenetworkstatus",
+      "community": 95,
+      "norm_label": "usenetworkstatus"
+    },
+    {
+      "label": "isPrivilegedUser",
+      "file_type": "code",
+      "source_file": "lib/admin-config.ts",
+      "source_location": "L32",
+      "_origin": "ast",
+      "id": "lib_admin_config_isprivilegeduser",
+      "community": 99,
+      "norm_label": "isprivilegeduser"
+    },
+    {
+      "label": "isSuperAdminUser",
+      "file_type": "code",
+      "source_file": "lib/admin-config.ts",
+      "source_location": "L39",
+      "_origin": "ast",
+      "id": "lib_admin_config_issuperadminuser",
+      "community": 100,
+      "norm_label": "issuperadminuser"
+    },
+    {
+      "label": "isPlusTierUser",
+      "file_type": "code",
+      "source_file": "lib/admin-config.ts",
+      "source_location": "L46",
+      "_origin": "ast",
+      "id": "lib_admin_config_isplustieruser",
+      "community": 98,
+      "norm_label": "isplustieruser"
+    },
+    {
+      "label": "getListingLimit",
+      "file_type": "code",
+      "source_file": "lib/admin-config.ts",
+      "source_location": "L59",
+      "_origin": "ast",
+      "id": "lib_admin_config_getlistinglimit",
+      "community": 97,
+      "norm_label": "getlistinglimit"
+    },
+    {
+      "label": "AdminError",
+      "file_type": "code",
+      "source_file": "lib/admin-service.ts",
+      "source_location": "L19",
+      "_origin": "ast",
+      "id": "lib_admin_service_adminerror",
+      "community": 106,
+      "norm_label": "adminerror"
+    },
+    {
+      "label": "isSuperAdminEmail",
+      "file_type": "code",
+      "source_file": "lib/admin-service.ts",
+      "source_location": "L32",
+      "_origin": "ast",
+      "id": "lib_admin_service_issuperadminemail",
+      "community": 111,
+      "norm_label": "issuperadminemail"
+    },
+    {
+      "label": "getUserRole",
+      "file_type": "code",
+      "source_file": "lib/admin-service.ts",
+      "source_location": "L41",
+      "_origin": "ast",
+      "id": "lib_admin_service_getuserrole",
+      "community": 109,
+      "norm_label": "getuserrole"
+    },
+    {
+      "label": "userHasPermission",
+      "file_type": "code",
+      "source_file": "lib/admin-service.ts",
+      "source_location": "L82",
+      "_origin": "ast",
+      "id": "lib_admin_service_userhaspermission",
+      "community": 121,
+      "norm_label": "userhaspermission"
+    },
+    {
+      "label": "isUserAdmin",
+      "file_type": "code",
+      "source_file": "lib/admin-service.ts",
+      "source_location": "L94",
+      "_origin": "ast",
+      "id": "lib_admin_service_isuseradmin",
+      "community": 112,
+      "norm_label": "isuseradmin"
+    },
+    {
+      "label": "isUserSuperAdmin",
+      "file_type": "code",
+      "source_file": "lib/admin-service.ts",
+      "source_location": "L102",
+      "_origin": "ast",
+      "id": "lib_admin_service_isusersuperadmin",
+      "community": 113,
+      "norm_label": "isusersuperadmin"
+    },
+    {
+      "label": "grantAdminRole",
+      "file_type": "code",
+      "source_file": "lib/admin-service.ts",
+      "source_location": "L112",
+      "_origin": "ast",
+      "id": "lib_admin_service_grantadminrole",
+      "community": 110,
+      "norm_label": "grantadminrole"
+    },
+    {
+      "label": "revokeAdminRole",
+      "file_type": "code",
+      "source_file": "lib/admin-service.ts",
+      "source_location": "L140",
+      "_origin": "ast",
+      "id": "lib_admin_service_revokeadminrole",
+      "community": 118,
+      "norm_label": "revokeadminrole"
+    },
+    {
+      "label": "logAdminAction",
+      "file_type": "code",
+      "source_file": "lib/admin-service.ts",
+      "source_location": "L161",
+      "_origin": "ast",
+      "id": "lib_admin_service_logadminaction",
+      "community": 114,
+      "norm_label": "logadminaction"
+    },
+    {
+      "label": "getAllAdmins",
+      "file_type": "code",
+      "source_file": "lib/admin-service.ts",
+      "source_location": "L191",
+      "_origin": "ast",
+      "id": "lib_admin_service_getalladmins",
+      "community": 108,
+      "norm_label": "getalladmins"
+    },
+    {
+      "label": "approveDealerApplication",
+      "file_type": "code",
+      "source_file": "lib/admin-service.ts",
+      "source_location": "L200",
+      "_origin": "ast",
+      "id": "lib_admin_service_approvedealerapplication",
+      "community": 107,
+      "norm_label": "approvedealerapplication"
+    },
+    {
+      "label": "rejectDealerApplication",
+      "file_type": "code",
+      "source_file": "lib/admin-service.ts",
+      "source_location": "L249",
+      "_origin": "ast",
+      "id": "lib_admin_service_rejectdealerapplication",
+      "community": 115,
+      "norm_label": "rejectdealerapplication"
+    },
+    {
+      "label": "suspendDealer",
+      "file_type": "code",
+      "source_file": "lib/admin-service.ts",
+      "source_location": "L276",
+      "_origin": "ast",
+      "id": "lib_admin_service_suspenddealer",
+      "community": 119,
+      "norm_label": "suspenddealer"
+    },
+    {
+      "label": "restoreDealer",
+      "file_type": "code",
+      "source_file": "lib/admin-service.ts",
+      "source_location": "L303",
+      "_origin": "ast",
+      "id": "lib_admin_service_restoredealer",
+      "community": 117,
+      "norm_label": "restoredealer"
+    },
+    {
+      "label": "addDealerEmployee",
+      "file_type": "code",
+      "source_file": "lib/admin-service.ts",
+      "source_location": "L327",
+      "_origin": "ast",
+      "id": "lib_admin_service_adddealeremployee",
+      "community": 105,
+      "norm_label": "adddealeremployee"
+    },
+    {
+      "label": "removeDealerEmployee",
+      "file_type": "code",
+      "source_file": "lib/admin-service.ts",
+      "source_location": "L356",
+      "_origin": "ast",
+      "id": "lib_admin_service_removedealeremployee",
+      "community": 116,
+      "norm_label": "removedealeremployee"
+    },
+    {
+      "label": "trackAnalyticsEvent",
+      "file_type": "code",
+      "source_file": "lib/admin-service.ts",
+      "source_location": "L379",
+      "_origin": "ast",
+      "id": "lib_admin_service_trackanalyticsevent",
+      "community": 120,
+      "norm_label": "trackanalyticsevent"
+    },
+    {
+      "label": "AdminSession",
+      "file_type": "code",
+      "source_file": "lib/admin.ts",
+      "source_location": "L12",
+      "_origin": "ast",
+      "id": "lib_admin_adminsession",
+      "community": 96,
+      "norm_label": "adminsession"
+    },
+    {
+      "label": "getServerAdminSession",
+      "file_type": "code",
+      "source_file": "lib/admin.ts",
+      "source_location": "L18",
+      "_origin": "ast",
+      "id": "lib_admin_getserveradminsession",
+      "community": 101,
+      "norm_label": "getserveradminsession"
+    },
+    {
+      "label": "requireAdminSession",
+      "file_type": "code",
+      "source_file": "lib/admin.ts",
+      "source_location": "L56",
+      "_origin": "ast",
+      "id": "lib_admin_requireadminsession",
+      "community": 103,
+      "norm_label": "requireadminsession"
+    },
+    {
+      "label": "requireSuperAdmin",
+      "file_type": "code",
+      "source_file": "lib/admin.ts",
+      "source_location": "L64",
+      "_origin": "ast",
+      "id": "lib_admin_requiresuperadmin",
+      "community": 104,
+      "norm_label": "requiresuperadmin"
+    },
+    {
+      "label": "isAllowedSuperAdminEmail",
+      "file_type": "code",
+      "source_file": "lib/admin.ts",
+      "source_location": "L72",
+      "_origin": "ast",
+      "id": "lib_admin_isallowedsuperadminemail",
+      "community": 102,
+      "norm_label": "isallowedsuperadminemail"
+    },
+    {
+      "label": "AnalyticsEventType",
+      "file_type": "code",
+      "source_file": "lib/analytics.ts",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "lib_analytics_analyticseventtype",
+      "community": 123,
+      "norm_label": "analyticseventtype"
+    },
+    {
+      "label": "AnalyticsEventPayload",
+      "file_type": "code",
+      "source_file": "lib/analytics.ts",
+      "source_location": "L10",
+      "_origin": "ast",
+      "id": "lib_analytics_analyticseventpayload",
+      "community": 122,
+      "norm_label": "analyticseventpayload"
+    },
+    {
+      "label": "trackEvent",
+      "file_type": "code",
+      "source_file": "lib/analytics.ts",
+      "source_location": "L38",
+      "_origin": "ast",
+      "id": "lib_analytics_trackevent",
+      "community": 126,
+      "norm_label": "trackevent"
+    },
+    {
+      "label": "trackBlogView",
+      "file_type": "code",
+      "source_file": "lib/analytics.ts",
+      "source_location": "L42",
+      "_origin": "ast",
+      "id": "lib_analytics_trackblogview",
+      "community": 124,
+      "norm_label": "trackblogview"
+    },
+    {
+      "label": "trackReviewView",
+      "file_type": "code",
+      "source_file": "lib/analytics.ts",
+      "source_location": "L51",
+      "_origin": "ast",
+      "id": "lib_analytics_trackreviewview",
+      "community": 127,
+      "norm_label": "trackreviewview"
+    },
+    {
+      "label": "trackVehicleView",
+      "file_type": "code",
+      "source_file": "lib/analytics.ts",
+      "source_location": "L60",
+      "_origin": "ast",
+      "id": "lib_analytics_trackvehicleview",
+      "community": 130,
+      "norm_label": "trackvehicleview"
+    },
+    {
+      "label": "trackSaveVehicle",
+      "file_type": "code",
+      "source_file": "lib/analytics.ts",
+      "source_location": "L69",
+      "_origin": "ast",
+      "id": "lib_analytics_tracksavevehicle",
+      "community": 129,
+      "norm_label": "tracksavevehicle"
+    },
+    {
+      "label": "trackSaveBlog",
+      "file_type": "code",
+      "source_file": "lib/analytics.ts",
+      "source_location": "L78",
+      "_origin": "ast",
+      "id": "lib_analytics_tracksaveblog",
+      "community": 128,
+      "norm_label": "tracksaveblog"
+    },
+    {
+      "label": "trackDealerView",
+      "file_type": "code",
+      "source_file": "lib/analytics.ts",
+      "source_location": "L87",
+      "_origin": "ast",
+      "id": "lib_analytics_trackdealerview",
+      "community": 125,
+      "norm_label": "trackdealerview"
+    },
+    {
+      "label": "signInResilient",
+      "file_type": "code",
+      "source_file": "lib/auth-resilient.ts",
+      "source_location": "L13",
+      "_origin": "ast",
+      "id": "lib_auth_resilient_signinresilient",
+      "community": 134,
+      "norm_label": "signinresilient"
+    },
+    {
+      "label": "signUpResilient",
+      "file_type": "code",
+      "source_file": "lib/auth-resilient.ts",
+      "source_location": "L29",
+      "_origin": "ast",
+      "id": "lib_auth_resilient_signupresilient",
+      "community": 135,
+      "norm_label": "signupresilient"
+    },
+    {
+      "label": "validateSessionResilient",
+      "file_type": "code",
+      "source_file": "lib/auth-resilient.ts",
+      "source_location": "L46",
+      "_origin": "ast",
+      "id": "lib_auth_resilient_validatesessionresilient",
+      "community": 136,
+      "norm_label": "validatesessionresilient"
+    },
+    {
+      "label": "getCurrentUserResilient",
+      "file_type": "code",
+      "source_file": "lib/auth-resilient.ts",
+      "source_location": "L61",
+      "_origin": "ast",
+      "id": "lib_auth_resilient_getcurrentuserresilient",
+      "community": 133,
+      "norm_label": "getcurrentuserresilient"
+    },
+    {
+      "label": "AuthUser",
+      "file_type": "code",
+      "source_file": "lib/auth.ts",
+      "source_location": "L7",
+      "_origin": "ast",
+      "id": "lib_auth_authuser",
+      "community": 132,
+      "norm_label": "authuser"
+    },
+    {
+      "label": "AuthError",
+      "file_type": "code",
+      "source_file": "lib/auth.ts",
+      "source_location": "L15",
+      "_origin": "ast",
+      "id": "lib_auth_autherror",
+      "community": 131,
+      "norm_label": "autherror"
+    },
+    {
+      "label": "BlogPost",
+      "file_type": "code",
+      "source_file": "lib/blog-data.ts",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "lib_blog_data_blogpost",
+      "community": 138,
+      "norm_label": "blogpost"
+    },
+    {
+      "label": "Article",
+      "file_type": "code",
+      "source_file": "lib/blog-data.ts",
+      "source_location": "L15",
+      "_origin": "ast",
+      "id": "lib_blog_data_article",
+      "community": 137,
+      "norm_label": "article"
+    },
+    {
+      "label": "BlogCreateInput",
+      "file_type": "code",
+      "source_file": "lib/blog-service.ts",
+      "source_location": "L12",
+      "_origin": "ast",
+      "id": "lib_blog_service_blogcreateinput",
+      "community": 141,
+      "norm_label": "blogcreateinput"
+    },
+    {
+      "label": "BlogUpdateInput",
+      "file_type": "code",
+      "source_file": "lib/blog-service.ts",
+      "source_location": "L24",
+      "_origin": "ast",
+      "id": "lib_blog_service_blogupdateinput",
+      "community": 142,
+      "norm_label": "blogupdateinput"
+    },
+    {
+      "label": "generateSlug",
+      "file_type": "code",
+      "source_file": "lib/blog-service.ts",
+      "source_location": "L31",
+      "_origin": "ast",
+      "id": "lib_blog_service_generateslug",
+      "community": 147,
+      "norm_label": "generateslug"
+    },
+    {
+      "label": "calculateReadingTime",
+      "file_type": "code",
+      "source_file": "lib/blog-service.ts",
+      "source_location": "L43",
+      "_origin": "ast",
+      "id": "lib_blog_service_calculatereadingtime",
+      "community": 143,
+      "norm_label": "calculatereadingtime"
+    },
+    {
+      "label": "createBlog",
+      "file_type": "code",
+      "source_file": "lib/blog-service.ts",
+      "source_location": "L52",
+      "_origin": "ast",
+      "id": "lib_blog_service_createblog",
+      "community": 144,
+      "norm_label": "createblog"
+    },
+    {
+      "label": "updateBlog",
+      "file_type": "code",
+      "source_file": "lib/blog-service.ts",
+      "source_location": "L119",
+      "_origin": "ast",
+      "id": "lib_blog_service_updateblog",
+      "community": 158,
+      "norm_label": "updateblog"
+    },
+    {
+      "label": "publishBlog",
+      "file_type": "code",
+      "source_file": "lib/blog-service.ts",
+      "source_location": "L175",
+      "_origin": "ast",
+      "id": "lib_blog_service_publishblog",
+      "community": 155,
+      "norm_label": "publishblog"
+    },
+    {
+      "label": "archiveBlog",
+      "file_type": "code",
+      "source_file": "lib/blog-service.ts",
+      "source_location": "L185",
+      "_origin": "ast",
+      "id": "lib_blog_service_archiveblog",
+      "community": 140,
+      "norm_label": "archiveblog"
+    },
+    {
+      "label": "deleteBlog",
+      "file_type": "code",
+      "source_file": "lib/blog-service.ts",
+      "source_location": "L195",
+      "_origin": "ast",
+      "id": "lib_blog_service_deleteblog",
+      "community": 145,
+      "norm_label": "deleteblog"
+    },
+    {
+      "label": "getBlog",
+      "file_type": "code",
+      "source_file": "lib/blog-service.ts",
+      "source_location": "L223",
+      "_origin": "ast",
+      "id": "lib_blog_service_getblog",
+      "community": 148,
+      "norm_label": "getblog"
+    },
+    {
+      "label": "getBlogBySlug",
+      "file_type": "code",
+      "source_file": "lib/blog-service.ts",
+      "source_location": "L244",
+      "_origin": "ast",
+      "id": "lib_blog_service_getblogbyslug",
+      "community": 150,
+      "norm_label": "getblogbyslug"
+    },
+    {
+      "label": "getLatestBlogs",
+      "file_type": "code",
+      "source_file": "lib/blog-service.ts",
+      "source_location": "L265",
+      "_origin": "ast",
+      "id": "lib_blog_service_getlatestblogs",
+      "community": 152,
+      "norm_label": "getlatestblogs"
+    },
+    {
+      "label": "getFeaturedBlogs",
+      "file_type": "code",
+      "source_file": "lib/blog-service.ts",
+      "source_location": "L298",
+      "_origin": "ast",
+      "id": "lib_blog_service_getfeaturedblogs",
+      "community": 151,
+      "norm_label": "getfeaturedblogs"
+    },
+    {
+      "label": "getTrendingBlogs",
+      "file_type": "code",
+      "source_file": "lib/blog-service.ts",
+      "source_location": "L326",
+      "_origin": "ast",
+      "id": "lib_blog_service_gettrendingblogs",
+      "community": 154,
+      "norm_label": "gettrendingblogs"
+    },
+    {
+      "label": "getBlogBlocks",
+      "file_type": "code",
+      "source_file": "lib/blog-service.ts",
+      "source_location": "L357",
+      "_origin": "ast",
+      "id": "lib_blog_service_getblogblocks",
+      "community": 149,
+      "norm_label": "getblogblocks"
+    },
+    {
+      "label": "addBlogBlock",
+      "file_type": "code",
+      "source_file": "lib/blog-service.ts",
+      "source_location": "L384",
+      "_origin": "ast",
+      "id": "lib_blog_service_addblogblock",
+      "community": 139,
+      "norm_label": "addblogblock"
+    },
+    {
+      "label": "updateBlogBlock",
+      "file_type": "code",
+      "source_file": "lib/blog-service.ts",
+      "source_location": "L421",
+      "_origin": "ast",
+      "id": "lib_blog_service_updateblogblock",
+      "community": 159,
+      "norm_label": "updateblogblock"
+    },
+    {
+      "label": "deleteBlogBlock",
+      "file_type": "code",
+      "source_file": "lib/blog-service.ts",
+      "source_location": "L454",
+      "_origin": "ast",
+      "id": "lib_blog_service_deleteblogblock",
+      "community": 146,
+      "norm_label": "deleteblogblock"
+    },
+    {
+      "label": "saveBlog",
+      "file_type": "code",
+      "source_file": "lib/blog-service.ts",
+      "source_location": "L473",
+      "_origin": "ast",
+      "id": "lib_blog_service_saveblog",
+      "community": 156,
+      "norm_label": "saveblog"
+    },
+    {
+      "label": "unsaveBlog",
+      "file_type": "code",
+      "source_file": "lib/blog-service.ts",
+      "source_location": "L510",
+      "_origin": "ast",
+      "id": "lib_blog_service_unsaveblog",
+      "community": 157,
+      "norm_label": "unsaveblog"
+    },
+    {
+      "label": "getSavedBlogs",
+      "file_type": "code",
+      "source_file": "lib/blog-service.ts",
+      "source_location": "L542",
+      "_origin": "ast",
+      "id": "lib_blog_service_getsavedblogs",
+      "community": 153,
+      "norm_label": "getsavedblogs"
+    },
+    {
+      "label": "CacheConfig",
+      "file_type": "code",
+      "source_file": "lib/cache-manager.ts",
+      "source_location": "L19",
+      "_origin": "ast",
+      "id": "lib_cache_manager_cacheconfig",
+      "community": 160,
+      "norm_label": "cacheconfig"
+    },
+    {
+      "label": "CacheManager",
+      "file_type": "code",
+      "source_file": "lib/cache-manager.ts",
+      "source_location": "L58",
+      "_origin": "ast",
+      "id": "lib_cache_manager_cachemanager",
+      "community": 161,
+      "norm_label": "cachemanager"
+    },
+    {
+      "label": "preloadCache",
+      "file_type": "code",
+      "source_file": "lib/cache-manager.ts",
+      "source_location": "L362",
+      "_origin": "ast",
+      "id": "lib_cache_manager_preloadcache",
+      "community": 162,
+      "norm_label": "preloadcache"
+    },
+    {
+      "label": "validateDeploymentConfig",
+      "file_type": "code",
+      "source_file": "lib/deployment-config.ts",
+      "source_location": "L59",
+      "_origin": "ast",
+      "id": "lib_deployment_config_validatedeploymentconfig",
+      "community": 163,
+      "norm_label": "validatedeploymentconfig"
+    },
+    {
+      "label": "AppError",
+      "file_type": "code",
+      "source_file": "lib/error-handler.ts",
+      "source_location": "L3",
+      "_origin": "ast",
+      "id": "lib_error_handler_apperror",
+      "community": 0,
+      "norm_label": "apperror"
+    },
+    {
+      "label": "NetworkError",
+      "file_type": "code",
+      "source_file": "lib/error-handler.ts",
+      "source_location": "L14",
+      "_origin": "ast",
+      "id": "lib_error_handler_networkerror",
+      "community": 0,
+      "norm_label": "networkerror"
+    },
+    {
+      "label": "ValidationError",
+      "file_type": "code",
+      "source_file": "lib/error-handler.ts",
+      "source_location": "L21",
+      "_origin": "ast",
+      "id": "lib_error_handler_validationerror",
+      "community": 0,
+      "norm_label": "validationerror"
+    },
+    {
+      "label": "UnauthorizedError",
+      "file_type": "code",
+      "source_file": "lib/error-handler.ts",
+      "source_location": "L31",
+      "_origin": "ast",
+      "id": "lib_error_handler_unauthorizederror",
+      "community": 0,
+      "norm_label": "unauthorizederror"
+    },
+    {
+      "label": "NotFoundError",
+      "file_type": "code",
+      "source_file": "lib/error-handler.ts",
+      "source_location": "L38",
+      "_origin": "ast",
+      "id": "lib_error_handler_notfounderror",
+      "community": 0,
+      "norm_label": "notfounderror"
+    },
+    {
+      "label": "ServerError",
+      "file_type": "code",
+      "source_file": "lib/error-handler.ts",
+      "source_location": "L45",
+      "_origin": "ast",
+      "id": "lib_error_handler_servererror",
+      "community": 0,
+      "norm_label": "servererror"
+    },
+    {
+      "label": "CookieCategory",
+      "file_type": "code",
+      "source_file": "lib/gdpr/cookie-config.ts",
+      "source_location": "L6",
+      "_origin": "ast",
+      "id": "lib_gdpr_cookie_config_cookiecategory",
+      "community": 166,
+      "norm_label": "cookiecategory"
+    },
+    {
+      "label": "CookieCategoryConfig",
+      "file_type": "code",
+      "source_file": "lib/gdpr/cookie-config.ts",
+      "source_location": "L8",
+      "_origin": "ast",
+      "id": "lib_gdpr_cookie_config_cookiecategoryconfig",
+      "community": 167,
+      "norm_label": "cookiecategoryconfig"
+    },
+    {
+      "label": "ConsentPreferences",
+      "file_type": "code",
+      "source_file": "lib/gdpr/cookie-config.ts",
+      "source_location": "L47",
+      "_origin": "ast",
+      "id": "lib_gdpr_cookie_config_consentpreferences",
+      "community": 164,
+      "norm_label": "consentpreferences"
+    },
+    {
+      "label": "ConsentState",
+      "file_type": "code",
+      "source_file": "lib/gdpr/cookie-config.ts",
+      "source_location": "L54",
+      "_origin": "ast",
+      "id": "lib_gdpr_cookie_config_consentstate",
+      "community": 165,
+      "norm_label": "consentstate"
+    },
+    {
+      "label": "uploadVehicleImage",
+      "file_type": "code",
+      "source_file": "lib/image-upload.ts",
+      "source_location": "L54",
+      "_origin": "ast",
+      "id": "lib_image_upload_uploadvehicleimage",
+      "community": 170,
+      "norm_label": "uploadvehicleimage"
+    },
+    {
+      "label": "uploadVehicleImages",
+      "file_type": "code",
+      "source_file": "lib/image-upload.ts",
+      "source_location": "L108",
+      "_origin": "ast",
+      "id": "lib_image_upload_uploadvehicleimages",
+      "community": 171,
+      "norm_label": "uploadvehicleimages"
+    },
+    {
+      "label": "uploadProfilePicture",
+      "file_type": "code",
+      "source_file": "lib/image-upload.ts",
+      "source_location": "L159",
+      "_origin": "ast",
+      "id": "lib_image_upload_uploadprofilepicture",
+      "community": 169,
+      "norm_label": "uploadprofilepicture"
+    },
+    {
+      "label": "deleteVehicleImages",
+      "file_type": "code",
+      "source_file": "lib/image-upload.ts",
+      "source_location": "L207",
+      "_origin": "ast",
+      "id": "lib_image_upload_deletevehicleimages",
+      "community": 168,
+      "norm_label": "deletevehicleimages"
+    },
+    {
+      "label": "compressImage",
+      "file_type": "code",
+      "source_file": "lib/image-utils.ts",
+      "source_location": "L8",
+      "_origin": "ast",
+      "id": "lib_image_utils_compressimage",
+      "community": 172,
+      "norm_label": "compressimage"
+    },
+    {
+      "label": "compressImages",
+      "file_type": "code",
+      "source_file": "lib/image-utils.ts",
+      "source_location": "L58",
+      "_origin": "ast",
+      "id": "lib_image_utils_compressimages",
+      "community": 173,
+      "norm_label": "compressimages"
+    },
+    {
+      "label": "fetchWithRetry",
+      "file_type": "code",
+      "source_file": "lib/network-resilience.ts",
+      "source_location": "L22",
+      "_origin": "ast",
+      "id": "lib_network_resilience_fetchwithretry",
+      "community": 174,
+      "norm_label": "fetchwithretry"
+    },
+    {
+      "label": "isOnline",
+      "file_type": "code",
+      "source_file": "lib/network-resilience.ts",
+      "source_location": "L90",
+      "_origin": "ast",
+      "id": "lib_network_resilience_isonline",
+      "community": 175,
+      "norm_label": "isonline"
+    },
+    {
+      "label": "withNetworkCheck",
+      "file_type": "code",
+      "source_file": "lib/network-resilience.ts",
+      "source_location": "L97",
+      "_origin": "ast",
+      "id": "lib_network_resilience_withnetworkcheck",
+      "community": 176,
+      "norm_label": "withnetworkcheck"
+    },
+    {
+      "label": "ReviewCreateInput",
+      "file_type": "code",
+      "source_file": "lib/review-service.ts",
+      "source_location": "L13",
+      "_origin": "ast",
+      "id": "lib_review_service_reviewcreateinput",
+      "community": 184,
+      "norm_label": "reviewcreateinput"
+    },
+    {
+      "label": "ReviewUpdateInput",
+      "file_type": "code",
+      "source_file": "lib/review-service.ts",
+      "source_location": "L21",
+      "_origin": "ast",
+      "id": "lib_review_service_reviewupdateinput",
+      "community": 185,
+      "norm_label": "reviewupdateinput"
+    },
+    {
+      "label": "createReview",
+      "file_type": "code",
+      "source_file": "lib/review-service.ts",
+      "source_location": "L28",
+      "_origin": "ast",
+      "id": "lib_review_service_createreview",
+      "community": 177,
+      "norm_label": "createreview"
+    },
+    {
+      "label": "updateReview",
+      "file_type": "code",
+      "source_file": "lib/review-service.ts",
+      "source_location": "L74",
+      "_origin": "ast",
+      "id": "lib_review_service_updatereview",
+      "community": 186,
+      "norm_label": "updatereview"
+    },
+    {
+      "label": "publishReview",
+      "file_type": "code",
+      "source_file": "lib/review-service.ts",
+      "source_location": "L114",
+      "_origin": "ast",
+      "id": "lib_review_service_publishreview",
+      "community": 183,
+      "norm_label": "publishreview"
+    },
+    {
+      "label": "deleteReview",
+      "file_type": "code",
+      "source_file": "lib/review-service.ts",
+      "source_location": "L124",
+      "_origin": "ast",
+      "id": "lib_review_service_deletereview",
+      "community": 178,
+      "norm_label": "deletereview"
+    },
+    {
+      "label": "getReview",
+      "file_type": "code",
+      "source_file": "lib/review-service.ts",
+      "source_location": "L145",
+      "_origin": "ast",
+      "id": "lib_review_service_getreview",
+      "community": 180,
+      "norm_label": "getreview"
+    },
+    {
+      "label": "getVehicleReviews",
+      "file_type": "code",
+      "source_file": "lib/review-service.ts",
+      "source_location": "L170",
+      "_origin": "ast",
+      "id": "lib_review_service_getvehiclereviews",
+      "community": 182,
+      "norm_label": "getvehiclereviews"
+    },
+    {
+      "label": "getLatestReviews",
+      "file_type": "code",
+      "source_file": "lib/review-service.ts",
+      "source_location": "L198",
+      "_origin": "ast",
+      "id": "lib_review_service_getlatestreviews",
+      "community": 179,
+      "norm_label": "getlatestreviews"
+    },
+    {
+      "label": "getTrendingReviews",
+      "file_type": "code",
+      "source_file": "lib/review-service.ts",
+      "source_location": "L231",
+      "_origin": "ast",
+      "id": "lib_review_service_gettrendingreviews",
+      "community": 181,
+      "norm_label": "gettrendingreviews"
+    },
+    {
+      "label": "createClient",
+      "file_type": "code",
+      "source_file": "lib/supabase-client.ts",
+      "source_location": "L5",
+      "_origin": "ast",
+      "id": "lib_supabase_client_createclient",
+      "community": 187,
+      "norm_label": "createclient"
+    },
+    {
+      "label": "getSupabaseConfig",
+      "file_type": "code",
+      "source_file": "lib/supabase-config.ts",
+      "source_location": "L5",
+      "_origin": "ast",
+      "id": "lib_supabase_config_getsupabaseconfig",
+      "community": 188,
+      "norm_label": "getsupabaseconfig"
+    },
+    {
+      "label": "createServerClient",
+      "file_type": "code",
+      "source_file": "lib/supabase-server.ts",
+      "source_location": "L6",
+      "_origin": "ast",
+      "id": "lib_supabase_server_createserverclient",
+      "community": 190,
+      "norm_label": "createserverclient"
+    },
+    {
+      "label": "validateSession",
+      "file_type": "code",
+      "source_file": "lib/supabase.ts",
+      "source_location": "L31",
+      "_origin": "ast",
+      "id": "lib_supabase_validatesession",
+      "community": 191,
+      "norm_label": "validatesession"
+    },
+    {
+      "label": "handleSupabaseError",
+      "file_type": "code",
+      "source_file": "lib/supabase.ts",
+      "source_location": "L75",
+      "_origin": "ast",
+      "id": "lib_supabase_handlesupabaseerror",
+      "community": 189,
+      "norm_label": "handlesupabaseerror"
+    },
+    {
+      "label": "EditorUser",
+      "file_type": "code",
+      "source_file": "lib/userSync.ts",
+      "source_location": "L5",
+      "_origin": "ast",
+      "id": "lib_usersync_editoruser",
+      "community": 192,
+      "norm_label": "editoruser"
+    },
+    {
+      "label": "syncUserToPublic",
+      "file_type": "code",
+      "source_file": "lib/userSync.ts",
+      "source_location": "L11",
+      "_origin": "ast",
+      "id": "lib_usersync_syncusertopublic",
+      "community": 194,
+      "norm_label": "syncusertopublic"
+    },
+    {
+      "label": "syncUserToEditors",
+      "file_type": "code",
+      "source_file": "lib/userSync.ts",
+      "source_location": "L55",
+      "_origin": "ast",
+      "id": "lib_usersync_syncusertoeditors",
+      "community": 193,
+      "norm_label": "syncusertoeditors"
+    },
+    {
+      "label": "cn",
+      "file_type": "code",
+      "source_file": "lib/utils.ts",
+      "source_location": "L4",
+      "_origin": "ast",
+      "id": "lib_utils_cn",
+      "community": 195,
+      "norm_label": "cn"
+    },
+    {
+      "label": "getVehiclesLean",
+      "file_type": "code",
+      "source_file": "lib/vehicle-operations-with-storage.ts",
+      "source_location": "L158",
+      "_origin": "ast",
+      "id": "lib_vehicle_operations_with_storage_getvehicleslean",
+      "community": 210,
+      "norm_label": "getvehicleslean"
+    },
+    {
+      "label": "getUserVehiclesLean",
+      "file_type": "code",
+      "source_file": "lib/vehicle-operations-with-storage.ts",
+      "source_location": "L182",
+      "_origin": "ast",
+      "id": "lib_vehicle_operations_with_storage_getuservehicleslean",
+      "community": 208,
+      "norm_label": "getuservehicleslean"
+    },
+    {
+      "label": "getVehicleByIdFull",
+      "file_type": "code",
+      "source_file": "lib/vehicle-operations-with-storage.ts",
+      "source_location": "L206",
+      "_origin": "ast",
+      "id": "lib_vehicle_operations_with_storage_getvehiclebyidfull",
+      "community": 209,
+      "norm_label": "getvehiclebyidfull"
+    },
+    {
+      "label": "createVehicleWithStorage",
+      "file_type": "code",
+      "source_file": "lib/vehicle-operations-with-storage.ts",
+      "source_location": "L240",
+      "_origin": "ast",
+      "id": "lib_vehicle_operations_with_storage_createvehiclewithstorage",
+      "community": 206,
+      "norm_label": "createvehiclewithstorage"
+    },
+    {
+      "label": "updateVehicleWithStorage",
+      "file_type": "code",
+      "source_file": "lib/vehicle-operations-with-storage.ts",
+      "source_location": "L344",
+      "_origin": "ast",
+      "id": "lib_vehicle_operations_with_storage_updatevehiclewithstorage",
+      "community": 211,
+      "norm_label": "updatevehiclewithstorage"
+    },
+    {
+      "label": "deleteVehicleWithStorage",
+      "file_type": "code",
+      "source_file": "lib/vehicle-operations-with-storage.ts",
+      "source_location": "L429",
+      "_origin": "ast",
+      "id": "lib_vehicle_operations_with_storage_deletevehiclewithstorage",
+      "community": 207,
+      "norm_label": "deletevehiclewithstorage"
+    },
+    {
+      "label": "searchVehicles",
+      "file_type": "code",
+      "source_file": "lib/vehicle-operations.ts",
+      "source_location": "L139",
+      "_origin": "ast",
+      "id": "lib_vehicle_operations_searchvehicles",
+      "community": 200,
+      "norm_label": "searchvehicles"
+    },
+    {
+      "label": "VehicleFilters",
+      "file_type": "code",
+      "source_file": "lib/vehicle-operations.ts",
+      "source_location": "L185",
+      "_origin": "ast",
+      "id": "lib_vehicle_operations_vehiclefilters",
+      "community": 205,
+      "norm_label": "vehiclefilters"
+    },
+    {
+      "label": "filterVehicles",
+      "file_type": "code",
+      "source_file": "lib/vehicle-operations.ts",
+      "source_location": "L206",
+      "_origin": "ast",
+      "id": "lib_vehicle_operations_filtervehicles",
+      "community": 196,
+      "norm_label": "filtervehicles"
+    },
+    {
+      "label": "saveVehicle",
+      "file_type": "code",
+      "source_file": "lib/vehicle-operations.ts",
+      "source_location": "L365",
+      "_origin": "ast",
+      "id": "lib_vehicle_operations_savevehicle",
+      "community": 199,
+      "norm_label": "savevehicle"
+    },
+    {
+      "label": "unsaveVehicle",
+      "file_type": "code",
+      "source_file": "lib/vehicle-operations.ts",
+      "source_location": "L390",
+      "_origin": "ast",
+      "id": "lib_vehicle_operations_unsavevehicle",
+      "community": 204,
+      "norm_label": "unsavevehicle"
+    },
+    {
+      "label": "getSavedVehicles",
+      "file_type": "code",
+      "source_file": "lib/vehicle-operations.ts",
+      "source_location": "L425",
+      "_origin": "ast",
+      "id": "lib_vehicle_operations_getsavedvehicles",
+      "community": 197,
+      "norm_label": "getsavedvehicles"
+    },
+    {
+      "label": "isVehicleSaved",
+      "file_type": "code",
+      "source_file": "lib/vehicle-operations.ts",
+      "source_location": "L477",
+      "_origin": "ast",
+      "id": "lib_vehicle_operations_isvehiclesaved",
+      "community": 198,
+      "norm_label": "isvehiclesaved"
+    },
+    {
+      "label": "subscribeToVehicles",
+      "file_type": "code",
+      "source_file": "lib/vehicle-operations.ts",
+      "source_location": "L503",
+      "_origin": "ast",
+      "id": "lib_vehicle_operations_subscribetovehicles",
+      "community": 202,
+      "norm_label": "subscribetovehicles"
+    },
+    {
+      "label": "subscribeToSavedVehicles",
+      "file_type": "code",
+      "source_file": "lib/vehicle-operations.ts",
+      "source_location": "L518",
+      "_origin": "ast",
+      "id": "lib_vehicle_operations_subscribetosavedvehicles",
+      "community": 201,
+      "norm_label": "subscribetosavedvehicles"
+    },
+    {
+      "label": "toggleSaveVehicle",
+      "file_type": "code",
+      "source_file": "lib/vehicle-operations.ts",
+      "source_location": "L541",
+      "_origin": "ast",
+      "id": "lib_vehicle_operations_togglesavevehicle",
+      "community": 203,
+      "norm_label": "togglesavevehicle"
+    },
+    {
+      "label": "VehicleError",
+      "file_type": "code",
+      "source_file": "lib/vehicle-service.ts",
+      "source_location": "L36",
+      "_origin": "ast",
+      "id": "lib_vehicle_service_vehicleerror",
+      "community": 213,
+      "norm_label": "vehicleerror"
+    },
+    {
+      "label": "invalidateCaches",
+      "file_type": "code",
+      "source_file": "lib/vehicle-service.ts",
+      "source_location": "L204",
+      "_origin": "ast",
+      "id": "lib_vehicle_service_invalidatecaches",
+      "community": 212,
+      "norm_label": "invalidatecaches"
+    },
+    {
+      "label": "proxy",
+      "file_type": "code",
+      "source_file": "proxy.ts",
+      "source_location": "L4",
+      "_origin": "ast",
+      "id": "proxy_proxy",
+      "community": 214,
+      "norm_label": "proxy"
+    },
+    {
+      "label": "UserRole",
+      "file_type": "code",
+      "source_file": "types/admin.ts",
+      "source_location": "L6",
+      "_origin": "ast",
+      "id": "types_admin_userrole",
+      "community": 225,
+      "norm_label": "userrole"
+    },
+    {
+      "label": "RolePermissions",
+      "file_type": "code",
+      "source_file": "types/admin.ts",
+      "source_location": "L8",
+      "_origin": "ast",
+      "id": "types_admin_rolepermissions",
+      "community": 224,
+      "norm_label": "rolepermissions"
+    },
+    {
+      "label": "AdminUser",
+      "file_type": "code",
+      "source_file": "types/admin.ts",
+      "source_location": "L185",
+      "_origin": "ast",
+      "id": "types_admin_adminuser",
+      "community": 215,
+      "norm_label": "adminuser"
+    },
+    {
+      "label": "DealerApplication",
+      "file_type": "code",
+      "source_file": "types/admin.ts",
+      "source_location": "L196",
+      "_origin": "ast",
+      "id": "types_admin_dealerapplication",
+      "community": 219,
+      "norm_label": "dealerapplication"
+    },
+    {
+      "label": "DealerProfile",
+      "file_type": "code",
+      "source_file": "types/admin.ts",
+      "source_location": "L206",
+      "_origin": "ast",
+      "id": "types_admin_dealerprofile",
+      "community": 221,
+      "norm_label": "dealerprofile"
+    },
+    {
+      "label": "DealerEmployee",
+      "file_type": "code",
+      "source_file": "types/admin.ts",
+      "source_location": "L219",
+      "_origin": "ast",
+      "id": "types_admin_dealeremployee",
+      "community": 220,
+      "norm_label": "dealeremployee"
+    },
+    {
+      "label": "Blog",
+      "file_type": "code",
+      "source_file": "types/admin.ts",
+      "source_location": "L227",
+      "_origin": "ast",
+      "id": "types_admin_blog",
+      "community": 217,
+      "norm_label": "blog"
+    },
+    {
+      "label": "BlogBlock",
+      "file_type": "code",
+      "source_file": "types/admin.ts",
+      "source_location": "L247",
+      "_origin": "ast",
+      "id": "types_admin_blogblock",
+      "community": 218,
+      "norm_label": "blogblock"
+    },
+    {
+      "label": "Review",
+      "file_type": "code",
+      "source_file": "types/admin.ts",
+      "source_location": "L258",
+      "_origin": "ast",
+      "id": "types_admin_review",
+      "community": 223,
+      "norm_label": "review"
+    },
+    {
+      "label": "AnalyticsEvent",
+      "file_type": "code",
+      "source_file": "types/admin.ts",
+      "source_location": "L273",
+      "_origin": "ast",
+      "id": "types_admin_analyticsevent",
+      "community": 216,
+      "norm_label": "analyticsevent"
+    },
+    {
+      "label": "PlatformMetrics",
+      "file_type": "code",
+      "source_file": "types/admin.ts",
+      "source_location": "L283",
+      "_origin": "ast",
+      "id": "types_admin_platformmetrics",
+      "community": 222,
+      "norm_label": "platformmetrics"
+    },
+    {
+      "label": "Json",
+      "file_type": "code",
+      "source_file": "types/supabase.ts",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "types_supabase_json",
+      "community": 227,
+      "norm_label": "json"
+    },
+    {
+      "label": "Database",
+      "file_type": "code",
+      "source_file": "types/supabase.ts",
+      "source_location": "L3",
+      "_origin": "ast",
+      "id": "types_supabase_database",
+      "community": 226,
+      "norm_label": "database"
+    },
+    {
+      "label": "UserProfile",
+      "file_type": "code",
+      "source_file": "types/user.ts",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "types_user_userprofile",
+      "community": 229,
+      "norm_label": "userprofile"
+    },
+    {
+      "label": "Vehicle",
+      "file_type": "code",
+      "source_file": "types/user.ts",
+      "source_location": "L14",
+      "_origin": "ast",
+      "id": "types_user_vehicle",
+      "community": 230,
+      "norm_label": "vehicle"
+    },
+    {
+      "label": "SavedVehicle",
+      "file_type": "code",
+      "source_file": "types/user.ts",
+      "source_location": "L40",
+      "_origin": "ast",
+      "id": "types_user_savedvehicle",
+      "community": 228,
+      "norm_label": "savedvehicle"
+    },
+    {
+      "label": "Vehicle",
+      "file_type": "code",
+      "source_file": "types/vehicle.ts",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "types_vehicle_vehicle",
+      "community": 231,
+      "norm_label": "vehicle"
+    },
+    {
+      "label": "VehicleFormData",
+      "file_type": "code",
+      "source_file": "types/vehicle.ts",
+      "source_location": "L35",
+      "_origin": "ast",
+      "id": "types_vehicle_vehicleformdata",
+      "community": 232,
+      "norm_label": "vehicleformdata"
+    },
+    {
+      "label": "createMiddlewareClient",
+      "file_type": "code",
+      "source_file": "utils/supabase/middleware.ts",
+      "source_location": "L5",
+      "_origin": "ast",
+      "id": "utils_supabase_middleware_createmiddlewareclient",
+      "community": 233,
+      "norm_label": "createmiddlewareclient"
+    },
+    {
+      "label": "createClient",
+      "file_type": "code",
+      "source_file": "utils/supabase/server.ts",
+      "source_location": "L6",
+      "_origin": "ast",
+      "id": "utils_supabase_server_createclient",
+      "community": 234,
+      "norm_label": "createclient"
+    }
+  ],
+  "links": [
+    {
+      "relation": "inherits",
+      "context": "type",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/error-handler.ts",
+      "source_location": "L14",
+      "weight": 1.0,
+      "source": "lib_error_handler_networkerror",
+      "target": "lib_error_handler_apperror",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "inherits",
+      "context": "type",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/error-handler.ts",
+      "source_location": "L38",
+      "weight": 1.0,
+      "source": "lib_error_handler_notfounderror",
+      "target": "lib_error_handler_apperror",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "inherits",
+      "context": "type",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/error-handler.ts",
+      "source_location": "L45",
+      "weight": 1.0,
+      "source": "lib_error_handler_servererror",
+      "target": "lib_error_handler_apperror",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "inherits",
+      "context": "type",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/error-handler.ts",
+      "source_location": "L31",
+      "weight": 1.0,
+      "source": "lib_error_handler_unauthorizederror",
+      "target": "lib_error_handler_apperror",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "inherits",
+      "context": "type",
+      "confidence": "EXTRACTED",
+      "source_file": "lib/error-handler.ts",
+      "source_location": "L21",
+      "weight": 1.0,
+      "source": "lib_error_handler_validationerror",
+      "target": "lib_error_handler_apperror",
+      "confidence_score": 1.0
+    }
+  ],
+  "hyperedges": [],
+  "built_at_commit": "2cdea7817ca769ca277a9ee15d08719a5db696f0"
+}

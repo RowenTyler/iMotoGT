@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Header } from "@/components/ui/header"
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
@@ -13,7 +14,9 @@ export const metadata: Metadata = {
 
 export default function AboutPage() {
   return (
-    <div className="min-h-screen bg-[var(--light-bg)] dark:bg-[var(--dark-bg)] pt-24 px-4 sm:px-6 lg:px-8">
+    <>
+      <Header />
+      <div className="min-h-screen bg-[var(--light-bg)] dark:bg-[var(--dark-bg)] pt-24 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
         <Link href="/" className="inline-flex items-center text-[#FF6700] dark:text-[#FF7D33] hover:underline mb-6">
           <ArrowLeft className="h-4 w-4 mr-2" />
@@ -81,5 +84,6 @@ export default function AboutPage() {
         </div>
       </div>
     </div>
+  </>
   )
 }

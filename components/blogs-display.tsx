@@ -3,8 +3,8 @@
 import React, { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { Skeleton } from '@/components/ui/skeleton'
 import { BlogCard } from './blog-card'
+import { BlogCardSkeleton } from '@/components/skeletons'
 import { getTrendingBlogs, getFeaturedBlogs, getLatestBlogs } from '@/lib/blog-service'
 import type { Blog } from '@/types/admin'
 import { ArrowRight } from 'lucide-react'
@@ -88,12 +88,12 @@ export default function BlogsDisplay({ onViewAll }: BlogsDisplayProps) {
 
       {/* Loading State */}
       {isLoading && (
-        <div className="space-y-4">
-          <Skeleton className="h-8 w-40" />
-          <div className="grid md:grid-cols-3 gap-6">
-            {[...Array(3)].map((_, i) => (
-              <Card key={i} className="h-64" />
-            ))}
+        <div className="space-y-8">
+          <div className="space-y-4">
+            <div className="h-8 w-40 bg-muted rounded animate-pulse" />
+            <div className="grid md:grid-cols-3 gap-6">
+              <BlogCardSkeleton count={3} />
+            </div>
           </div>
         </div>
       )}

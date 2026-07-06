@@ -12,7 +12,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: false, error: "User object is required" }, { status: 400 })
     }
 
-    console.log("[v0] API sync-user endpoint called for:", body.user.email)
 
     const result = await syncUserToEditors(body.user)
 

@@ -162,6 +162,7 @@ export async function getVehiclesLean(status = "active"): Promise<Vehicle[]> {
       .select(VEHICLE_LIST_QUERY)
       .eq("status", status)
       .order("created_at", { ascending: false })
+      .limit(50)
 
     if (error) {
       console.error("[VehicleOps] getVehiclesLean error:", error)
@@ -186,6 +187,7 @@ export async function getUserVehiclesLean(userId: string): Promise<Vehicle[]> {
       .select(VEHICLE_LIST_QUERY)
       .eq("user_id", userId)
       .order("created_at", { ascending: false })
+      .limit(50)
 
     if (error) {
       console.error("[VehicleOps] getUserVehiclesLean error:", error)
@@ -241,7 +243,6 @@ export async function createVehicleWithStorage(
   vehicleData: VehicleFormData,
   userId: string
 ): Promise<Vehicle> {
-  console.log("[VehicleOps] Creating vehicle with storage upload...")
 
   // Verify authentication
   const {
@@ -268,7 +269,6 @@ export async function createVehicleWithStorage(
       `[VehicleOps] Uploading ${vehicleData.images.length} images...`
     )
     imageUrls = await uploadVehicleImages(vehicleData.images, tempFolderId)
-    console.log(`[VehicleOps] Images ready: ${imageUrls.length}`)
   }
 
   // Build the database record
@@ -326,7 +326,6 @@ export async function createVehicleWithStorage(
   }
 
   const vehicle = mapDatabaseToVehicle(data)
-  console.log("[VehicleOps] ✅ Vehicle created:", vehicle.id)
   return vehicle
 }
 
@@ -384,7 +383,6 @@ export async function updateVehicleWithStorage(
 
       if (hasNewBase64) {
         // Upload new base64 images, keep existing URLs as-is
-        console.log("[VehicleOps] Uploading new images for vehicle update...")
         dbData.images = await uploadVehicleImages(vehicleData.images, id)
       } else {
         // All images are already URLs — just save the array
@@ -471,7 +469,6 @@ export async function deleteVehicleWithStorage(
       return false
     }
 
-    console.log("[VehicleOps] ✅ Vehicle soft-deleted:", id)
 
     // Clean up storage images asynchronously (fire-and-forget)
     // Only attempt if images are Supabase Storage URLs, not base64

@@ -1,5 +1,6 @@
 import { createClient } from "@/utils/supabase/server"
 import ReviewCard from "@/components/review-card"
+import { Header } from "@/components/ui/header"
 
 export const dynamic = "force-dynamic"
 
@@ -13,7 +14,9 @@ export default async function ReviewsPage() {
     .limit(12)
 
   return (
-    <div className="space-y-10">
+    <>
+      <Header />
+      <div className="space-y-10 pt-24 pb-8">
       <section className="rounded-3xl bg-white p-8 shadow-sm">
         <div className="max-w-4xl">
           <p className="text-sm uppercase tracking-[0.45em] text-orange-500">Expert Reviews</p>
@@ -32,5 +35,6 @@ export default async function ReviewsPage() {
         )}
       </section>
     </div>
+  </>
   )
 }

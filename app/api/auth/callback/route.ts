@@ -50,7 +50,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: profileError.message }, { status: 500 })
   }
 
-  console.log("✅ User profile created for OAuth user:", user.id)
   return NextResponse.json({ success: true })
 }
 

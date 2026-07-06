@@ -8,12 +8,10 @@ export default function LoginClientPage() {
   const router = useRouter()
 
   const handleLoginSuccess = (userData: UserProfile) => {
-    console.log("✅ Login successful, redirecting to dashboard with user:", userData.firstName, userData.lastName)
     router.push("/dashboard")
   }
 
   const handleSignUpSuccess = (userData: UserProfile) => {
-    console.log("✅ Sign up successful, redirecting to dashboard")
     router.push("/dashboard?signup=true")
   }
 

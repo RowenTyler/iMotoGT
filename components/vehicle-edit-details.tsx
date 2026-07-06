@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation"
 import { ChevronLeft, ChevronRight, X, UploadCloud } from "lucide-react"
 import type { Vehicle } from "@/types/vehicle"
 import type { VehicleFormData } from "@/types/vehicle"
-import { vehicleService } from "@/lib/vehicle-service"
+import { updateVehicle } from "@/lib/vehicle-service"
 
 interface VehicleEditDetailsProps {
   vehicle: Vehicle
@@ -219,7 +219,7 @@ export default function VehicleEditDetails({ vehicle, onBack }: VehicleEditDetai
         sellerProvince: editableData.sellerProvince || "",
       }
 
-      await vehicleService.updateVehicle(vehicle.id, updateData, vehicle.userId)
+      await updateVehicle(vehicle.id, updateData, vehicle.userId)
       router.push("/dashboard")
     } catch (err: any) {
       console.error("Error saving vehicle:", err)

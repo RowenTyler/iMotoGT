@@ -16,14 +16,21 @@ export async function GET() {
       !supabaseKey && 'SUPABASE_SERVICE_ROLE_KEY (or NEXT_PUBLIC_SUPABASE_ANON_KEY)',
     ].filter(Boolean);
 
-    console.error(
-      `[platform-stats] ❌ Missing env vars: ${missing.join(', ')}\n` +
-      'Go to Vercel → Project → Settings → Environment Variables and add them for Production.'
+    console.warn(
+      `[platform-stats] ⚠️ Missing env vars: ${missing.join(', ')} — returning default stats`
     );
 
+    // Graceful fallback for local dev or misconfig: just return zeros
     return NextResponse.json(
-      { error: 'Server misconfiguration', detail: `Missing: ${missing.join(', ')}` },
-      { status: 500 }
+      {
+        vehicles: 0,
+        users: 0,
+        revenue: 0,
+        revenueGoal: 10000,
+        revenuePercentage: 0,
+        lastUpdated: new Date().toISOString(),
+      },
+      { status: 200 }
     );
   }
 
@@ -65,7 +72,6 @@ export async function GET() {
       ? parseFloat(((revenue / revenueGoal) * 100).toFixed(1))
       : 0;
 
-    console.log(`[platform-stats] ✅ vehicles=${vehicles}, users=${users}`);
 
     return NextResponse.json(
       {
