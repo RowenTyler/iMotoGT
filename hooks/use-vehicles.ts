@@ -93,7 +93,6 @@ export function useVehicles(options: UseVehiclesOptions = {}) {
     if (!enableRealtime) return
 
     const subscription = vehicleService.subscribeToVehicles((payload) => {
-      console.log("Real-time vehicle update:", payload)
 
       if (payload.eventType === "INSERT" && payload.new.status === "active") {
         setVehicles((prev) => [payload.new, ...prev])

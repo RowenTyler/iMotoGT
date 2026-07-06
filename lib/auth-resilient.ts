@@ -15,7 +15,6 @@ export async function signInResilient(
   password: string,
 ): Promise<{ user: AuthUser | null; error: Error | null }> {
   try {
-    console.log("[Auth Resilience] Attempting sign in with network resilience")
     return await withNetworkCheck(() => authService.signIn(email, password))
   } catch (error: any) {
     console.error("[Auth Resilience] Sign in failed:", error.message)
@@ -32,7 +31,6 @@ export async function signUpResilient(
   metadata?: { firstName?: string; lastName?: string },
 ): Promise<{ user: AuthUser | null; error: Error | null }> {
   try {
-    console.log("[Auth Resilience] Attempting sign up with network resilience")
     return await withNetworkCheck(() => authService.signUp(email, password, metadata))
   } catch (error: any) {
     console.error("[Auth Resilience] Sign up failed:", error.message)
@@ -45,7 +43,6 @@ export async function signUpResilient(
  */
 export async function validateSessionResilient(): Promise<boolean> {
   try {
-    console.log("[Auth Resilience] Validating session with network resilience")
     return await withNetworkCheck(() => {
       return import("./supabase").then((m) => m.validateSession())
     })
@@ -60,7 +57,6 @@ export async function validateSessionResilient(): Promise<boolean> {
  */
 export async function getCurrentUserResilient(): Promise<AuthUser | null> {
   try {
-    console.log("[Auth Resilience] Getting current user with network resilience")
     return await withNetworkCheck(() => authService.getCurrentUser())
   } catch (error: any) {
     console.warn("[Auth Resilience] Get current user failed:", error.message)

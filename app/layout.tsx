@@ -10,14 +10,19 @@ import { CookiePreferencesModal } from "@/components/gdpr/cookie-preferences-mod
 import { VehicleProvider } from "@/components/VehicleProvider"
 import { NavigationCacheHandler } from "@/components/NavigationCacheHandler"
 
-const inter = Inter({ subsets: ["latin"] })
+const inter = Inter({
+  subsets: ["latin"],
+  display: "swap",
+  preload: true,
+  adjustFontFallback: true,
+})
 
 export const dynamic = "force-dynamic"
 
 export const viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
+  maximumScale: 5,
 }
 
 export const metadata: Metadata = {
@@ -64,9 +69,6 @@ export const metadata: Metadata = {
       "max-snippet": -1,
     },
   },
-  alternates: {
-    canonical: "/",
-  },
 }
 
 export default function RootLayout({
@@ -88,6 +90,15 @@ export default function RootLayout({
         <link
           rel="preconnect"
           href="https://mwzrrrnmtyiyrwdqhcqb.supabase.co"
+        />
+
+        {/* Hero image: preload so it starts downloading before the browser
+            even parses the body, cutting LCP time. */}
+        <link
+          rel="preload"
+          href="/home-page.png"
+          as="image"
+          type="image/png"
         />
 
         {/* Preconnect to Google Fonts */}

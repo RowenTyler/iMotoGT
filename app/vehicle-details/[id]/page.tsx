@@ -7,9 +7,10 @@ export const dynamic = "force-dynamic"
 const FALLBACK_OG_IMAGE = "https://imotogt.co.za/imoto-icon-metadate-image.png"
 
 export async function generateMetadata(
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ): Promise<Metadata> {
-  const canonical = `https://imotogt.co.za/vehicle-details/${params.id}`
+  const { id } = await params
+  const canonical = `https://imotogt.co.za/vehicle-details/${id}`
 
   try {
     const supabase = await createClient()
@@ -18,7 +19,7 @@ export async function generateMetadata(
       .select(
         "make, model, variant, year, price, mileage, transmission, fuel, city, province, images, is_deleted"
       )
-      .eq("id", params.id)
+      .eq("id", id)
       .maybeSingle()
 
     if (!vehicle || vehicle.is_deleted) {

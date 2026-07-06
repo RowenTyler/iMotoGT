@@ -6,6 +6,7 @@ import { Header } from "@/components/ui/header"
 import AdvancedFilters from "@/components/advanced-filters"
 import VehicleCard from "@/components/vehicle-card"
 import VehicleDetails from "@/components/vehicle-details"
+import { VehicleCardSkeleton } from "@/components/skeletons"
 import { useUser } from "@/components/UserContext"
 import type { Vehicle } from "@/types/vehicle"
 import { Search, SlidersHorizontal } from "lucide-react"
@@ -51,8 +52,8 @@ export default function ResultsPage() {
   // -----------------------------------------------------------------
   const fetchAllVehicles = useCallback(async () => {
     try {
-      const { vehicleService } = await import("@/lib/vehicle-service")
-      const data = await vehicleService.getVehicles()
+      const { getVehicles } = await import("@/lib/vehicle-service")
+      const data = await getVehicles()
       const vehicles = Array.isArray(data) ? data : data.vehicles || []
       
       // Build hierarchy and location data from all vehicles
@@ -155,8 +156,8 @@ export default function ResultsPage() {
 
   const fetchFilteredVehicles = useCallback(async () => {
     try {
-      const { vehicleService } = await import("@/lib/vehicle-service")
-      
+      const { getVehicles, filterVehicles } = await import("@/lib/vehicle-service")
+
       const hasActiveFilters = Object.entries(filters).some(([key, value]) => {
         if (key === "suburb") return false // suburb filtered client-side
         if (Array.isArray(value)) return value.length > 0
@@ -170,9 +171,9 @@ export default function ResultsPage() {
         // Build DB filters without suburb
         const dbFilters = { ...filters }
         delete dbFilters.suburb
-        data = await vehicleService.filterVehicles(dbFilters)
+        data = await filterVehicles(dbFilters)
       } else {
-        data = await vehicleService.getVehicles()
+        data = await getVehicles()
       }
 
       const vehicles = Array.isArray(data) ? data : data.vehicles || []
@@ -355,16 +356,7 @@ export default function ResultsPage() {
               </div>
             ) : loading ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
-                {Array.from({ length: 6 }).map((_, i) => (
-                  <div key={i} className="bg-white dark:bg-gray-800 rounded-lg shadow animate-pulse">
-                    <div className="h-48 bg-gray-300 dark:bg-gray-700 rounded-t-lg"></div>
-                    <div className="p-4 space-y-4">
-                      <div className="h-4 bg-gray-300 dark:bg-gray-700 rounded w-3/4"></div>
-                      <div className="h-4 bg-gray-300 dark:bg-gray-700 rounded w-1/2"></div>
-                      <div className="h-4 bg-gray-300 dark:bg-gray-700 rounded w-5/6"></div>
-                    </div>
-                  </div>
-                ))}
+                <VehicleCardSkeleton count={6} />
               </div>
             ) : filteredVehicles.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">

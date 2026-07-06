@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { useUser } from "@/components/UserContext"
 import Dashboard from "@/components/dashboard"
 import EmailVerificationBanner from "@/components/email-verification-banner"
+import { DashboardSkeleton } from "@/components/skeletons"
 import type { Vehicle } from "@/types/vehicle"
 
 export const dynamic = 'force-dynamic'
@@ -40,14 +41,10 @@ export default function DashboardPage() {
 
     try {
       setSavedVehiclesLoading(true)
-      console.log("🔄 DashboardPage: Loading saved vehicles for user:", user.id)
 
       // Dynamic import to avoid circular deps
       const { getSavedVehicles } = await import("@/lib/vehicle-service")
       const savedData = await getSavedVehicles(user.id)
-
-      console.log("✅ DashboardPage: Loaded saved vehicles:", savedData.length,
-        "first image:", savedData[0]?.images?.[0]?.substring(0, 60) ?? "none")
 
       setSavedVehiclesData(savedData)
     } catch (error) {
@@ -66,7 +63,6 @@ export default function DashboardPage() {
   // ── Auth & verification redirects ────────────────────────────────────────────
   useEffect(() => {
     if (!isLoading && !user) {
-      console.log("⚠️ No user found, redirecting to login")
       router.push("/login?redirect=/dashboard")
     }
 
@@ -84,12 +80,10 @@ export default function DashboardPage() {
   const handleDeleteListedCar = async (vehicleId: string, reason?: string) => {
     try {
       setIsDeletingVehicle(vehicleId)
-      console.log("🗑️ DashboardPage: Soft deleting vehicle:", { vehicleId, reason })
 
       const finalReason = reason || "No reason provided"
       await deleteListedVehicle(vehicleId, finalReason)
 
-      console.log("✅ DashboardPage: Soft delete completed")
       await refreshVehicles()
     } catch (error: any) {
       console.error("❌ DashboardPage: Soft delete failed:", error)
@@ -117,11 +111,7 @@ export default function DashboardPage() {
 
   // ── Loading / no-user guards ──────────────────────────────────────────────────
   if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-[#6F7F69]">Loading...</p>
-      </div>
-    )
+    return <DashboardSkeleton />
   }
 
   if (!user) return null

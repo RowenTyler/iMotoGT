@@ -21,7 +21,6 @@ export function useNetworkStatus(): NetworkStatus {
 
   useEffect(() => {
     const handleOnline = () => {
-      console.log("[Network Status] Connection restored")
       setStatus((prev) => ({
         isOnline: true,
         wasOffline: prev.isOnline ? false : true,
@@ -30,7 +29,6 @@ export function useNetworkStatus(): NetworkStatus {
     }
 
     const handleOffline = () => {
-      console.log("[Network Status] Connection lost")
       setStatus({
         isOnline: false,
         wasOffline: true,

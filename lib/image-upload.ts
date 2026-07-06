@@ -86,7 +86,6 @@ export async function uploadVehicleImage(
       data: { publicUrl },
     } = supabase.storage.from("vehicle-storage").getPublicUrl(data.path)
 
-    console.log(`[ImageUpload] ✅ Image ${imageIndex} → ${publicUrl}`)
     return publicUrl
   } catch (err) {
     console.error(`[ImageUpload] ❌ Exception uploading image ${imageIndex}:`, err)
@@ -188,7 +187,6 @@ export async function uploadProfilePicture(
       data: { publicUrl },
     } = supabase.storage.from("profile-picture").getPublicUrl(data.path)
 
-    console.log(`[ImageUpload] ✅ Profile picture → ${publicUrl}`)
     return publicUrl
   } catch (err) {
     console.error("[ImageUpload] ❌ Exception uploading profile picture:", err)

@@ -11,11 +11,9 @@ export interface EditorUser {
 export async function syncUserToPublic(user: any): Promise<{ success: boolean; error?: string }> {
   try {
     if (!user?.id || !user?.email) {
-      console.log("[v0] User missing id or email, skipping sync to public.users")
       return { success: true }
     }
 
-    console.log("[v0] Syncing user to public.users:", user.email)
 
     const syncData = {
       id: user.id,
@@ -30,12 +28,10 @@ export async function syncUserToPublic(user: any): Promise<{ success: boolean; e
 
     // If it fails due to duplicate, try update
     if (error?.code === "23505") {
-      console.log("[v0] User already exists, skipping duplicate insert")
       return { success: true }
     }
 
     if (error?.code === "42501") {
-      console.log("[v0] RLS policy blocked insert, user may not be authenticated")
       return { success: true } // Don't fail - profile will be created by createUserProfile
     }
 
@@ -44,7 +40,6 @@ export async function syncUserToPublic(user: any): Promise<{ success: boolean; e
       return { success: true } // Don't fail hard - profile creation should handle it
     }
 
-    console.log("[v0] User synced successfully to public.users")
     return { success: true }
   } catch (err: any) {
     console.error("[v0] Error in syncUserToPublic:", err.message)
@@ -59,7 +54,6 @@ export async function syncUserToEditors(user: any): Promise<{ success: boolean; 
       return { success: true }
     }
 
-    console.log("[v0] Syncing user to editors.users:", user.email)
 
     const { data, error } = await supabase.from("editors.users").upsert(
       {
@@ -75,7 +69,6 @@ export async function syncUserToEditors(user: any): Promise<{ success: boolean; 
       return { success: false, error: error.message }
     }
 
-    console.log("[v0] User synced successfully to editors.users")
     return { success: true }
   } catch (err: any) {
     console.error("[v0] Error in syncUserToEditors:", err.message)

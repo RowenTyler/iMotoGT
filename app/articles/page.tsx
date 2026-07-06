@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ArticleCard } from "@/components/article-card"
 import { articles } from "@/lib/blog-data"
+import { Header } from "@/components/ui/header"
 
 export default function ArticlesPage() {
   const [searchTerm, setSearchTerm] = useState("")
@@ -39,7 +40,9 @@ export default function ArticlesPage() {
   )
 
   return (
-    <div className="min-h-screen bg-[var(--light-bg)] dark:bg-[var(--dark-bg)] pt-24 pb-16 px-4 sm:px-6 lg:px-8">
+    <>
+      <Header />
+      <div className="min-h-screen bg-[var(--light-bg)] dark:bg-[var(--dark-bg)] pt-24 pb-16 px-4 sm:px-6 lg:px-8">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <Link href="/" className="inline-flex items-center text-[#FF6700] dark:text-[#FF7D33] hover:underline mb-6">
@@ -152,5 +155,6 @@ export default function ArticlesPage() {
         )}
       </div>
     </div>
+  </>
   )
 }

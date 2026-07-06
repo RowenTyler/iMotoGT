@@ -101,7 +101,6 @@ export class CacheManager {
           try {
             localStorage.setItem(key, serialized)
             localStorage.setItem(`${key}_ts`, String(Date.now()))
-            console.log(`[Cache] Retry succeeded for "${key}"`)
           } catch (retryErr) {
             console.error(
               `[Cache] Retry failed for "${key}" after eviction`
@@ -226,7 +225,6 @@ export class CacheManager {
         (k) => k.startsWith("imoto_") || k.endsWith("_ts")
       )
       keys.forEach((k) => localStorage.removeItem(k))
-      console.log(`[Cache] Cleared ${keys.length} entries`)
     } catch (err) {
       console.error("[Cache] clearAll() error:", err)
     }
@@ -244,7 +242,6 @@ export class CacheManager {
     try {
       this.delete(`${CACHE_CONFIG.USER_VEHICLES_KEY}${userId}`)
       this.delete(`${CACHE_CONFIG.SAVED_VEHICLES_KEY}${userId}`)
-      console.log(`[Cache] Cleared user cache for ${userId}`)
     } catch (err) {
       console.error("[Cache] clearUserCache() error:", err)
     }
@@ -344,7 +341,6 @@ export class CacheManager {
 
       entries.forEach(({ key }) => {
         this.delete(key)
-        console.log(`[Cache] Evicted "${key}"`)
       })
     } catch (err) {
       console.error("[Cache] evictOldest() error:", err)

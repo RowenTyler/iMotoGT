@@ -51,7 +51,6 @@ export async function validateSession(): Promise<boolean> {
 
     if (timeUntilExpiry < 300) {
       // Less than 5 minutes
-      console.log("Session about to expire, refreshing...")
       const { data, error: refreshError } = await supabase.auth.refreshSession()
 
       if (refreshError) {

@@ -65,7 +65,6 @@ const getVehicles = async (status = "active"): Promise<Vehicle[]> => {
 
   const cached = CacheManager.get<Vehicle[]>(cacheKey)
   if (cached) {
-    console.log(`✅ [VehicleService] ${cached.length} vehicles from cache`)
 
     if (CacheManager.isStale(cacheKey)) {
       getVehiclesLean(status)
@@ -80,7 +79,6 @@ const getVehicles = async (status = "active"): Promise<Vehicle[]> => {
     return cached
   }
 
-  console.log(`🔄 [VehicleService] Fetching vehicles (status: ${status})...`)
   const vehicles = await getVehiclesLean(status)
 
   CacheManager.set(cacheKey, pruneForCache(vehicles))
@@ -95,7 +93,6 @@ const getVehicleById = async (id: string): Promise<Vehicle | null> => {
 
   const cached = CacheManager.get<Vehicle>(cacheKey)
   if (cached) {
-    console.log(`✅ [VehicleService] Vehicle ${id} from cache`)
     return cached
   }
 
@@ -145,7 +142,6 @@ const getUserVehicles = async (
  * Caching here caused stale empty-image arrays to persist after the fix.
  */
 const getSavedVehicles = async (userId: string): Promise<Vehicle[]> => {
-  console.log(`🔄 [VehicleService] Fetching saved vehicles for ${userId}...`)
   const vehicles = await getSavedVehiclesFromDB(userId)
   console.log(
     `✅ [VehicleService] Got ${vehicles.length} saved vehicles, ` +

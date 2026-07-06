@@ -5,18 +5,15 @@ import { supabase } from "@/lib/supabase"
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    console.log("🔍 GET /api/vehicles/[id] - Fetching vehicle:", params.id)
-
-    const vehicle = await vehicleService.getVehicleById(params.id)
+    const { id } = await params
+    const vehicle = await vehicleService.getVehicleById(id)
 
     if (!vehicle) {
-      console.log("❌ Vehicle not found")
       return NextResponse.json({ error: "Vehicle not found" }, { status: 404 })
     }
 
-    console.log("✅ Vehicle fetched successfully")
     return NextResponse.json(vehicle)
   } catch (error: any) {
     console.error("❌ GET /api/vehicles/[id] error:", error)
@@ -24,9 +21,9 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    console.log("📝 PUT /api/vehicles/[id] - Updating vehicle:", params.id)
+    const { id } = await params
 
     // Get the current session
     const {
@@ -40,14 +37,11 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     }
 
     const userId = session.user.id
-    console.log("👤 User ID:", userId)
 
     const body = await request.json()
-    console.log("📝 Request body:", body)
 
-    const updatedVehicle = await vehicleService.updateVehicle(params.id, body, userId)
+    const updatedVehicle = await vehicleService.updateVehicle(id, body, userId)
 
-    console.log("✅ Vehicle updated successfully")
     return NextResponse.json(updatedVehicle)
   } catch (error: any) {
     console.error("❌ PUT /api/vehicles/[id] error:", error)
@@ -55,9 +49,9 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    console.log("🗑️ DELETE /api/vehicles/[id] - Deleting vehicle:", params.id)
+    const { id } = await params
 
     // Get the current session
     const {
@@ -71,24 +65,22 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     }
 
     const userId = session.user.id
-    console.log("👤 User ID:", userId)
 
     // Get the deletion reason from request body
     const body = await request.json().catch(() => ({}))
     const reason = body.reason
 
-    console.log("📝 Deletion reason:", reason)
 
     // Verify ownership - query without deleted_at filter
     const { data: existingVehicle, error: fetchError } = await supabase
       .from("vehicles")
       .select("user_id,deleted_at,is_deleted")
-      .eq("id", params.id)
+      .eq("id", id)
       .single()
 
     if (fetchError) {
       if (fetchError.code === "PGRST116") {
-        console.error("❌ Vehicle not found:", params.id)
+        console.error("❌ Vehicle not found:", id)
         return NextResponse.json({ error: "Vehicle not found" }, { status: 404 })
       }
       console.error("❌ Database error fetching vehicle:", fetchError)
@@ -96,7 +88,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     }
 
     if (!existingVehicle) {
-      console.error("❌ Vehicle not found:", params.id)
+      console.error("❌ Vehicle not found:", id)
       return NextResponse.json({ error: "Vehicle not found" }, { status: 404 })
     }
 
@@ -106,7 +98,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     }
 
     if (existingVehicle.is_deleted || existingVehicle.deleted_at) {
-      console.warn("⚠️ Vehicle already deleted:", params.id)
+      console.warn("⚠️ Vehicle already deleted:", id)
       return NextResponse.json({ success: true, message: "Vehicle already deleted" })
     }
 
@@ -126,7 +118,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
     const { error: updateError } = await supabase
       .from("vehicles")
       .update(updates)
-      .eq("id", params.id)
+      .eq("id", id)
       .eq("is_deleted", false)
 
     if (updateError) {
@@ -134,7 +126,6 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
       return NextResponse.json({ error: `Failed to delete vehicle: ${updateError.message}` }, { status: 500 })
     }
 
-    console.log("✅ Vehicle soft-deleted successfully")
     return NextResponse.json({ success: true })
   } catch (error: any) {
     console.error("❌ DELETE /api/vehicles/[id] error:", error)

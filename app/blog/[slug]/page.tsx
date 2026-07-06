@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation"
 import { createClient } from "@/utils/supabase/server"
+import { Header } from "@/components/ui/header"
 import AnalyticsTracker from "@/components/analytics-tracker"
 import Link from "next/link"
 
@@ -171,7 +172,8 @@ export default async function BlogDetailPage({ params }: { params: Promise<{ slu
   
   return (
     <>
-      <article className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+      <Header />
+      <article className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-10 space-y-8">
         <Link href="/blog" className="inline-flex items-center text-sm text-[#FF6700] hover:underline">
           ← Back to all blogs
         </Link>

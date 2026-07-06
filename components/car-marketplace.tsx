@@ -1,21 +1,38 @@
 "use client"
 
 import type React from "react"
-import { useEffect, useState, useRef, useCallback, useMemo } from "react"
+import { useEffect, useState, useRef, useCallback, useMemo, Suspense } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
+import dynamic from "next/dynamic"
 import * as SliderPrimitive from "@radix-ui/react-slider"
-import { Search, X, ChevronDown, ChevronRight, Truck, CarIcon, Bike, Facebook, Instagram, Twitter } from "lucide-react"
-import VehicleDetails from "./vehicle-details"
-import LocationPage from "./location-page"
-import { vehicleService } from "@/lib/vehicle-service"
+import { Search, X, ChevronDown, ChevronRight, Truck, CarIcon, Bike } from "lucide-react"
+import { getVehicles, getSavedVehicles } from "@/lib/vehicle-service"
 import type { Vehicle } from "@/types/vehicle"
 import { useUser } from "@/components/UserContext"
 import { Header } from "./ui/header"
 import VehicleCard from "./vehicle-card"
+import { VehicleCardSkeleton } from "@/components/skeletons"
 import { useVehicleList, useVehicleContext } from "@/components/VehicleProvider"
 import { useNavigationCache } from "@/components/NavigationCacheHandler"
 import { useDebounce } from "@/hooks/use-debounce"
+
+// ── Lazy-load heavy sub-components (only shown on user interaction) ──
+const VehicleDetails = dynamic(() => import("./vehicle-details"), {
+  loading: () => (
+    <div className="min-h-[60vh] flex items-center justify-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#FF6700]" />
+    </div>
+  ),
+})
+
+const LocationPage = dynamic(() => import("./location-page"), {
+  loading: () => (
+    <div className="min-h-[60vh] flex items-center justify-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#FF6700]" />
+    </div>
+  ),
+})
 
 // Common South African car make abbreviations
 const MAKE_ABBREVIATIONS: Record<string, string> = {
@@ -73,7 +90,7 @@ interface CachedFormState {
   condition?: string
 }
 
-export default function CarMarketplace() {
+export default function CarMarketplace({ children }: { children?: React.ReactNode }) {
   const router = useRouter()
   const { user, setUser, savedVehicles, toggleSaveVehicle } = useUser()
   
@@ -125,7 +142,7 @@ export default function CarMarketplace() {
   const fetchVehicles = useCallback(async () => {
     console.log("🔄 [CarMarketplace] Fetching vehicles...")
     try {
-      const result = await vehicleService.getVehicles()
+      const result = await getVehicles()
       console.log("✅ [CarMarketplace] getVehicles returned:", result)
       
       let vehicles: Vehicle[] = []
@@ -226,7 +243,7 @@ export default function CarMarketplace() {
       
       try {
         console.log("🔄 HomePage: Loading saved vehicles data for user:", user.id)
-        const savedData = await vehicleService.getSavedVehicles(user.id)
+        const savedData = await getSavedVehicles(user.id)
         console.log("✅ HomePage: Loaded saved vehicles:", savedData)
         setSavedVehiclesData(savedData)
       } catch (error) {
@@ -794,27 +811,21 @@ export default function CarMarketplace() {
           <div className="min-h-screen flex flex-col items-center justify-center px-4 py-20 relative">
             {/* Background Image with Rounded Bottom */}
             <div className="absolute inset-0 overflow-hidden rounded-b-[50px]">
-              <Image 
-                src="/home-page.png" 
-                alt="Car marketplace hero" 
+              <Image
+                src="/home-page.png"
+                alt="Car marketplace hero"
                 fill
+                sizes="100vw"
                 priority
-                quality={80}
+                quality={85}
                 className="object-cover"
               />
               {/* Overlay for better text readability */}
               <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/40 to-black/60"></div>
             </div>
 
-            {/* Content - Now positioned above the image */}
-            <div className="relative z-10 text-center mb-8">
-              <h1 className="text-4xl md:text-5xl font-bold mb-4 text-white drop-shadow-lg">
-                Find Your Perfect Car
-              </h1>
-              <p className="text-xl opacity-90 text-white drop-shadow-md">
-                Search from thousands of vehicles across South Africa
-              </p>
-            </div>
+            {/* Content - rendered server-side for LCP */}
+            {children}
 
             {/* Search Card - Fully Transparent with Backdrop Blur */}
             <div className="relative z-10 bg-transparent backdrop-blur-sm p-6 md:p-8 rounded-2xl shadow-xl max-w-3xl w-full border border-white/20 dark:border-[#4A4D45]/40">
@@ -1216,24 +1227,8 @@ export default function CarMarketplace() {
               </div>
 
               {loading ? (
-                // Skeleton UI grid
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {Array.from({ length: 8 }).map((_, i) => (
-                    <div
-                      key={i}
-                      className="rounded-lg shadow-md overflow-hidden h-96 bg-gray-200 dark:bg-gray-700 animate-pulse"
-                    >
-                      {/* Image area */}
-                      <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-600 relative">
-                        {/* Bottom content strip */}
-                        <div className="absolute bottom-0 left-0 right-0 p-4 space-y-2">
-                          <div className="h-5 bg-gray-300 dark:bg-gray-600 rounded w-3/4" />
-                          <div className="h-7 bg-gray-300 dark:bg-gray-600 rounded w-1/2" />
-                          <div className="h-4 bg-gray-300 dark:bg-gray-600 rounded w-2/3" />
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                  <VehicleCardSkeleton count={8} />
                 </div>
               ) : error ? (
                 <div className="text-center py-12">

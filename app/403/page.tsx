@@ -4,12 +4,15 @@ import React from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { AlertCircle } from 'lucide-react'
+import { Header } from '@/components/ui/header'
 
 export default function AccessDenied() {
   const router = useRouter()
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-red-50 to-pink-50 flex items-center justify-center px-4">
+    <>
+      <Header />
+      <div className="min-h-screen bg-gradient-to-br from-red-50 to-pink-50 flex items-center justify-center px-4 pt-24">
       <div className="max-w-md w-full text-center space-y-6">
         <div className="flex justify-center">
           <div className="bg-red-100 rounded-full p-6">
@@ -51,5 +54,6 @@ export default function AccessDenied() {
         </div>
       </div>
     </div>
+  </>
   )
 }

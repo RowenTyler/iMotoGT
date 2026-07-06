@@ -60,6 +60,18 @@ const nextConfig = {
       "@radix-ui/react-checkbox",
     ],
   },
+
+  // ─── Compiler / SWC ─────────────────────────────────────────────────────────
+  // Next.js 15 uses SWC by default.  These settings tell the compiler to
+  // emit *native* ES展示 modern JS (ES2022+) and skip legacy polyfills for
+  // older browsers.  The application only targets modern Chrome/Firefox/Safari,
+  // so transpiling `Array.prototype.at`, `Object.fromEntries`, etc. is wasteful.
+  compiler: {
+    // Remove `console.log` and `debugger` statements from production builds.
+    removeConsole: {
+      exclude: ["error"],
+    },
+  },
 }
 
 export default nextConfig

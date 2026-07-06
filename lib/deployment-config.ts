@@ -93,7 +93,6 @@ export function validateDeploymentConfig() {
 if (typeof window === "undefined") {
   try {
     validateDeploymentConfig()
-    console.log("✅ Deployment configuration validated successfully")
   } catch (error) {
     console.error("❌ Deployment configuration validation failed:", error)
     if (deploymentConfig.app.environment === "production") {

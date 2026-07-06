@@ -39,11 +39,11 @@ export function CookieConsentBanner() {
                 <p className="mt-1 text-sm text-muted-foreground">
                   We use cookies to ensure essential website functionality and to improve your experience. 
                   You can choose to accept all cookies or customize your preferences.{' '}
-                  <Link 
-                    href="/privacy" 
+                  <Link
+                    href="/privacy"
                     className="text-primary underline underline-offset-2 hover:text-primary/80"
                   >
-                    Learn more
+                    Read our privacy policy
                   </Link>
                 </p>
               </div>

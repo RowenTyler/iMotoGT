@@ -2,6 +2,7 @@ import Link from "next/link"
 import Image from "next/image"
 import { ArrowLeft, Clock, User, Share2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Header } from "@/components/ui/header"
 import { ArticleCard } from "@/components/article-card"
 import { articles } from "@/lib/blog-data"
 import { notFound } from "next/navigation"
@@ -66,7 +67,9 @@ export default function ArticlePage({ params }: ArticlePageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--light-bg)] dark:bg-[var(--dark-bg)] pt-24 pb-16 px-4 sm:px-6 lg:px-8">
+    <>
+      <Header />
+      <div className="min-h-screen bg-[var(--light-bg)] dark:bg-[var(--dark-bg)] pt-24 pb-16 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
         {/* Back Link */}
         <Link href="/articles" className="inline-flex items-center text-[#FF6700] dark:text-[#FF7D33] hover:underline mb-6">
@@ -207,5 +210,6 @@ export default function ArticlePage({ params }: ArticlePageProps) {
         </div>
       </div>
     </div>
+  </>
   )
 }

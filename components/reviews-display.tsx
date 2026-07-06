@@ -4,11 +4,10 @@ import React, { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Skeleton } from '@/components/ui/skeleton'
+import { ReviewCardSkeleton } from '@/components/skeletons'
 import { getTrendingReviews, getLatestReviews } from '@/lib/review-service'
 import type { Review } from '@/types/admin'
 import { Eye, Calendar, Video, FileText, ArrowRight } from 'lucide-react'
-import Image from 'next/image'
 
 interface ReviewsDisplayProps {
   onViewAll?: () => void
@@ -85,7 +84,6 @@ export default function ReviewsDisplay({ onViewAll }: ReviewsDisplayProps) {
 
   return (
     <div className="space-y-8">
-      {/* Trending Reviews */}
       {!isLoading && trendingReviews.length > 0 && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
@@ -103,7 +101,6 @@ export default function ReviewsDisplay({ onViewAll }: ReviewsDisplayProps) {
         </div>
       )}
 
-      {/* Latest Reviews */}
       {!isLoading && latestReviews.length > 0 && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
@@ -139,19 +136,8 @@ export default function ReviewsDisplay({ onViewAll }: ReviewsDisplayProps) {
         </div>
       )}
 
-      {/* Loading State */}
-      {isLoading && (
-        <div className="space-y-4">
-          <Skeleton className="h-8 w-40" />
-          <div className="grid md:grid-cols-3 gap-6">
-            {[...Array(3)].map((_, i) => (
-              <Card key={i} className="h-40" />
-            ))}
-          </div>
-        </div>
-      )}
+      {isLoading && <ReviewCardSkeleton />}
 
-      {/* Empty State */}
       {!isLoading && latestReviews.length === 0 && trendingReviews.length === 0 && (
         <Card className="p-8 text-center">
           <p className="text-gray-500">No reviews yet. Check back soon!</p>

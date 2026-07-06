@@ -4,7 +4,15 @@ import type React from "react"
 import { createContext, useContext, useEffect, useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { authService, type AuthUser } from "@/lib/auth"
-import { vehicleService } from "@/lib/vehicle-service"
+import {
+  getSavedVehicles,
+  getUserVehicles,
+  createVehicle,
+  updateVehicle,
+  deleteVehicle,
+  saveVehicle,
+  unsaveVehicle,
+} from "@/lib/vehicle-service"
 import type { UserProfile } from "@/types/user"
 import type { Vehicle } from "@/types/vehicle"
 import type { VehicleFormData } from "@/types/vehicle"
@@ -47,7 +55,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
     try {
       console.log("🔄 Loading saved vehicles for user:", user.id)
-      const savedVehiclesList = await vehicleService.getSavedVehicles(user.id)
+      const savedVehiclesList = await getSavedVehicles(user.id)
       const savedVehicleIds = new Set(savedVehiclesList.map(vehicle => vehicle.id))
       setSavedVehicles(savedVehicleIds)
       console.log(`✅ Loaded ${savedVehicleIds.size} saved vehicles`)
@@ -86,7 +94,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
     try {
       console.log("🔄 Refreshing vehicles for user:", user.id)
-      const vehicles = await vehicleService.getUserVehicles(user.id)
+      const vehicles = await getUserVehicles(user.id)
       console.log(`✅ Loaded ${vehicles.length} vehicles`)
       setListedVehicles(vehicles)
     } catch (error) {
@@ -119,8 +127,8 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
           // ── Parallel: profile + vehicles + saved vehicles ────────────────
           const [profile, vehicles, savedVehiclesList] = await Promise.all([
             authService.getUserProfile(currentUser.id),
-            vehicleService.getUserVehicles(currentUser.id).catch(() => [] as Vehicle[]),
-            vehicleService.getSavedVehicles(currentUser.id).catch(() => [] as Vehicle[]),
+            getUserVehicles(currentUser.id).catch(() => [] as Vehicle[]),
+            getSavedVehicles(currentUser.id).catch(() => [] as Vehicle[]),
           ])
 
           if (!mounted) return
@@ -180,8 +188,8 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         // ── Parallel: profile + vehicles + saved vehicles ────────────────
         const [profile, vehicles, savedVehiclesList] = await Promise.all([
           authService.getUserProfile(newAuthUser.id),
-          vehicleService.getUserVehicles(newAuthUser.id).catch(() => [] as Vehicle[]),
-          vehicleService.getSavedVehicles(newAuthUser.id).catch(() => [] as Vehicle[]),
+          getUserVehicles(newAuthUser.id).catch(() => [] as Vehicle[]),
+          getSavedVehicles(newAuthUser.id).catch(() => [] as Vehicle[]),
         ])
 
         if (!mounted) return
@@ -268,7 +276,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
     try {
       console.log("➕ Adding new vehicle")
-      const newVehicle = await vehicleService.createVehicle(vehicleData, user.id)
+      const newVehicle = await createVehicle(vehicleData, user.id)
       setListedVehicles((prev) => [newVehicle, ...(Array.isArray(prev) ? prev : [])])
       console.log("✅ Vehicle added successfully")
     } catch (error) {
@@ -285,7 +293,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
     try {
       console.log("📝 Updating vehicle:", vehicleId)
-      const updatedVehicle = await vehicleService.updateVehicle(vehicleId, vehicleData, user.id)
+      const updatedVehicle = await updateVehicle(vehicleId, vehicleData, user.id)
 
       setListedVehicles((prev) => {
         const prevArray = Array.isArray(prev) ? prev : []
@@ -314,7 +322,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         return prevArray.filter((v) => v.id !== vehicleId)
       })
 
-      const success = await vehicleService.deleteVehicle(vehicleId, user.id, reason)
+      const success = await deleteVehicle(vehicleId, user.id, reason)
 
       if (!success) {
         console.error("❌ Failed to delete vehicle")
@@ -343,7 +351,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     try {
       if (isCurrentlySaved) {
         console.log("❌ Unsaving vehicle from database:", vehicle.id)
-        const success = await vehicleService.unsaveVehicle(user.id, vehicle.id)
+        const success = await unsaveVehicle(user.id, vehicle.id)
         if (success) {
           setSavedVehicles(prev => {
             const newSet = new Set(prev)
@@ -357,7 +365,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         }
       } else {
         console.log("💾 Saving vehicle to database:", vehicle.id)
-        const success = await vehicleService.saveVehicle(user.id, vehicle.id)
+        const success = await saveVehicle(user.id, vehicle.id)
         if (success) {
           setSavedVehicles(prev => {
             const newSet = new Set(prev)

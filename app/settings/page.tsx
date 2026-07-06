@@ -17,7 +17,6 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (!isLoading && !authUser) {
-      console.log("⚠️ No authenticated user, redirecting to login")
       router.push("/login?redirect=/settings")
     }
   }, [authUser, isLoading, router])
@@ -43,7 +42,6 @@ export default function SettingsPage() {
 
     try {
       setIsSaving(true)
-      console.log("💾 Saving profile updates...")
 
       // Handle profile picture upload
       if (profilePictureFile) {
@@ -56,9 +54,7 @@ export default function SettingsPage() {
         })
 
         // Upload to profile-picture bucket, get back a public URL
-        console.log("🖼️ Uploading profile picture to storage...")
         const profilePicUrl = await uploadProfilePicture(base64Image, user.id)
-        console.log("✅ Profile picture URL:", profilePicUrl)
 
         // Replace the base64 in the update with the storage URL
         updatedProfile.profilePic = profilePicUrl
@@ -72,12 +68,10 @@ export default function SettingsPage() {
 
       if (error) throw new Error(error.message)
 
-      console.log("✅ Profile updated successfully")
 
       // Refresh context so header avatar and dashboard update immediately
       await refreshUserProfile()
 
-      console.log("✅ User context refreshed")
     } catch (error) {
       console.error("❌ Error saving profile:", error)
       throw error

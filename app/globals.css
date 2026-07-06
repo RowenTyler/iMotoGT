@@ -2,9 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  font-family: Arial, Helvetica, sans-serif;
-}
 
 @layer utilities {
   .text-balance {
@@ -34,8 +31,6 @@ body {
     --input: 120 10% 85%;
     --ring: 24 100% 50%;
     --radius: 0.5rem;
-    --spacing-8: 2rem;
-    --cell-size: var(--spacing-8);
   }
 }
 
@@ -48,32 +43,31 @@ body {
   }
 }
 
-/* Custom scrollbar: orange thumb, transparent/translucent track */
-:root {
-  --scrollbar-thumb: #ff7a18; /* primary orange */
-  --scrollbar-track: rgba(255,255,255,0.02); /* very translucent */
-}
+/* Scoped scrollbar styles — avoid * to reduce render-blocking */
+@layer base {
+  :root {
+    --scrollbar-thumb: #ff7a18;
+    --scrollbar-track: rgba(255, 255, 255, 0.02);
+  }
 
-/* WebKit browsers (Chrome, Edge, Safari) */
-*::-webkit-scrollbar {
-  width: 12px;
-  height: 12px;
-}
-*::-webkit-scrollbar-track {
-  background: var(--scrollbar-track);
-}
-*::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, #ff8a00, var(--scrollbar-thumb));
-  border-radius: 9999px;
-  border: 3px solid transparent; /* creates padding so track peeks through */
-  background-clip: padding-box;
-}
-*::-webkit-scrollbar-thumb:hover {
-  opacity: 0.95;
-}
+  html {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+  }
 
-/* Firefox */
-* {
-  scrollbar-width: thin;
-  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+  html::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+  }
+
+  html::-webkit-scrollbar-track {
+    background: var(--scrollbar-track);
+  }
+
+  html::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #ff8a00, var(--scrollbar-thumb));
+    border-radius: 9999px;
+    border: 3px solid transparent;
+    background-clip: padding-box;
+  }
 }

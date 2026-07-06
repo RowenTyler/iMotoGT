@@ -16,12 +16,12 @@ interface DeletionAudit {
   timestamp: string
 }
 
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   const startTime = Date.now()
-  const vehicleId = params.id
+  const vehicleId = id
 
   try {
-    console.log(`[v0] Starting soft delete for vehicle: ${vehicleId}`)
 
     // Parse request body
     let body
@@ -129,7 +129,6 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 
           if (deleteAttempts < maxDeleteRetries) {
             const delay = Math.pow(2, deleteAttempts - 1) * 1000
-            console.log(`[v0] Delete attempt ${deleteAttempts} failed, retrying in ${delay}ms:`, dbError)
             await new Promise(resolve => setTimeout(resolve, delay))
             continue
           }
@@ -143,7 +142,6 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 
         if (deleteAttempts < maxDeleteRetries) {
           const delay = Math.pow(2, deleteAttempts - 1) * 1000
-          console.log(`[v0] Unexpected delete error ${deleteAttempts}, retrying in ${delay}ms:`, unexpectedError)
           await new Promise(resolve => setTimeout(resolve, delay))
         }
       }
@@ -176,14 +174,12 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
       if (auditError) {
         console.warn("[v0] Failed to create audit log entry:", auditError)
       } else {
-        console.log("[v0] Audit log created successfully")
       }
     } catch (auditError) {
       console.warn("[v0] Exception creating audit log:", auditError)
     }
 
     const duration = Date.now() - startTime
-    console.log(`[v0] Vehicle soft deleted successfully: ${vehicleId} (${vehicle.make} ${vehicle.model}) by ${user.email} in ${duration}ms`)
 
     return NextResponse.json({
       success: true,
