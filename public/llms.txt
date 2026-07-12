@@ -1,0 +1,36 @@
+# iMoto GT
+
+> The simplest way to buy or sell your car in South Africa.
+
+iMoto GT is a South African vehicle marketplace connecting buyers and sellers of cars, trucks, and motorbikes. The platform provides a transparent, community-driven car trading experience.
+
+## What You Can Do
+
+- **Browse vehicles** — Search thousands of listings across South Africa with filters for make, model, price range, year, fuel type, transmission, body type, engine capacity, and province.
+- **Sell your car** — Create a listing with photos, description, and your contact details.
+- **Read automotive content** — Expert car reviews, buying guides, theft prevention tips, and market insights.
+- **Save listings** — Bookmark cars you're interested in for later review.
+
+## Key Pages
+
+- [/home](https://imotogt.co.za/home) — Main marketplace with search and featured listings
+- [/blog](https://imotogt.co.za/blog) — Automotive blogs, buying guides, and tips
+- [/reviews](https://imotogt.co.za/reviews) — Vehicle reviews from the iMoto GT editorial team
+- [/contact](https://imotogt.co.za/contact) — Get in touch with the team
+- [/about](https://imotogt.co.za/about) — About iMoto GT and our mission
+- [/privacy](https://imotogt.co.za/privacy) — Privacy policy and data handling
+
+## About iMoto GT
+
+Founded to revolutionize the South African automotive market, iMoto GT eliminates unnecessary middlemen and reduces costs by connecting buyers and sellers directly. The platform serves thousands of users across South Africa.
+
+## Contact
+
+- **Email:** supportadmin@imotogt.co.za
+- **Facebook:** https://www.facebook.com/profile.php?id=61590392978737
+- **Instagram:** https://www.instagram.com/imotogt_/
+- **Twitter/X:** https://x.com/iMotoGT
+
+---
+
+*Last updated: July 2026*

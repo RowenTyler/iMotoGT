@@ -83,6 +83,36 @@ export default async function HomePage() {
         </div>
       </section>
 
+      {/* Static content block for LLM/SEO crawlers — visible in raw HTML */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16" id="about-imoto">
+        <div className="grid gap-8 md:grid-cols-2">
+          <div>
+            <h2 className="text-2xl font-bold text-[#3E5641] dark:text-white mb-4">
+              About iMoto GT
+            </h2>
+            <p className="text-[#6F7F69] dark:text-gray-300 leading-relaxed">
+              iMoto GT is South Africa's trusted online marketplace for buying and selling
+              vehicles. We connect car buyers and sellers directly across all nine provinces,
+              making the process transparent, simple, and affordable. Whether you're looking
+              for a family car in Gauteng, a bakkie in the Western Cape, or selling your
+              trusted vehicle in KwaZulu-Natal, iMoto GT helps you find the right match.
+            </p>
+          </div>
+          <div>
+            <h3 className="text-xl font-semibold text-[#3E5641] dark:text-white mb-3">
+              Why Choose iMoto GT?
+            </h3>
+            <ul className="space-y-2 text-[#6F7F69] dark:text-gray-300">
+              <li>• Transparent pricing with no hidden dealer fees</li>
+              <li>• Direct communication between buyer and seller</li>
+              <li>• Browse thousands of verified vehicle listings across South Africa</li>
+              <li>• Expert reviews and buying guides to help you make informed decisions</li>
+              <li>• Create listings in minutes with photo uploads</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
       <footer className="bg-[#3E5641] dark:bg-[#1F2B20] py-8 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
